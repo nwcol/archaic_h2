@@ -60,7 +60,7 @@ def sim_ancestry(demog, recomb_rate=1e-8, seq_length=1e4, reps=None, n=1):
                               num_replicates=reps)
     time1 = time.time()
     t = np.round(time1 - time0, 2)
-    print(f"{n} {seq_length} bp windows in {t} s")
+    print(f"{reps} {seq_length} bp windows in {t} s")
     return ts
 
 
@@ -132,10 +132,9 @@ def get_pop_divergence(ts, u=1e-8):
     return div, sample_pops
 
 
-
 graph = load_yaml(filename="c:/archaic/yamls/super_archaic.yaml")
 demog = graph_to_demog(graph)
-#ts = coalescent(demog)
+# ts = coalescent(demog)
 
 
 goal = 1e8
@@ -194,17 +193,161 @@ def multi_window(demog, window_size=5e5, iter=200):
         pi.append(ts_pi)
         ts_div, pops = get_pop_divergence(ts)
         div.append(ts_div)
+    sample_pops = get_sample_populations(ts)
     mean_pi = np.mean(pi, axis=0)
     mean_div = np.mean(div, axis=0)
     time1 = time.time()
     print(np.round(time1 - time0, 2))
-    return mean_pi, mean_div
+    return sample_pops, mean_pi, mean_div
 
 
+def multi_multi_window(demog, window_size=5e5, iter=200, n=30, npops=4):
+    mean_pis = np.zeros((n, 4))
+    mean_divs = np.zeros((n, 4, 4))
+    for i in np.arange(n):
+        sample_pops, mean_pi, mean_div = multi_window(demog,
+                                                      window_size=window_size,
+                                                      iter=iter)
+        mean_pis[i] = mean_pi
+        mean_divs[i] = mean_div
+    info = dict(demog=demog, sample_pops=sample_pops, window_size=window_size,
+                iter=200, n=30, npops=4)
+    return mean_pis, mean_divs, info
 
 
+def pi_scatter_plot(mean_pi):
+    labels = ["Denisovan", "Neanderthal", "Modern African", "Modern European"]
+    colors = ["green", "purple", "red", "blue"]
+    npops = np.shape(mean_pi)[1]
+    reps = len(mean_pi)
+    fig = plt.figure(figsize=(8,6))
+    sub = fig.add_subplot(111)
+    for i in np.arange(npops):
+        x = np.random.uniform(i - 0.1, i + 0.1, size=reps)
+        plt.scatter(x, mean_pi[:, i], color=colors[i], label=labels[i],
+                    marker='x')
+    sub.set_xlim(-0.3, npops - 0.7)
+    sub.set_ylim(0, )
+    sub.set_ylabel("branch length diversity")
+    sub.legend()
+    fig.show()
 
 
+def pi_violin_plot(mean_pi):
+    npops = np.shape(mean_pi)[1]
+    fig = plt.figure(figsize=(8,6))
+    sub = fig.add_subplot(111)
+    x = np.arange(npops)
+    sub.violinplot(mean_pi, positions=x, widths=0.3, showmeans=True)
+    sub.set_xlim(-1, npops)
+    sub.set_ylim(0, )
+    fig.show()
+
+
+def div_violin_plot(div):
+    """
+    Divergence combinations. Order D, N, X, Y
+    DD ND XD YD
+    DN NN XN YN
+    DX NX XX YX
+    DY NY XY YY
+
+    unique combinations: DN, DX, DY, NX, NY, XY
+
+    :param mean_pi:
+    :return:
+    """
+    ndivs = 6s
+    reps = len(div)
+    fig = plt.figure(figsize=(8, 6))
+    sub = fig.add_subplot(111)
+    x = np.arange(ndivs)
+    unique = np.zeros((reps, 6))
+    unique[:, 0] = div[:, 1, 0]
+    unique[:, 1] = div[:, 2, 0]
+    unique[:, 2] = div[:, 3, 0]
+    unique[:, 3] = div[:, 2, 1]
+    unique[:, 4] = div[:, 3, 1]
+    unique[:, 5] = div[:, 3, 2]
+    sub.violinplot(unique, positions=x, widths=0.3, showmeans=True)
+    sub.set_xlim(-1, ndivs)
+    sub.set_xticks(np.arange(6), ["D-N", "D-X", "D-Y", "N-X", "N-Y", "X-Y"])
+    sub.set_ylim(0, )
+    fig.show()
+
+
+def pi_box_plot(pi, info):
+    """
+    Plot an array of mean diversity values from n simulations using box plots
+    with markers for mean values. n = len(mean_pi)
+
+    :param pi:
+    :return:
+    """
+    npops = info["npops"]
+    n = info['n']
+    fig = plt.figure(figsize=(8,6))
+    sub = fig.add_subplot(111)
+    x = np.arange(npops)
+    colors = ["lightgreen", "gold", "red", "blue"]
+    mean_style = dict(markerfacecolor="white", markeredgecolor='black',
+                      marker="D")
+    median_style = dict(linewidth=2, color='black')
+    boxplot = sub.boxplot(pi, positions=x, widths=0.8, showmeans=True,
+                          medianprops=median_style, patch_artist=True,
+                          meanprops=mean_style)
+    for box, color in zip(boxplot['boxes'], colors):
+        box.set_facecolor(color)
+    sub.set_xlim(-0.6, npops-0.4)
+    sub.set_ylim(0, )
+    labels = [demog.populations[i].name for i in info["sample_pops"]]
+    sub.set_xticks(np.arange(npops), labels)
+    sub.set_ylabel("branch-length diversity")
+    sub.set_xlabel("populations")
+    tract = int(info["iter"] * info["window_size"] * 1e-6)
+    sub.set_title(f"population diversities, n = {n}, {tract} Mb")
+    fig.show()
+
+
+def div_box_plot(div, info):
+    """
+    Divergence combinations. Order D, N, X, Y
+    DD ND XD YD
+    DN NN XN YN
+    DX NX XX YX
+    DY NY XY YY
+
+    unique combinations: DN, DX, DY, NX, NY, XY
+
+    :param mean_pi:
+    :return:
+    """
+    ndivs = 6
+    npops = info["npops"]
+    n = info['n']
+    fig = plt.figure(figsize=(8, 6))
+    sub = fig.add_subplot(111)
+    x = np.arange(ndivs)
+    unique = np.zeros((n, 6))
+    unique[:, 0] = div[:, 1, 0]
+    unique[:, 1] = div[:, 2, 0]
+    unique[:, 2] = div[:, 3, 0]
+    unique[:, 3] = div[:, 2, 1]
+    unique[:, 4] = div[:, 3, 1]
+    unique[:, 5] = div[:, 3, 2]
+    mean_style = dict(markerfacecolor="red", markeredgecolor='black',
+                      marker="s")
+    median_style = dict(linewidth=2, color='red')
+    sub.boxplot(unique, positions=x, widths=0.8, showmeans=True,
+                medianprops=median_style, meanprops=mean_style)
+    sub.set_xlim(-1, ndivs)
+    sub.set_xticks(np.arange(6), ["D-N", "D-X", "D-Y", "N-X", "N-Y", "X-Y"])
+    sub.set_ylim(0, )
+    sub.set_ylabel("branch-length diversity")
+    sub.set_xlabel("populations")
+    tract = int(info["iter"] * info["window_size"] * 1e-6)
+    sub.set_title(f"population divergences n = {n}, {tract} Mb")
+    fig.show()
 
 
 
