@@ -2,5 +2,6 @@
 /workspace.xml
 .idea/
 env/
+svg/
 __pycache__
 *.pyc

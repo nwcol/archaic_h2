@@ -1,0 +1,130 @@
+description: Model of ancient introgression presented in Hubisz et al. 2020
+
+time_units: years
+generation_time: 25 # complete guess
+
+demes:
+  - name: Ancestral
+    description: Ancestral population = Hominin in Hubisz.
+    epochs:
+      - start_size: 18500
+        end_time: 1600000 # sort of made up
+
+  - name: S
+    description: Superarchaic
+    ancestors:
+      - Ancestral
+    epochs:
+      - start_size: 3000 # placeholder
+        end_time: 40000 # placeholder
+
+  - name: NDH
+    description: Common ancestor of neanderthals, denisovans, modern humans.
+    ancestors:
+      - Ancestral
+    epochs:
+      - start_size: 18500
+        end_time: 575000
+
+  - name: ND
+    description: Ancestor of neanderthals and denisovans
+    ancestors:
+      - NDH
+    epochs:
+      - start_size: 7100
+        end_time: 415000
+
+  - name: N
+    description: Neanderthals
+    ancestors:
+      - ND
+    epochs:
+      - start_size: 3400
+        end_time: 30000 # placeholder
+
+  - name: D
+    description: Denisovans
+    ancestors:
+      - ND
+    epochs:
+      - start_size: 2500
+        end_time: 30000 # placeholder
+
+  - name: H
+    description: Modern humans
+    ancestors:
+      - NDH
+    epochs:
+      - start_size: 23700
+
+pulses:
+  # old migrations
+  # S -> D
+  - sources: [S]
+    dest: D
+    proportions: [0.01] # placeholder
+    time: 225000 # approx
+
+  # S -> N
+  - sources: [S]
+    dest: N
+    proportions: [0.01] # placeholder
+    time: 215000 # approx
+
+  # S -> H
+  - sources: [S]
+    dest: H
+    proportions: [0.01] # placeholder
+    time: 200000
+
+  # H -> N
+  - sources: [H]
+    dest: N
+    proportions: [0.01]
+    time: 250000 # approx
+
+  # H -> D
+  - sources: [H]
+    dest: D
+    proportions: [0.01]
+    time: 240000 # approx
+
+  # new migrations
+  # D -> H
+  - sources: [D]
+    dest: H
+    proportions: [0.01] # placeholder
+    time: 50000
+
+  # N -> H
+  - sources: [N]
+    dest: H
+    proportions: [0.01]
+    time: 49500 # fake
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
