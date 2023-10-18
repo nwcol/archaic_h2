@@ -71,9 +71,9 @@ demes:
   ancestors: 
     - XY
   epochs:
-    - start_size: 5000 # guess
+    - start_size: 4000 # guess
       end_time: 600 # placeholder. approx 15 kya
-    - start_size: 15000 # guess
+    - start_size: 10000 # guess
     
     
 pulses:
@@ -89,14 +89,14 @@ pulses:
     proportions: [0.02] # table S1
     time: 8000 # approx 200 kya. guess.
 
-# pulse gamma XY -> N
-  - sources: [XY]
-    dest: N
-    proportions: [0.015] # table S1
-    time: 10000 # approx 250 kya
-
 # pulse delta S -> ND. novel hypothesis
   - sources: [S]
     dest: ND
-    proportions: [0.035] # table S1
+    proportions: [0.03] # table S1
     time: 22000 # approx 550 kya
+
+# pulse gamma XY -> N
+  - sources: [XY]
+    dest: N
+    proportions: [0.03] # table S1
+    time: 10000 # approx 250 kya

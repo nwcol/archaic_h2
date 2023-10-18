@@ -14,298 +14,12 @@ import numpy as np
 
 import time
 
+import os
+
 
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
     matplotlib.use('Qt5Agg')
-
-
-class Cluster0:
-    """
-    Keeps a demography, tree sequences, and tree sequence statistics
-    conveniently grouped together for comparison to other clusters.
-
-    Parameters for ancestry simulations are defined in instantiation
-    """
-
-    def __init__(self, id, demog, n_trials, sample_pops, recomb_rate=1e-8,
-                 mut_rate=1e-8, length=1e8, window_length=5e5, sample_size=1,
-                 mutate=False, color=None):
-        """
-        Initialize a DemogCluster
-
-        :param id: demography scenario name
-        :param demog: msprime.Demography instance
-        :param n_trials:
-        :param sample_pops: specifies sample populations by string id
-        :type sample_pops: list of str
-        :param recomb_rate:
-        :param mut_rate:
-        :param length:
-        :param window_length:
-        :param sample_size:
-        :param mutate:
-        :param color: specify a color for plotting statistics from this cluster
-        """
-        sample_pops = list(set(sample_pops))
-        self.id = id
-        self.demog = demog
-        pop_names = [pop.name for pop in demog.populations]
-        pop_index = np.arange(demog.num_populations)
-        self.name_to_pop = dict(zip(pop_names, pop_index))
-        self.pop_to_name = dict(zip(pop_index, pop_names))
-        self.n_trials = n_trials
-        self.samples = dict(zip(sample_pops,
-                                np.full(len(sample_pops), sample_size)))
-        sample_id = np.sort([self.name_to_pop[name] for name in sample_pops])
-        self.labels = [self.pop_to_name[id] for id in sample_id]
-        self.sample_map = dict(zip(sample_id, sample_pops))
-        self.n_sample_pops = len(sample_pops)
-        self.recomb_rate = recomb_rate
-        self.mutate = mutate
-        self.mut_rate = mut_rate
-        self.length = length
-        self.window_length = window_length
-        self.n_windows = int(length / window_length)
-        self.color = None
-        self.trials = []
-        self.pi = None
-        self.pi_xy = None
-        self.f2 = None
-        self.statistics = []
-
-    @classmethod
-    def load_graph(cls, name, n_trials, sample_pops, path="c:/archaic/yamls/",
-                   **kwargs):
-        """
-        Load a .yaml graph file and convert it to an msprime Demography
-        instance to instantiate a DemogCluster
-
-        :param name:
-        :param n_trials:
-        :param sample_pops:
-        :param path:
-        :param kwargs:
-        :return:
-        """
-        filename = path + name
-        graph = demes.load(filename)
-        demog = msprime.Demography.from_demes(graph)
-        return cls(name, demog, n_trials, sample_pops, *kwargs)
-
-    @classmethod
-    def load_stats(cls, filename, path="c:/archaic/statistics/"):
-        dict = np.load(path + filename)
-        cluster = cls(id, demog, n_trials, sample_pops)
-        for stat in dict:
-            setattr(cluster, stat, dict[stat])
-        return cluster
-
-    def __repr__(self):
-        Mb = int(self.length / 1e6)
-        all = self.n_trials
-        done = len(self.trials)
-        return f"DemogCluster {self.id}, {Mb} Mb, {done} of {all} complete"
-
-    @property
-    def two_way_labels(self):
-        labels = self.labels
-        labels = [(labels[i], labels[j]) for i, j in self.two_way_index]
-        return labels
-
-    @property
-    def two_way_index(self):
-        n = self.n_sample_pops
-        unique = int((np.square(n) - n) / 2)
-        coords = []
-        for i in np.arange(n):
-            for j in np.arange(0, i):
-                coords.append((i, j))
-        return coords
-
-    def plot_demog(self, log_time=False):
-        graph = self.demog.to_demes()
-        demesdraw.tubes(graph, log_time=log_time)
-
-    def simulate(self, verbose=True):
-        """
-        Run self.n_trials coalescent simulations using msprime sim_ancestry
-        function. If self.mutate == True, also simulate mutation
-        """
-        time0 = time.time()
-        for i in np.arange(self.n_trials):
-            multi_window = []
-            for j in np.arange(self.n_windows):
-                ts = msprime.sim_ancestry(samples=self.samples,
-                                          demography=self.demog,
-                                          ploidy=2,
-                                          model="hudson",
-                                          sequence_length=self.window_length,
-                                          recombination_rate=self.recomb_rate
-                                          )
-                if self.mutate:
-                    ts = msprime.sim_mutations(ts, rate=self.mut_rate)
-                multi_window.append(ts)
-            self.trials.append(multi_window)
-        time1 = time.time()
-        if verbose:
-            t = np.round(time1 - time0, 2)
-            print(f"{self.n_trials} trials w/ {self.length} bp set up in {t} s")
-
-    def compute_diversity(self, verbose=True):
-        """
-        Compute the diversities for each trial
-
-        :return:
-        """
-        time0 = time.time()
-        pi = np.zeros((self.n_trials, len(self.sample_map)))
-        for i, ts_iterator in enumerate(self.trials):
-            pi[i] = self.compute_trial_diversity(ts_iterator)
-        time1 = time.time()
-        if verbose:
-            t = np.round(time1 - time0, 2)
-            Mb = int(self.length / 1e6)
-            print(f"pi across {self.n_trials} {Mb} Mb trials computed in {t} s")
-        self.pi = pi
-        self.statistics.append("pi")
-
-    def compute_trial_diversity(self, trial):
-        """
-        Compute window diversities for one ts_iterator and return their mean
-
-        :return:
-        """
-        trial_pi = np.zeros((self.n_windows, len(self.sample_map)))
-        for i, window_ts in enumerate(trial):
-            trial_pi[i] = self.compute_window_diversity(window_ts)
-        mean_trial_pi = np.mean(trial_pi, axis=0)
-        return mean_trial_pi
-
-    def compute_window_diversity(self, window_ts):
-        """
-        Compute diversity for one window of a ts_iterator
-
-        :param window_ts:
-        :return:
-        """
-        window_pi = np.zeros(len(self.sample_map))
-        for i, pop_id in enumerate(self.sample_map):
-            sample = window_ts.samples(population=pop_id)
-            window_pi[i] = window_ts.diversity(mode="branch",
-                                               sample_sets=sample)
-        window_pi *= self.mut_rate
-        return window_pi
-
-    def compute_divergence(self, verbose=True):
-        """
-        Compute the divergences across all 2-tuples
-
-        :return:
-        """
-        time0 = time.time()
-        pi_xy = np.zeros((self.n_trials, len(self.sample_map),
-                          len(self.sample_map)))
-        for i, trial in enumerate(self.trials):
-            pi_xy[i] = self.compute_trial_divergence(trial)
-        time1 = time.time()
-        if verbose:
-            t = np.round(time1 - time0, 2)
-            Mb = int(self.length / 1e6)
-            print(f"pi_xy across {self.n_trials} {Mb} Mb trials computed in {t} s")
-        self.pi_xy = pi_xy
-        self.statistics.append("pi_xy")
-
-    def compute_trial_divergence(self, trial):
-        """
-        Compute divergence for one ts_iterator
-
-        :return:
-        """
-        trial_pi_xy = np.zeros((self.n_windows, len(self.samples),
-                                len(self.samples)))
-        for i, window_ts in enumerate(trial):
-            trial_pi_xy[i] = self.compute_window_divergence(window_ts)
-        mean_trial_pi_xy = np.mean(trial_pi_xy, axis=0)
-        return mean_trial_pi_xy
-
-    def compute_window_divergence(self, window_ts):
-        window_pi_xy = np.zeros((len(self.sample_map), len(self.sample_map)))
-        for i, pop0_id in enumerate(self.sample_map):
-            sample0 = window_ts.samples(population=pop0_id)
-            for j, pop1_id in enumerate(self.sample_map):
-                sample1 = window_ts.samples(population=pop1_id)
-                window_pi_xy[i, j] = window_ts.divergence(
-                    sample_sets=[sample0, sample1], mode="branch")
-        window_pi_xy *= self.mut_rate
-        return window_pi_xy
-
-    def compute_f2(self, verbose=True):
-        """
-        Compute the f2 statistic across all 2-tuples
-
-        :return:
-        """
-        time0 = time.time()
-        f2 = np.zeros((self.n_trials, len(self.sample_map),
-                       len(self.sample_map)))
-        for i, trial in enumerate(self.trials):
-            f2[i] = self.compute_trial_f2(trial)
-        time1 = time.time()
-        if verbose:
-            t = np.round(time1 - time0, 2)
-            Mb = int(self.length / 1e6)
-            print(f"f2 across {self.n_trials} {Mb} Mb trials computed in {t} s")
-        self.f2 = f2
-        self.statistics.append("f2")
-
-    def compute_trial_f2(self, ts_iterator):
-        n_pops = len(self.sample_map)
-        trial_f2 = np.zeros((self.n_windows, n_pops, n_pops))
-        for i, window_ts in enumerate(ts_iterator):
-            trial_f2[i] = self.compute_window_f2(window_ts)
-        mean_f2 = np.mean(trial_f2, axis=0)
-        return mean_f2
-
-    def compute_window_f2(self, window_ts):
-        window_f2 = np.zeros((len(self.sample_map), len(self.sample_map)))
-        for i, pop0_id in enumerate(self.sample_map):
-            sample0 = window_ts.samples(population=pop0_id)
-            for j, pop1_id in enumerate(self.sample_map):
-                sample1 = window_ts.samples(population=pop1_id)
-                window_f2[i, j] = window_ts.f2(sample_sets=[sample0, sample1],
-                                               mode="branch")
-        window_f2 *= self.mut_rate
-        return window_f2
-
-    def clear_ts(self):
-        """
-        remove tree structures from the instance
-
-        :return:
-        """
-        self.trials = []
-
-    def write(self, filename=None, path="c:/archaic/statistics/"):
-        """
-        Save statistics in .npz format
-
-        :param filename:
-        :return:
-        """
-        if not filename:
-            filename = self.id
-            filename.replace(".yaml", "")
-        stats = self.statistics
-        arrays = [getattr(self, stat) for stat in stats]
-        stats = {stat: array for (stat, array) in zip(stats, arrays)}
-        filename = path + filename
-        np.savez(filename, **stats)
-
-
-
-
-
 
 
 class Cluster:
@@ -317,7 +31,8 @@ class Cluster:
     """
 
     def __init__(self, name, demography, n_reps, sample_pops, recomb_rate=1e-8,
-                 mut_rate=1e-8, seq_length=1e8, window_length=5e5, sample_size=1):
+                 mut_rate=1e-8, seq_length=1e8, window_length=5e5, sample_size=1,
+                 source=None, statistics=None, created=None):
         """
         Initialize a DemogCluster
 
@@ -333,8 +48,11 @@ class Cluster:
         :param sample_size: number of diploid individuals to sample per pop
         """
         self.name = name
+        if source:
+            self.source = source
         self.demography = demography
         self.n_reps = n_reps
+        self.sample_size = sample_size
         #
         sample_pops = list(set(sample_pops))
         self.dim = len(sample_pops)
@@ -347,7 +65,10 @@ class Cluster:
         self.sample_ids = np.array(sample_ids)
         sample_sizes = [sample_size] * self.dim
         self.sample_dict = dict(zip(sample_pops, sample_sizes))
-        self.labels = dict(zip(sample_ids, sample_pops))
+        order = [self.name_id_map[name] for name in sample_pops]
+        sorter = np.argsort(order)
+        sorted_sample_pops = [sample_pops[i] for i in sorter]
+        self.labels = dict(zip(np.arange(self.dim), sorted_sample_pops))
         self.recomb_rate = recomb_rate
         self.mut_rate = mut_rate
         self.seq_length = seq_length
@@ -355,9 +76,11 @@ class Cluster:
         self.n_windows = int(seq_length / window_length)
         self.replicates = []
         self.statistics = {}
+        if statistics:
+            self.statistics = statistics
 
     @classmethod
-    def load_graph(cls, name, n_trials, sample_pops, path="c:/archaic/yamls/",
+    def load_graph(cls, source, n_trials, sample_pops, path="c:/archaic/yamls/",
                    **kwargs):
         """
         Load a .yaml graph file and convert it to an msprime Demography
@@ -370,14 +93,49 @@ class Cluster:
         :param kwargs:
         :return:
         """
-        filename = path + name
+        filename = path + source
         graph = demes.load(filename)
         demog = msprime.Demography.from_demes(graph)
-        return cls(name, demog, n_trials, sample_pops, *kwargs)
+        name = source.replace(".yaml", "")
+        return cls(name, demog, n_trials, sample_pops, source=source, **kwargs)
 
     @classmethod
-    def load_data(cls, filename, path="c:/archaic/statistics"):
-        pass
+    def load_data(cls, dir_name, path="c:/archaic/statistics/"):
+        full_path = path + dir_name
+        filenames = os.listdir(path + dir_name)
+        arrays = []
+        names = []
+        for name in filenames:
+            arrays.append(np.loadtxt(full_path + '/' + name))
+            names.append(name.replace(".txt", ''))
+        statistics = dict(zip(names, arrays))
+        for key in statistics:
+            if key in ["pi_xy", "f2", "Fst"]:
+                arr = statistics[key]
+                i, jk = arr.shape
+                j = int(np.sqrt(jk))
+                statistics[key] = arr.reshape(i, j, j)
+        dicts = []
+        for name in filenames:
+            file = open(full_path + '/' + name, 'r')
+            lines = [line.replace('#', '').replace("\n", '')
+                     for line in file if '#' in line]
+            file.close()
+            dic = eval("{" + ",".join(lines) + "}")
+            dicts.append(dic)
+        for dic in dicts:
+            if dic != dicts[0]:
+                raise ValueError("incompatible headers in data set!")
+        d = dicts[0]
+        filename = "c:/archaic/yamls/" + d["source"]
+        graph = demes.load(filename)
+        demog = msprime.Demography.from_demes(graph)
+        return cls(name=d["name"], demography=demog, n_reps=d["n_reps"],
+                   sample_pops=d["sample_pops"], recomb_rate=d["recomb_rate"],
+                   mut_rate=d["mut_rate"], seq_length=d["seq_length"],
+                   window_length=d["window_length"],
+                   sample_size=d["sample_size"],  source=d["source"],
+                   statistics=statistics)
 
     @property
     def pi(self):
@@ -490,21 +248,48 @@ class Cluster:
         """
         self.replicates = []
 
-    def write(self, filename=None, path="c:/archaic/statistics/"):
+    def get_header(self):
+        items = [f"'name' : '{self.name}'",
+                 f"'source' : '{self.source}'",
+                 f"'sample_pops' : {list(self.sample_dict.keys())}",
+                 f"'sample_size' : {self.sample_size}",
+                 f"'n_reps' : {self.n_reps}",
+                 f"'n_windows' : {self.n_windows}",
+                 f"'seq_length' : {self.seq_length}",
+                 f"'window_length' : {self.window_length}",
+                 f"'recomb_rate' : {self.recomb_rate}",
+                 f"'mut_rate' : {self.mut_rate}",
+                 f"'created' : {None}"
+                 ]
+        header = "\n".join(items)
+        return header
+
+    def write(self, dir_name=None, path="c:/archaic/statistics/"):
         """
         Save statistics in .npz format
 
         :param filename:
         :return:
         """
-        if not filename:
-            filename = self.id
-            filename.replace(".yaml", "")
-        stats = self.statistics
-        arrays = [getattr(self, stat) for stat in stats]
-        stats = {stat: array for (stat, array) in zip(stats, arrays)}
-        filename = path + filename
-        np.savez(filename, **stats)
+        if not dir_name:
+            dir_name = self.name +'/'
+        full_path = os.path.join(path, dir_name)
+        check = os.path.exists(full_path)
+        while check:
+            dir_name = dir_name.replace("/", "0/")
+            full_path = os.path.join(path, dir_name)
+            check = os.path.exists(full_path)
+        os.mkdir(full_path)
+        header = self.get_header()
+        for statistic in self.statistics:
+            filename = os.path.join(full_path, statistic + ".txt")
+            arr = self.statistics[statistic]
+            if arr.ndim == 3:
+                i, j, k = arr.shape
+                arr = arr.reshape(i, j * k)
+            np.savetxt(filename, arr, header=header)
+        return full_path
+
 
 
 class Replicate:
@@ -712,17 +497,6 @@ def pi_scatter_plot(mean_pi):
     fig.show()
 
 
-def pi_violin_plot(mean_pi):
-    npops = np.shape(mean_pi)[1]
-    fig = plt.figure(figsize=(8,6))
-    sub = fig.add_subplot(111)
-    x = np.arange(npops)
-    sub.violinplot(mean_pi, positions=x, widths=0.3, showmeans=True)
-    sub.set_xlim(-1, npops)
-    sub.set_ylim(0, )
-    fig.show()
-
-
 def div_violin_plot(div):
     """
     Divergence combinations. Order D, N, X, Y
@@ -828,6 +602,229 @@ def div_box_plot(div, info):
     tract = int(info["iter"] * info["window_size"] * 1e-6)
     sub.set_title(f"population divergences n = {n}, {tract} Mb")
     fig.show()
+
+
+def test222(*clusters, statistic="pi"):
+    """
+
+    :param args: lists of clusters. each list is displayed in one subplot
+    :return:
+    """
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    n_clusters = len(clusters)
+    dim = clusters[0].dim
+    alphas = np.linspace(1, 0.4, n_clusters)
+    for i, cluster in enumerate(clusters):
+        stat = cluster.statistics[statistic]
+        x = np.arange(0, dim) + (i-1) * (dim + 0.5)
+        b = ax.violinplot(stat, positions=x, widths=1, showmeans=True,
+                           showmedians=True)
+        for part, color in zip(b['bodies'], colors):
+            part.set_facecolor(color)
+            part.set_edgecolor('black')
+    ax.set_ylim(0, )
+
+
+def test(*args, statistic="pi"):
+    """
+
+    :param args: lists of clusters. each list is displayed in one subplot
+    :return:
+    """
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    dim = args[0][0].dim
+    for i, clusters in enumerate(args):
+        n_clusters = len(clusters)
+        alphas = np.linspace(1, 0.4, n_clusters)
+        for j, cluster in enumerate(clusters):
+            stat = cluster.statistics[statistic]
+            x = np.arange(0, dim) + i * (dim + 0.5)
+            v = ax.violinplot(stat, positions=x, widths=1, showmeans=False,
+                               showmedians=False, showextrema=False)
+            b = ax.boxplot(stat, positions=x, widths=0.25, capwidths=0,
+                            medianprops=median_style, patch_artist=True)
+            for box, color in zip(b['boxes'], colors):
+                box.set(facecolor=color)
+            for part, color in zip(v['bodies'], colors):
+                part.set_facecolor(color)
+                part.set_edgecolor('black')
+                part.set_alpha(0.6)
+    ax.set_ylim(0, )
+
+
+def ranked(*cluster_groups, statistic="pi"):
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    dim = cluster_groups[0][0].dim
+    x_offset = 0
+    for i, clusters in enumerate(cluster_groups):
+        n_clusters = len(clusters)
+        alphas = np.linspace(1, 0.4, n_clusters)
+        x = np.arange(0, dim * n_clusters, n_clusters)
+        x += x_offset
+        for j, cluster in enumerate(clusters):
+            stat = cluster.statistics[statistic]
+            b = ax.boxplot(stat, positions=x, widths=1, capwidths=0,
+                            medianprops=median_style, patch_artist=True)
+            for box, color in zip(b['boxes'], colors):
+                box.set(facecolor=color, alpha=alphas[j])
+            x += 1
+        x_offset += dim * n_clusters
+    ax.set_ylim(0, )
+    ax.set_yticks(np.linspace(0, 0.001, 11))
+    labels = list(cluster_groups[0][0].labels.values())
+    ax.legend(handles=[matplotlib.patches.Patch(
+        color=colors[i], label=labels[i]) for i in np.arange(dim)])
+
+
+def plot_3d_oneway(x_axis, y_axis, x_label, y_label, *args,
+                          statistic="pi"):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    colors = ["green", "gold", "red", "blue"]
+    dim = args[0].dim
+    for arg in args:
+        x, y = project(arg, x_axis, y_axis)
+        stats = arg.statistics[statistic]
+        means = np.mean(stats, axis=0)
+        stds = np.std(stats, axis=0)
+        for i, z in enumerate(means):
+            ax.errorbar(x, y, z, stds[i], color=colors[i], marker='x')
+
+
+def plot_wireframe_oneway(x_axis, y_axis, x_label, y_label, size, *args,
+                          statistic="pi"):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    colors = ["green", "gold", "red", "blue"]
+    means = []
+    xs = []
+    ys = []
+    dim = args[0].dim
+    for arg in args:
+        x, y = project(arg, x_axis, y_axis)
+        xs.append(x)
+        ys.append(y)
+        stats = arg.statistics[statistic]
+        means.append(np.mean(stats, axis=0))
+    X = np.array(xs).reshape((size))
+    Y = np.array(ys).reshape((size))
+    means = np.array(means)
+    for i in np.arange(dim):
+        Z = np.array(means[:, i]).reshape((size))
+        ax.plot_wireframe(X, Y, Z, color=colors[i])
+
+
+def pseudo_one_way(var0, var1, label0, label1, clusters, statistic="pi"):
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(13, 6), sharey='all')
+    ax0, ax1 = axs
+    colors = [[0, 1, 0.2, 1], [1, 1, 0, 1], [1, 0, 0, 1], [0, 0, 1, 1]]
+    means = []
+    stds = []
+    x0 = []
+    x1 = []
+    dim = clusters[0].dim
+    for cluster in clusters:
+        _x0, _x1 = project(cluster, var0, var1)
+        x0.append(_x0)
+        x1.append(_x1)
+        stats = cluster.statistics[statistic]
+        means.append(np.mean(stats, axis=0))
+        stds.append(np.std(stats, axis=0))
+    x0 = np.array(x0)
+    x1 = np.array(x1)
+    means = np.array(means)
+    stds = np.array(stds)
+    for i in np.arange(dim):
+        y = means[:, i]
+        err = stds[:, i]
+        size = np.arange(len(err)) * 2
+        # colors vary along axis 1 (the secondary axis)
+        uniques = len(set(list(x0)))
+        alphas = np.linspace(0.5, 1, uniques)
+        for u in list(set(list(x1))):
+            color = [colors[i] for x in np.arange(np.sum(x1==u))]
+            ax0.errorbar(x0[x1==u], y[x1==u], yerr=err[x1==u], color=colors[i],
+                         capsize=4, marker='x')
+            ax0.annotate(f"{label1}:{u}", (np.max(x0), np.max(y[x1==u])))
+        for j, u in enumerate(list(set(list(x0)))):
+            color = colors[i]
+            color[3] = alphas[j]
+            ax1.errorbar(x1[x0==u], y[x0==u], yerr=err[x0==u], color=colors[i],
+                         capsize=4, marker='x', alpha=alphas[j])
+            ax1.annotate(f"{label0}:{u}", (np.max(x1), np.max(y[x0==u])),
+                         color=color)
+    ax0.set_xlabel(label0)
+    ax1.set_xlabel(label1)
+    ax0.set_ylabel(statistic)
+
+
+
+def project(cluster, x_axis, y_axis):
+    """
+    return mass migration proportions
+
+    recall that mass migrations are REVERSED in msprime!!!!
+
+    :param cluster:
+    :param x_axis: (source, dest)
+    :param y_axis:
+    :return:
+    """
+    x = 0
+    y = 0
+    events = cluster.demography.events
+    for event in events:
+        if "source" in event.asdict():
+            if event.source == x_axis[1] and event.dest == x_axis[0]:
+                x = event.proportion
+            if event.source == y_axis[1] and event.dest == y_axis[0]:
+                y = event.proportion
+    return x, y
+
+
+
+
+
+
+
+
+
+
+
+
+def multifig(*args, statistic="pi"):
+    """
+
+    :param args: lists of clusters. each list is displayed in one subplot
+    :return:
+    """
+    n_rows = len(args)
+    n_cols = len(args[0])
+    fig, axs = plt.subplots(n_cols, n_rows, figsize=(8, 6), sharey="all")
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    for i, arg in enumerate(args):
+        for j, cluster in enumerate(arg):
+            ax = axs[i, j]
+            dim = cluster.dim
+            stat = cluster.statistics[statistic]
+            x = np.arange(0, dim)
+            b = ax.violinplot(stat, positions=x, widths=1, showmeans=True,
+                              showmedians=True)
+            for part, color in zip(b['bodies'], colors):
+                part.set_facecolor(color)
+                part.set_edgecolor('black')
+            ax.set_ylim(0, )
 
 
 def compare_one_way(statistic, *args):
@@ -1030,7 +1027,104 @@ def one_way_violin(statistic, *args):
     fig.show()
 
 
-def test():
-    null = Cluster.load_graph("null.yaml", 2, ['N', 'D', 'X', "Y"])
+
+
+
+
+
+
+
+
+
+def two_way_3d(var0, var1, label0, label1, clusters, statistic="pi"):
+    colors = ["green", "orange", "red", "blue"]
+    ids = clusters[0].sample_ids
+    id_name_map = clusters[0].id_name_map
+    names = [id_name_map[i] for i in ids]
+    means = []
+    stds = []
+    x0s = []
+    x1s = []
+    dim = clusters[0].dim
+    for cluster in clusters:
+        _x0, _x1 = project(cluster, var0, var1)
+        x0s.append(_x0)
+        x1s.append(_x1)
+        stats = cluster.statistics[statistic]
+        means.append(np.mean(stats, axis=0))
+        stds.append(np.std(stats, axis=0))
+    x0s = np.array(x0s) # vector of x0 point for each cluster
+    x1s = np.array(x1s) # vector of x1 point for each cluster
+    means = np.array(means) # n_cluster * dim array of means
+    stds = np.array(stds) # n_cluster * dim array of stds
+    unique_x0s = np.sort(np.array(list(set(list(x0s)))))
+    unique_x1s = np.sort(np.array(list(set(list(x1s)))))
+
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(13, 6), sharey='all')
+    ax0, ax1 = axs
+
+    for i, x0 in enumerate(unique_x0s):
+
+        for j, x1 in enumerate(unique_x1s):
+
+            for k in np.arange(dim):
+                y = means[:, k]
+                err = stds[:, k]
+                mask0 = np.nonzero(x0s == x0)
+                mask1 = np.nonzero(x1s == x1)
+                ax0.plot(x0s[mask1], y[mask1], color=colors[k])
+                ax0.plot(x0s[mask0], y[mask0], color=colors[k])
+                ax1.plot(x1s[mask0], y[mask0], color=colors[k])
+                ax1.plot(x1s[mask1], y[mask1], color=colors[k])
+                if i == 0 and j == 0:
+                    ax0.errorbar(x0s[mask1], y[mask1], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask1], label=names[k])
+                    ax1.errorbar(x1s[mask0], y[mask0], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask0])
+                else:
+                    ax0.errorbar(x0s[mask1], y[mask1], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask1])
+                    ax1.errorbar(x1s[mask0], y[mask0], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask0])
+    ax0.set_xlabel(f"{label0}: {var0[0]} -> {var0[1]}")
+    ax1.set_xlabel(f"{label1}: {var1[0]} -> {var1[1]}")
+    ax0.set_ylabel(statistic)
+    fig.legend()
+    fig.show()
+
+
+def full(filename, n_reps=100):
+    print(f"est time: {n_reps * 3} s")
+    null = Cluster.load_graph(filename, n_reps, ['N', 'D', 'X', "Y"])
     null.simulate()
-    null.compute_diversity()
+    null.compute_pi()
+    null.compute_pi_xy()
+    null.compute_f2()
+    null.compute_Fst()
+    null.write()
+
+
+a02_b02_names = ['rogers_a02_b02_d00_g00',
+ 'rogers_a02_b02_d00_g03',
+ 'rogers_a02_b02_d00_g06',
+ 'rogers_a02_b02_d03_g00',
+ 'rogers_a02_b02_d03_g03',
+ 'rogers_a02_b02_d03_g06',
+ 'rogers_a02_b02_d05_g00',
+ 'rogers_a02_b02_d05_g03',
+ 'rogers_a02_b02_d05_g06',
+ 'rogers_null']
+
+a02_b02_clusters = [Cluster.load_data(name) for name in a02_b02_names]
+
+
+# set up 2 more cluster groups with different beta proportions
+
+
+
+
+
+
+
+
+
