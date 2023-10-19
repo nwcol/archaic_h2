@@ -176,6 +176,10 @@ class Cluster:
                 coords.append((i, j))
         return coords
 
+    @property
+    def seq_Mb(self):
+        return int(self.seq_length * 1e-6)
+
     def plot_demography(self, log_time=False):
         graph = self.demography.to_demes()
         demesdraw.tubes(graph, log_time=log_time)
@@ -479,355 +483,14 @@ class Window:
         return Fst
 
 
-def pi_scatter_plot(mean_pi):
-    labels = ["Denisovan", "Neanderthal", "Modern African", "Modern European"]
-    colors = ["green", "purple", "red", "blue"]
-    npops = np.shape(mean_pi)[1]
-    reps = len(mean_pi)
-    fig = plt.figure(figsize=(8,6))
-    sub = fig.add_subplot(111)
-    for i in np.arange(npops):
-        x = np.random.uniform(i - 0.1, i + 0.1, size=reps)
-        plt.scatter(x, mean_pi[:, i], color=colors[i], label=labels[i],
-                    marker='x')
-    sub.set_xlim(-0.3, npops - 0.7)
-    sub.set_ylim(0, )
-    sub.set_ylabel("branch length diversity")
-    sub.legend()
-    fig.show()
-
-
-def div_violin_plot(div):
+def one_way_1d_plot(statistic, *args):
     """
-    Divergence combinations. Order D, N, X, Y
-    DD ND XD YD
-    DN NN XN YN
-    DX NX XX YX
-    DY NY XY YY
+    Plot a box plot comparison of a one way statistic from several clusters
 
-    unique combinations: DN, DX, DY, NX, NY, XY
-
-    :param mean_pi:
+    :param statistic:
+    :param args:
     :return:
     """
-    ndivs = 6
-    reps = len(div)
-    fig = plt.figure(figsize=(8, 6))
-    sub = fig.add_subplot(111)
-    x = np.arange(ndivs)
-    unique = np.zeros((reps, 6))
-    unique[:, 0] = div[:, 1, 0]
-    unique[:, 1] = div[:, 2, 0]
-    unique[:, 2] = div[:, 3, 0]
-    unique[:, 3] = div[:, 2, 1]
-    unique[:, 4] = div[:, 3, 1]
-    unique[:, 5] = div[:, 3, 2]
-    sub.violinplot(unique, positions=x, widths=0.3, showmeans=True)
-    sub.set_xlim(-1, ndivs)
-    sub.set_xticks(np.arange(6), ["D-N", "D-X", "D-Y", "N-X", "N-Y", "X-Y"])
-    sub.set_ylim(0, )
-    fig.show()
-
-
-def pi_box_plot(pi, info):
-    """
-    Plot an array of mean diversity values from n simulations using box plots
-    with markers for mean values. n = len(mean_pi)
-
-    :param pi:
-    :return:
-    """
-    npops = info["npops"]
-    n = info['n']
-    fig = plt.figure(figsize=(8,6))
-    sub = fig.add_subplot(111)
-    x = np.arange(npops)
-    colors = ["lightgreen", "gold", "red", "blue"]
-    mean_style = dict(markerfacecolor="white", markeredgecolor='black',
-                      marker="D")
-    median_style = dict(linewidth=2, color='black')
-    boxplot = sub.boxplot(pi, positions=x, widths=0.8, showmeans=True,
-                          medianprops=median_style, patch_artist=True,
-                          meanprops=mean_style)
-    for box, color in zip(boxplot['boxes'], colors):
-        box.set_facecolor(color)
-    sub.set_xlim(-0.6, npops-0.4)
-    sub.set_ylim(0, )
-    demog = info["demog"]
-    labels = [demog.populations[i].name for i in info["sample_pops"]]
-    sub.set_xticks(np.arange(npops), labels)
-    sub.set_ylabel("branch-length diversity")
-    sub.set_xlabel("populations")
-    tract = int(info["iter"] * info["window_size"] * 1e-6)
-    sub.set_title(f"population diversities, n = {n}, {tract} Mb")
-    fig.show()
-
-
-def div_box_plot(div, info):
-    """
-    Divergence combinations. Order D, N, X, Y
-    DD ND XD YD
-    DN NN XN YN
-    DX NX XX YX
-    DY NY XY YY
-
-    unique combinations: DN, DX, DY, NX, NY, XY
-
-    :param mean_pi:
-    :return:
-    """
-    ndivs = 6
-    npops = info["npops"]
-    n = info['n']
-    fig = plt.figure(figsize=(8, 6))
-    sub = fig.add_subplot(111)
-    x = np.arange(ndivs)
-    unique = np.zeros((n, 6))
-    unique[:, 0] = div[:, 1, 0]
-    unique[:, 1] = div[:, 2, 0]
-    unique[:, 2] = div[:, 3, 0]
-    unique[:, 3] = div[:, 2, 1]
-    unique[:, 4] = div[:, 3, 1]
-    unique[:, 5] = div[:, 3, 2]
-    mean_style = dict(markerfacecolor="red", markeredgecolor='black',
-                      marker="s")
-    median_style = dict(linewidth=2, color='red')
-    sub.boxplot(unique, positions=x, widths=0.8, showmeans=True,
-                medianprops=median_style, meanprops=mean_style)
-    sub.set_xlim(-1, ndivs)
-    sub.set_xticks(np.arange(6), ["D-N", "D-X", "D-Y", "N-X", "N-Y", "X-Y"])
-    sub.set_ylim(0, )
-    sub.set_ylabel("branch-length diversity")
-    sub.set_xlabel("populations")
-    tract = int(info["iter"] * info["window_size"] * 1e-6)
-    sub.set_title(f"population divergences n = {n}, {tract} Mb")
-    fig.show()
-
-
-def test222(*clusters, statistic="pi"):
-    """
-
-    :param args: lists of clusters. each list is displayed in one subplot
-    :return:
-    """
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111)
-    colors = ["green", "gold", "red", "blue"]
-    median_style = dict(linewidth=1, color="black")
-    n_clusters = len(clusters)
-    dim = clusters[0].dim
-    alphas = np.linspace(1, 0.4, n_clusters)
-    for i, cluster in enumerate(clusters):
-        stat = cluster.statistics[statistic]
-        x = np.arange(0, dim) + (i-1) * (dim + 0.5)
-        b = ax.violinplot(stat, positions=x, widths=1, showmeans=True,
-                           showmedians=True)
-        for part, color in zip(b['bodies'], colors):
-            part.set_facecolor(color)
-            part.set_edgecolor('black')
-    ax.set_ylim(0, )
-
-
-def test(*args, statistic="pi"):
-    """
-
-    :param args: lists of clusters. each list is displayed in one subplot
-    :return:
-    """
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111)
-    colors = ["green", "gold", "red", "blue"]
-    median_style = dict(linewidth=1, color="black")
-    dim = args[0][0].dim
-    for i, clusters in enumerate(args):
-        n_clusters = len(clusters)
-        alphas = np.linspace(1, 0.4, n_clusters)
-        for j, cluster in enumerate(clusters):
-            stat = cluster.statistics[statistic]
-            x = np.arange(0, dim) + i * (dim + 0.5)
-            v = ax.violinplot(stat, positions=x, widths=1, showmeans=False,
-                               showmedians=False, showextrema=False)
-            b = ax.boxplot(stat, positions=x, widths=0.25, capwidths=0,
-                            medianprops=median_style, patch_artist=True)
-            for box, color in zip(b['boxes'], colors):
-                box.set(facecolor=color)
-            for part, color in zip(v['bodies'], colors):
-                part.set_facecolor(color)
-                part.set_edgecolor('black')
-                part.set_alpha(0.6)
-    ax.set_ylim(0, )
-
-
-def ranked(*cluster_groups, statistic="pi"):
-
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111)
-    colors = ["green", "gold", "red", "blue"]
-    median_style = dict(linewidth=1, color="black")
-    dim = cluster_groups[0][0].dim
-    x_offset = 0
-    for i, clusters in enumerate(cluster_groups):
-        n_clusters = len(clusters)
-        alphas = np.linspace(1, 0.4, n_clusters)
-        x = np.arange(0, dim * n_clusters, n_clusters)
-        x += x_offset
-        for j, cluster in enumerate(clusters):
-            stat = cluster.statistics[statistic]
-            b = ax.boxplot(stat, positions=x, widths=1, capwidths=0,
-                            medianprops=median_style, patch_artist=True)
-            for box, color in zip(b['boxes'], colors):
-                box.set(facecolor=color, alpha=alphas[j])
-            x += 1
-        x_offset += dim * n_clusters
-    ax.set_ylim(0, )
-    ax.set_yticks(np.linspace(0, 0.001, 11))
-    labels = list(cluster_groups[0][0].labels.values())
-    ax.legend(handles=[matplotlib.patches.Patch(
-        color=colors[i], label=labels[i]) for i in np.arange(dim)])
-
-
-def plot_3d_oneway(x_axis, y_axis, x_label, y_label, *args,
-                          statistic="pi"):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    colors = ["green", "gold", "red", "blue"]
-    dim = args[0].dim
-    for arg in args:
-        x, y = project(arg, x_axis, y_axis)
-        stats = arg.statistics[statistic]
-        means = np.mean(stats, axis=0)
-        stds = np.std(stats, axis=0)
-        for i, z in enumerate(means):
-            ax.errorbar(x, y, z, stds[i], color=colors[i], marker='x')
-
-
-def plot_wireframe_oneway(x_axis, y_axis, x_label, y_label, size, *args,
-                          statistic="pi"):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    colors = ["green", "gold", "red", "blue"]
-    means = []
-    xs = []
-    ys = []
-    dim = args[0].dim
-    for arg in args:
-        x, y = project(arg, x_axis, y_axis)
-        xs.append(x)
-        ys.append(y)
-        stats = arg.statistics[statistic]
-        means.append(np.mean(stats, axis=0))
-    X = np.array(xs).reshape((size))
-    Y = np.array(ys).reshape((size))
-    means = np.array(means)
-    for i in np.arange(dim):
-        Z = np.array(means[:, i]).reshape((size))
-        ax.plot_wireframe(X, Y, Z, color=colors[i])
-
-
-def pseudo_one_way(var0, var1, label0, label1, clusters, statistic="pi"):
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(13, 6), sharey='all')
-    ax0, ax1 = axs
-    colors = [[0, 1, 0.2, 1], [1, 1, 0, 1], [1, 0, 0, 1], [0, 0, 1, 1]]
-    means = []
-    stds = []
-    x0 = []
-    x1 = []
-    dim = clusters[0].dim
-    for cluster in clusters:
-        _x0, _x1 = project(cluster, var0, var1)
-        x0.append(_x0)
-        x1.append(_x1)
-        stats = cluster.statistics[statistic]
-        means.append(np.mean(stats, axis=0))
-        stds.append(np.std(stats, axis=0))
-    x0 = np.array(x0)
-    x1 = np.array(x1)
-    means = np.array(means)
-    stds = np.array(stds)
-    for i in np.arange(dim):
-        y = means[:, i]
-        err = stds[:, i]
-        size = np.arange(len(err)) * 2
-        # colors vary along axis 1 (the secondary axis)
-        uniques = len(set(list(x0)))
-        alphas = np.linspace(0.5, 1, uniques)
-        for u in list(set(list(x1))):
-            color = [colors[i] for x in np.arange(np.sum(x1==u))]
-            ax0.errorbar(x0[x1==u], y[x1==u], yerr=err[x1==u], color=colors[i],
-                         capsize=4, marker='x')
-            ax0.annotate(f"{label1}:{u}", (np.max(x0), np.max(y[x1==u])))
-        for j, u in enumerate(list(set(list(x0)))):
-            color = colors[i]
-            color[3] = alphas[j]
-            ax1.errorbar(x1[x0==u], y[x0==u], yerr=err[x0==u], color=colors[i],
-                         capsize=4, marker='x', alpha=alphas[j])
-            ax1.annotate(f"{label0}:{u}", (np.max(x1), np.max(y[x0==u])),
-                         color=color)
-    ax0.set_xlabel(label0)
-    ax1.set_xlabel(label1)
-    ax0.set_ylabel(statistic)
-
-
-
-def project(cluster, x_axis, y_axis):
-    """
-    return mass migration proportions
-
-    recall that mass migrations are REVERSED in msprime!!!!
-
-    :param cluster:
-    :param x_axis: (source, dest)
-    :param y_axis:
-    :return:
-    """
-    x = 0
-    y = 0
-    events = cluster.demography.events
-    for event in events:
-        if "source" in event.asdict():
-            if event.source == x_axis[1] and event.dest == x_axis[0]:
-                x = event.proportion
-            if event.source == y_axis[1] and event.dest == y_axis[0]:
-                y = event.proportion
-    return x, y
-
-
-
-
-
-
-
-
-
-
-
-
-def multifig(*args, statistic="pi"):
-    """
-
-    :param args: lists of clusters. each list is displayed in one subplot
-    :return:
-    """
-    n_rows = len(args)
-    n_cols = len(args[0])
-    fig, axs = plt.subplots(n_cols, n_rows, figsize=(8, 6), sharey="all")
-    colors = ["green", "gold", "red", "blue"]
-    median_style = dict(linewidth=1, color="black")
-    for i, arg in enumerate(args):
-        for j, cluster in enumerate(arg):
-            ax = axs[i, j]
-            dim = cluster.dim
-            stat = cluster.statistics[statistic]
-            x = np.arange(0, dim)
-            b = ax.violinplot(stat, positions=x, widths=1, showmeans=True,
-                              showmedians=True)
-            for part, color in zip(b['bodies'], colors):
-                part.set_facecolor(color)
-                part.set_edgecolor('black')
-            ax.set_ylim(0, )
-
-
-def compare_one_way(statistic, *args):
     n_clusters = len(args)
     labels = args[0].labels
     n_pops = args[0].n_sample_pops
@@ -867,7 +530,7 @@ def compare_one_way(statistic, *args):
     fig.show()
 
 
-def compare_two_way(statistic, *args):
+def two_way_1d(statistic, *args):
     """
     Compare a two-way statistic between demographic clusters given in *args.
 
@@ -922,6 +585,95 @@ def compare_two_way(statistic, *args):
                 for i in np.arange(n_clusters)])
     fig.show()
     # add color, legend, labels etc
+
+
+def violins(*args, statistic="pi"):
+    """
+    plots overlapping violin plots
+
+    :param args: lists of clusters. each list is displayed in one subplot
+    :return:
+    """
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    dim = args[0][0].dim
+    for i, clusters in enumerate(args):
+        n_clusters = len(clusters)
+        alphas = np.linspace(1, 0.4, n_clusters)
+        for j, cluster in enumerate(clusters):
+            stat = cluster.statistics[statistic]
+            x = np.arange(0, dim) + i * (dim + 0.5)
+            v = ax.violinplot(stat, positions=x, widths=1, showmeans=False,
+                               showmedians=False, showextrema=False)
+            b = ax.boxplot(stat, positions=x, widths=0.25, capwidths=0,
+                            medianprops=median_style, patch_artist=True)
+            for box, color in zip(b['boxes'], colors):
+                box.set(facecolor=color)
+            for part, color in zip(v['bodies'], colors):
+                part.set_facecolor(color)
+                part.set_edgecolor('black')
+                part.set_alpha(0.6)
+    ax.set_ylim(0, )
+
+
+def ranked(*cluster_groups, statistic="pi"):
+    """
+    plots side by side box plots
+
+    :param cluster_groups:
+    :param statistic:
+    :return:
+    """
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    colors = ["green", "gold", "red", "blue"]
+    median_style = dict(linewidth=1, color="black")
+    dim = cluster_groups[0][0].dim
+    x_offset = 0
+    for i, clusters in enumerate(cluster_groups):
+        n_clusters = len(clusters)
+        alphas = np.linspace(1, 0.4, n_clusters)
+        x = np.arange(0, dim * n_clusters, n_clusters)
+        x += x_offset
+        for j, cluster in enumerate(clusters):
+            stat = cluster.statistics[statistic]
+            b = ax.boxplot(stat, positions=x, widths=1, capwidths=0,
+                            medianprops=median_style, patch_artist=True)
+            for box, color in zip(b['boxes'], colors):
+                box.set(facecolor=color, alpha=alphas[j])
+            x += 1
+        x_offset += dim * n_clusters
+    ax.set_ylim(0, )
+    ax.set_yticks(np.linspace(0, 0.001, 11))
+    labels = list(cluster_groups[0][0].labels.values())
+    ax.legend(handles=[matplotlib.patches.Patch(
+        color=colors[i], label=labels[i]) for i in np.arange(dim)])
+
+
+def project(cluster, x_axis, y_axis):
+    """
+    return mass migration proportions from a cluster
+
+    recall that mass migrations are REVERSED in msprime!!!!
+
+    :param cluster:
+    :param x_axis: (source, dest)
+    :param y_axis:
+    :return:
+    """
+    x = 0
+    y = 0
+    events = cluster.demography.events
+    for event in events:
+        if "source" in event.asdict():
+            if event.source == x_axis[1] and event.dest == x_axis[0]:
+                x = event.proportion
+            if event.source == y_axis[1] and event.dest == y_axis[0]:
+                y = event.proportion
+    return x, y
+
 
 def compare_two_wayv(statistic, *args):
     """
@@ -1027,16 +779,20 @@ def one_way_violin(statistic, *args):
     fig.show()
 
 
+def one_way_2d(var0, var1, label0, label1, clusters, statistic="pi",
+               y_max=1e-3, y_tick=1e-4, title=None):
+    """
+    Plot projections of points in the space defined by two variables var0 and
+    var1 and a statistic.
 
-
-
-
-
-
-
-
-
-def two_way_3d(var0, var1, label0, label1, clusters, statistic="pi"):
+    :param var0:
+    :param var1:
+    :param label0:
+    :param label1:
+    :param clusters:
+    :param statistic:
+    :return:
+    """
     colors = ["green", "orange", "red", "blue"]
     ids = clusters[0].sample_ids
     id_name_map = clusters[0].id_name_map
@@ -1060,22 +816,25 @@ def two_way_3d(var0, var1, label0, label1, clusters, statistic="pi"):
     unique_x0s = np.sort(np.array(list(set(list(x0s)))))
     unique_x1s = np.sort(np.array(list(set(list(x1s)))))
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(13, 6), sharey='all')
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(11, 6), sharey='all')
     ax0, ax1 = axs
 
     for i, x0 in enumerate(unique_x0s):
 
         for j, x1 in enumerate(unique_x1s):
 
+            line_widths = np.arange(1, 2 + len(unique_x1s))
+
             for k in np.arange(dim):
                 y = means[:, k]
                 err = stds[:, k]
                 mask0 = np.nonzero(x0s == x0)
                 mask1 = np.nonzero(x1s == x1)
-                ax0.plot(x0s[mask1], y[mask1], color=colors[k])
-                ax0.plot(x0s[mask0], y[mask0], color=colors[k])
-                ax1.plot(x1s[mask0], y[mask0], color=colors[k])
-                ax1.plot(x1s[mask1], y[mask1], color=colors[k])
+                ax0.plot(x0s[mask1], y[mask1], color=colors[k],
+                         linewidth=line_widths[j])  # horizontal
+                ax0.plot(x0s[mask0], y[mask0], color=colors[k])  # vertical
+                ax1.plot(x1s[mask0], y[mask0], color=colors[k])  # horizontal
+                ax1.plot(x1s[mask1], y[mask1], color=colors[k])  # vertical
                 if i == 0 and j == 0:
                     ax0.errorbar(x0s[mask1], y[mask1], color=colors[k], capsize=3,
                                  marker='+', yerr=err[mask1], label=names[k])
@@ -1086,15 +845,104 @@ def two_way_3d(var0, var1, label0, label1, clusters, statistic="pi"):
                                  marker='+', yerr=err[mask1])
                     ax1.errorbar(x1s[mask0], y[mask0], color=colors[k], capsize=3,
                                  marker='+', yerr=err[mask0])
-    ax0.set_xlabel(f"{label0}: {var0[0]} -> {var0[1]}")
-    ax1.set_xlabel(f"{label1}: {var1[0]} -> {var1[1]}")
+    ax0.set_xlabel(f"{label0} prop: {var0[0]} -> {var0[1]}")
+    ax1.set_xlabel(f"{label1} prop: {var1[0]} -> {var1[1]}")
+    ax0.set_title(f"projection to {label0}")
+    ax1.set_title(f"projection to {label1}")
     ax0.set_ylabel(statistic)
+    ax0.set_yticks(np.arange(0, y_max + y_tick, y_tick))
+    n = clusters[0].n_reps
+    Mb = clusters[0].seq_Mb
+    if title:
+        fig.suptitle(title + f": n = {n} reps / demography, {Mb} Mb / rep")
+    fig.subplots_adjust(wspace=0.03, hspace=0)
     fig.legend()
     fig.show()
 
 
-def full(filename, n_reps=100):
-    print(f"est time: {n_reps * 3} s")
+def two_way_2d(var0, var1, label0, label1, clusters, statistic="f2",
+               y_max=1e-3, y_tick=1e-4, title=None):
+    """
+    Plot projections of points in the space defined by two variables var0 and
+    var1 and a two-way statistic.
+
+    :param var0:
+    :param var1:
+    :param label0:
+    :param label1:
+    :param clusters:
+    :param statistic:
+    :return:
+    """
+    colors = ["red", "blue", "gold", "green", "magenta", "purple"]
+    labels = clusters[0].two_way_labels
+    means = []
+    stds = []
+    x0s = []
+    x1s = []
+    dim = len(clusters[0].two_way_index)
+    for cluster in clusters:
+        _x0, _x1 = project(cluster, var0, var1)
+        x0s.append(_x0)
+        x1s.append(_x1)
+        idx = cluster.two_way_index
+        arr = cluster.statistics[statistic]
+        stats = [arr[:, j, k] for j, k in idx]
+        means.append(np.mean(stats, axis=1))
+        stds.append(np.std(stats, axis=1))
+    x0s = np.array(x0s) # vector of x0 point for each cluster
+    x1s = np.array(x1s) # vector of x1 point for each cluster
+    means = np.array(means) # n_cluster * dim array of means
+    stds = np.array(stds) # n_cluster * dim array of stds
+    unique_x0s = np.sort(np.array(list(set(list(x0s)))))
+    unique_x1s = np.sort(np.array(list(set(list(x1s)))))
+
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharey='all')
+    ax0, ax1 = axs
+
+    for i, x0 in enumerate(unique_x0s):
+
+        for j, x1 in enumerate(unique_x1s):
+
+            line_widths = np.arange(1, 2 + len(unique_x1s))
+
+            for k in np.arange(dim):
+                y = means[:, k]
+                err = stds[:, k]
+                mask0 = np.nonzero(x0s == x0)
+                mask1 = np.nonzero(x1s == x1)
+                ax0.plot(x0s[mask1], y[mask1], color=colors[k],
+                         linewidth=line_widths[j])  # horizontal
+                ax0.plot(x0s[mask0], y[mask0], color=colors[k])  # vertical
+                ax1.plot(x1s[mask0], y[mask0], color=colors[k])  # horizontal
+                ax1.plot(x1s[mask1], y[mask1], color=colors[k])  # vertical
+                if i == 0 and j == 0:
+                    ax0.errorbar(x0s[mask1], y[mask1], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask1], label=labels[k])
+                    ax1.errorbar(x1s[mask0], y[mask0], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask0])
+                else:
+                    ax0.errorbar(x0s[mask1], y[mask1], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask1])
+                    ax1.errorbar(x1s[mask0], y[mask0], color=colors[k], capsize=3,
+                                 marker='+', yerr=err[mask0])
+    ax0.set_xlabel(f"{label0}: {var0[0]} -> {var0[1]}")
+    ax1.set_xlabel(f"{label1}: {var1[0]} -> {var1[1]}")
+    ax0.set_title(f"projection to {label0}")
+    ax1.set_title(f"projection to {label1}")
+    ax0.set_ylabel(statistic)
+    ax0.set_yticks(np.arange(0, y_max + y_tick, y_tick))
+    n = clusters[0].n_reps
+    Mb = clusters[0].seq_Mb
+    if title:
+        fig.suptitle(title + f": n = {n} reps / demography, {Mb} Mb / rep")
+    fig.subplots_adjust(wspace=0.03, hspace=0)
+    fig.legend()
+    fig.show()
+
+
+def simulate_and_write(filename, n_reps=100):
+    print(f"est time: {n_reps * 3.5} s")
     null = Cluster.load_graph(filename, n_reps, ['N', 'D', 'X', "Y"])
     null.simulate()
     null.compute_pi()
@@ -1105,18 +953,29 @@ def full(filename, n_reps=100):
 
 
 a02_b02_names = ['rogers_a02_b02_d00_g00',
- 'rogers_a02_b02_d00_g03',
- 'rogers_a02_b02_d00_g06',
- 'rogers_a02_b02_d03_g00',
- 'rogers_a02_b02_d03_g03',
- 'rogers_a02_b02_d03_g06',
- 'rogers_a02_b02_d05_g00',
- 'rogers_a02_b02_d05_g03',
- 'rogers_a02_b02_d05_g06',
- 'rogers_null']
+                 'rogers_a02_b02_d00_g03',
+                 'rogers_a02_b02_d00_g06',
+                 'rogers_a02_b02_d03_g00',
+                 'rogers_a02_b02_d03_g03',
+                 'rogers_a02_b02_d03_g06',
+                 'rogers_a02_b02_d05_g00',
+                 'rogers_a02_b02_d05_g03',
+                 'rogers_a02_b02_d05_g06']
+
+
+a02_b00_names = ['rogers_a02_b00_d00_g00',
+                 'rogers_a02_b00_d00_g03',
+                 'rogers_a02_b00_d00_g06',
+                 'rogers_a02_b00_d03_g00',
+                 'rogers_a02_b00_d03_g03',
+                 'rogers_a02_b00_d03_g06',
+                 'rogers_a02_b00_d05_g00',
+                 'rogers_a02_b00_d05_g03',
+                 'rogers_a02_b00_d05_g06']
+
 
 a02_b02_clusters = [Cluster.load_data(name) for name in a02_b02_names]
-
+a02_b00_clusters = [Cluster.load_data(name) for name in a02_b00_names]
 
 # set up 2 more cluster groups with different beta proportions
 
