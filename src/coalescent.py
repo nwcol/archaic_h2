@@ -22,7 +22,7 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
 
 
-class Cluster:
+class Group:
     """
     Keeps a demography, tree sequences, and tree sequence statistics
     conveniently grouped together for comparison to other clusters.
@@ -80,8 +80,8 @@ class Cluster:
             self.statistics = statistics
 
     @classmethod
-    def load_graph(cls, source, n_trials, sample_pops, path="c:/archaic/yamls/",
-                   **kwargs):
+    def load_graph(cls, source, n_trials, sample_pops,
+                   path="c:/archaic/data/yamls/", **kwargs):
         """
         Load a .yaml graph file and convert it to an msprime Demography
         instance to instantiate a DemogCluster
@@ -100,7 +100,7 @@ class Cluster:
         return cls(name, demog, n_trials, sample_pops, source=source, **kwargs)
 
     @classmethod
-    def load_data(cls, dir_name, path="c:/archaic/statistics/"):
+    def load_data(cls, dir_name, path="c:/archaic/data/statistics/"):
         full_path = path + dir_name
         filenames = os.listdir(path + dir_name)
         arrays = []
@@ -127,7 +127,7 @@ class Cluster:
             if dic != dicts[0]:
                 raise ValueError("incompatible headers in data set!")
         d = dicts[0]
-        filename = "c:/archaic/yamls/" + d["source"]
+        filename = "c:/archaic/data/yamls/" + d["source"]
         graph = demes.load(filename)
         demog = msprime.Demography.from_demes(graph)
         return cls(name=d["name"], demography=demog, n_reps=d["n_reps"],
@@ -491,22 +491,22 @@ def one_way_1d_plot(statistic, *args):
     :param args:
     :return:
     """
-    n_clusters = len(args)
+    n_groups = len(args)
     labels = args[0].labels
     n_pops = args[0].n_sample_pops
     stat_stack = [np.zeros((args[i].n_trials, n_pops))
-                  for i in np.arange(n_clusters)]
-    for i, cluster in enumerate(args):
-        stat_stack[i][:] = cluster.pi
+                  for i in np.arange(n_groups)]
+    for i, group in enumerate(args):
+        stat_stack[i][:] = group.pi
     x_loc = np.arange(n_pops)
     colors = []
     fig = plt.figure(figsize=(8, 6))
     sub = fig.add_subplot(111)
-    width = 0.5 / n_clusters
-    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_clusters)
-    for i, cluster in enumerate(args):
-        if cluster.color:
-            color = cluster.color
+    width = 0.5 / n_groups
+    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_groups)
+    for i, group in enumerate(args):
+        if group.color:
+            color = group.color
         else:
             color = "white"
         colors.append(color)
@@ -522,11 +522,11 @@ def one_way_1d_plot(statistic, *args):
     sub.set_ylim(0, )
     sub.set_ylabel(f"{statistic}")
     sub.set_xlabel("population")
-    n = int(np.mean([cluster.n_trials for cluster in args]))
+    n = int(np.mean([group.n_trials for group in args]))
     Mb = args[0].length * 1e-6
-    sub.set_title(f"{statistic} in {n_clusters} trials, n = {n}, {Mb} Mb")
+    sub.set_title(f"{statistic} in {n_groups} trials, n = {n}, {Mb} Mb")
     sub.legend(handles=[matplotlib.patches.Patch(color=colors[i], label=args[i].id)
-                for i in np.arange(n_clusters)])
+                for i in np.arange(n_groups)])
     fig.show()
 
 
@@ -541,27 +541,27 @@ def two_way_1d(statistic, *args):
     :param args:
     :return:
     """
-    n_clusters = len(args)
+    n_groups = len(args)
     indices = args[0].two_way_index
     labels = args[0].two_way_labels
     n_two_ways = len(indices)
     stat_stack = [np.zeros((args[i].n_trials, n_two_ways))
-                  for i in np.arange(n_clusters)]
-    for k, cluster in enumerate(args):
+                  for i in np.arange(n_groups)]
+    for k, group in enumerate(args):
         for r, (i, j) in enumerate(indices):
             if statistic == "pi_xy" or statistic == "divergence":
-                stat_stack[k][:, r] = cluster.pi_xy[:, i, j]
+                stat_stack[k][:, r] = group.pi_xy[:, i, j]
             elif statistic == "f2":
-                stat_stack[k][:, r] = cluster.f2[:, i, j]
+                stat_stack[k][:, r] = group.f2[:, i, j]
     x_loc = np.arange(n_two_ways)
     colors = []
     fig = plt.figure(figsize=(8, 6))
     sub = fig.add_subplot(111)
-    width = 0.5 / n_clusters
-    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_clusters)
-    for i, cluster in enumerate(args):
-        if cluster.color:
-            color = cluster.color
+    width = 0.5 / n_groups
+    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_groups)
+    for i, group in enumerate(args):
+        if group.color:
+            color = group.color
         else:
             color = "white"
         colors.append(color)
@@ -578,11 +578,11 @@ def two_way_1d(statistic, *args):
     sub.set_ylim(0, )
     sub.set_ylabel(f"{statistic}")
     sub.set_xlabel("populations")
-    n = int(np.mean([cluster.n_trials for cluster in args]))
+    n = int(np.mean([group.n_trials for group in args]))
     Mb = args[0].length * 1e-6
-    sub.set_title(f"{statistic} in {n_clusters} trials, n = {n}, {Mb} Mb")
+    sub.set_title(f"{statistic} in {n_groups} trials, n = {n}, {Mb} Mb")
     sub.legend(handles=[matplotlib.patches.Patch(color=colors[i], label=args[i].id)
-                for i in np.arange(n_clusters)])
+                for i in np.arange(n_groups)])
     fig.show()
     # add color, legend, labels etc
 
@@ -599,11 +599,11 @@ def violins(*args, statistic="pi"):
     colors = ["green", "gold", "red", "blue"]
     median_style = dict(linewidth=1, color="black")
     dim = args[0][0].dim
-    for i, clusters in enumerate(args):
-        n_clusters = len(clusters)
-        alphas = np.linspace(1, 0.4, n_clusters)
-        for j, cluster in enumerate(clusters):
-            stat = cluster.statistics[statistic]
+    for i, groups in enumerate(args):
+        n_groups = len(groups)
+        alphas = np.linspace(1, 0.4, n_groups)
+        for j, group in enumerate(groups):
+            stat = group.statistics[statistic]
             x = np.arange(0, dim) + i * (dim + 0.5)
             v = ax.violinplot(stat, positions=x, widths=1, showmeans=False,
                                showmedians=False, showextrema=False)
@@ -618,7 +618,7 @@ def violins(*args, statistic="pi"):
     ax.set_ylim(0, )
 
 
-def ranked(*cluster_groups, statistic="pi"):
+def ranked(*group_groups, statistic="pi"):
     """
     plots side by side box plots
 
@@ -630,29 +630,29 @@ def ranked(*cluster_groups, statistic="pi"):
     ax = fig.add_subplot(111)
     colors = ["green", "gold", "red", "blue"]
     median_style = dict(linewidth=1, color="black")
-    dim = cluster_groups[0][0].dim
+    dim = group_groups[0][0].dim
     x_offset = 0
-    for i, clusters in enumerate(cluster_groups):
-        n_clusters = len(clusters)
-        alphas = np.linspace(1, 0.4, n_clusters)
-        x = np.arange(0, dim * n_clusters, n_clusters)
+    for i, groups in enumerate(group_groups):
+        n_groups = len(groups)
+        alphas = np.linspace(1, 0.4, n_groups)
+        x = np.arange(0, dim * n_groups, n_groups)
         x += x_offset
-        for j, cluster in enumerate(clusters):
-            stat = cluster.statistics[statistic]
+        for j, group in enumerate(groups):
+            stat = group.statistics[statistic]
             b = ax.boxplot(stat, positions=x, widths=1, capwidths=0,
                             medianprops=median_style, patch_artist=True)
             for box, color in zip(b['boxes'], colors):
                 box.set(facecolor=color, alpha=alphas[j])
             x += 1
-        x_offset += dim * n_clusters
+        x_offset += dim * n_groups
     ax.set_ylim(0, )
     ax.set_yticks(np.linspace(0, 0.001, 11))
-    labels = list(cluster_groups[0][0].labels.values())
+    labels = list(group_groups[0][0].labels.values())
     ax.legend(handles=[matplotlib.patches.Patch(
         color=colors[i], label=labels[i]) for i in np.arange(dim)])
 
 
-def project(cluster, x_axis, y_axis):
+def project(group, x_axis, y_axis):
     """
     return mass migration proportions from a cluster
 
@@ -665,7 +665,7 @@ def project(cluster, x_axis, y_axis):
     """
     x = 0
     y = 0
-    events = cluster.demography.events
+    events = group.demography.events
     for event in events:
         if "source" in event.asdict():
             if event.source == x_axis[1] and event.dest == x_axis[0]:
@@ -686,27 +686,27 @@ def compare_two_wayv(statistic, *args):
     :param args:
     :return:
     """
-    n_clusters = len(args)
+    n_groups = len(args)
     indices = args[0].two_way_index
     labels = args[0].two_way_labels
     n_two_ways = len(indices)
     stat_stack = [np.zeros((args[i].n_trials, n_two_ways))
-                  for i in np.arange(n_clusters)]
-    for k, cluster in enumerate(args):
+                  for i in np.arange(n_groups)]
+    for k, group in enumerate(args):
         for r, (i, j) in enumerate(indices):
             if statistic == "pi_xy" or statistic == "divergence":
-                stat_stack[k][:, r] = cluster.pi_xy[:, i, j]
+                stat_stack[k][:, r] = group.pi_xy[:, i, j]
             elif statistic == "f2":
-                stat_stack[k][:, r] = cluster.f2[:, i, j]
+                stat_stack[k][:, r] = group.f2[:, i, j]
     x_loc = np.arange(n_two_ways)
     colors = []
     fig = plt.figure(figsize=(8, 6))
     sub = fig.add_subplot(111)
-    width = 0.5 / n_clusters
-    pos = np.linspace(-0.5 + width * 1.15, 0.5 - width * 1.15, n_clusters)
-    for i, cluster in enumerate(args):
-        if cluster.color:
-            color = cluster.color
+    width = 0.5 / n_groups
+    pos = np.linspace(-0.5 + width * 1.15, 0.5 - width * 1.15, n_groups)
+    for i, group in enumerate(args):
+        if group.color:
+            color = group.color
         else:
             color = "black"
         colors.append(color)
@@ -724,32 +724,32 @@ def compare_two_wayv(statistic, *args):
     sub.set_ylim(0, )
     sub.set_ylabel(f"{statistic}")
     sub.set_xlabel("populations")
-    n = int(np.mean([cluster.n_trials for cluster in args]))
+    n = int(np.mean([group.n_trials for group in args]))
     Mb = args[0].length * 1e-6
-    sub.set_title(f"{statistic} in {n_clusters} trials, n = {n}, {Mb} Mb")
+    sub.set_title(f"{statistic} in {n_groups} trials, n = {n}, {Mb} Mb")
     sub.legend(handles=[matplotlib.patches.Patch(color=colors[i], label=args[i].id)
-                for i in np.arange(n_clusters)])
+                for i in np.arange(n_groups)])
     fig.show()
 
 
 def one_way_violin(statistic, *args):
-    n_clusters = len(args)
+    n_groups = len(args)
     labels = args[0].labels
     n_pops = args[0].n_sample_pops
     stat_stack = [np.zeros((args[i].n_trials, n_pops))
-                  for i in np.arange(n_clusters)]
-    for i, cluster in enumerate(args):
+                  for i in np.arange(n_groups)]
+    for i, group in enumerate(args):
         if statistic == "pi":
-            stat_stack[i][:] = cluster.pi
+            stat_stack[i][:] = group.pi
     x_loc = np.arange(n_pops)
     colors = []
     fig = plt.figure(figsize=(8, 6))
     sub = fig.add_subplot(111)
-    width = 0.5 / n_clusters
-    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_clusters)
-    for i, cluster in enumerate(args):
-        if cluster.color:
-            color = cluster.color
+    width = 0.5 / n_groups
+    pos = np.linspace(-0.5 + width * 1.25, 0.5 - width * 1.25, n_groups)
+    for i, group in enumerate(args):
+        if group.color:
+            color = group.color
         else:
             color = "black"
         colors.append(color)
@@ -771,15 +771,15 @@ def one_way_violin(statistic, *args):
     sub.set_ylim(0, )
     sub.set_ylabel(f"{statistic}")
     sub.set_xlabel("population")
-    n = int(np.mean([cluster.n_trials for cluster in args]))
+    n = int(np.mean([group.n_trials for group in args]))
     Mb = args[0].length * 1e-6
-    sub.set_title(f"{statistic} in {n_clusters} trials, n = {n}, {Mb} Mb")
+    sub.set_title(f"{statistic} in {n_groups} trials, n = {n}, {Mb} Mb")
     sub.legend(handles=[matplotlib.patches.Patch(color=colors[i], label=args[i].id)
-                for i in np.arange(n_clusters)], loc="best")
+                for i in np.arange(n_groups)], loc="best")
     fig.show()
 
 
-def one_way_2d(var0, var1, label0, label1, clusters, statistic="pi",
+def one_way_2d(var0, var1, label0, label1, groups, statistic="pi",
                y_max=1e-3, y_tick=1e-4, title=None):
     """
     Plot projections of points in the space defined by two variables var0 and
@@ -794,19 +794,19 @@ def one_way_2d(var0, var1, label0, label1, clusters, statistic="pi",
     :return:
     """
     colors = ["green", "orange", "red", "blue"]
-    ids = clusters[0].sample_ids
-    id_name_map = clusters[0].id_name_map
+    ids = groups[0].sample_ids
+    id_name_map = groups[0].id_name_map
     names = [id_name_map[i] for i in ids]
     means = []
     stds = []
     x0s = []
     x1s = []
-    dim = clusters[0].dim
-    for cluster in clusters:
-        _x0, _x1 = project(cluster, var0, var1)
+    dim = groups[0].dim
+    for group in groups:
+        _x0, _x1 = project(group, var0, var1)
         x0s.append(_x0)
         x1s.append(_x1)
-        stats = cluster.statistics[statistic]
+        stats = group.statistics[statistic]
         means.append(np.mean(stats, axis=0))
         stds.append(np.std(stats, axis=0))
     x0s = np.array(x0s) # vector of x0 point for each cluster
@@ -851,8 +851,8 @@ def one_way_2d(var0, var1, label0, label1, clusters, statistic="pi",
     ax1.set_title(f"projection to {label1}")
     ax0.set_ylabel(statistic)
     ax0.set_yticks(np.arange(0, y_max + y_tick, y_tick))
-    n = clusters[0].n_reps
-    Mb = clusters[0].seq_Mb
+    n = groups[0].n_reps
+    Mb = groups[0].seq_Mb
     if title:
         fig.suptitle(title + f": n = {n} reps / demography, {Mb} Mb / rep")
     fig.subplots_adjust(wspace=0.03, hspace=0)
@@ -860,7 +860,7 @@ def one_way_2d(var0, var1, label0, label1, clusters, statistic="pi",
     fig.show()
 
 
-def two_way_2d(var0, var1, label0, label1, clusters, statistic="f2",
+def two_way_2d(var0, var1, label0, label1, groups, statistic="f2",
                y_max=1e-3, y_tick=1e-4, title=None):
     """
     Plot projections of points in the space defined by two variables var0 and
@@ -875,18 +875,18 @@ def two_way_2d(var0, var1, label0, label1, clusters, statistic="f2",
     :return:
     """
     colors = ["red", "blue", "gold", "green", "magenta", "purple"]
-    labels = clusters[0].two_way_labels
+    labels = groups[0].two_way_labels
     means = []
     stds = []
     x0s = []
     x1s = []
-    dim = len(clusters[0].two_way_index)
-    for cluster in clusters:
-        _x0, _x1 = project(cluster, var0, var1)
+    dim = len(groups[0].two_way_index)
+    for group in groups:
+        _x0, _x1 = project(group, var0, var1)
         x0s.append(_x0)
         x1s.append(_x1)
-        idx = cluster.two_way_index
-        arr = cluster.statistics[statistic]
+        idx = group.two_way_index
+        arr = group.statistics[statistic]
         stats = [arr[:, j, k] for j, k in idx]
         means.append(np.mean(stats, axis=1))
         stds.append(np.std(stats, axis=1))
@@ -932,8 +932,8 @@ def two_way_2d(var0, var1, label0, label1, clusters, statistic="f2",
     ax1.set_title(f"projection to {label1}")
     ax0.set_ylabel(statistic)
     ax0.set_yticks(np.arange(0, y_max + y_tick, y_tick))
-    n = clusters[0].n_reps
-    Mb = clusters[0].seq_Mb
+    n = groups[0].n_reps
+    Mb = groups[0].seq_Mb
     if title:
         fig.suptitle(title + f": n = {n} reps / demography, {Mb} Mb / rep")
     fig.subplots_adjust(wspace=0.03, hspace=0)
@@ -943,7 +943,7 @@ def two_way_2d(var0, var1, label0, label1, clusters, statistic="f2",
 
 def simulate_and_write(filename, n_reps=100):
     print(f"est time: {n_reps * 3.5} s")
-    null = Cluster.load_graph(filename, n_reps, ['N', 'D', 'X', "Y"])
+    null = Group.load_graph(filename, n_reps, ['N', 'D', 'X', "Y"])
     null.simulate()
     null.compute_pi()
     null.compute_pi_xy()
@@ -974,8 +974,8 @@ a02_b00_names = ['rogers_a02_b00_d00_g00',
                  'rogers_a02_b00_d05_g06']
 
 
-a02_b02_clusters = [Cluster.load_data(name) for name in a02_b02_names]
-a02_b00_clusters = [Cluster.load_data(name) for name in a02_b00_names]
+a02_b02_groups = [Group.load_data(name) for name in a02_b02_names]
+a02_b00_groups = [Group.load_data(name) for name in a02_b00_names]
 
 # set up 2 more cluster groups with different beta proportions
 
