@@ -1,0 +1,20 @@
+import sys
+
+import statistics
+
+import vcf_util
+
+
+def main(file_name, sample):
+    samples = vcf_util.parse_samples(file_name)
+    if sample.encode() not in samples:
+        raise ValueError("Invalid sample specified")
+    alt = vcf_util.read_genotypes(file_name, sample)
+    n = 2
+    diversity = statistics.compute_diversity(alt, n)
+    return diversity
+
+
+file_name = sys.argv[1]
+sample = sys.argv[2]
+print(main(file_name, sample))

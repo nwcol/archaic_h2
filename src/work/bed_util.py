@@ -21,18 +21,28 @@ class Bed:
 
     def __init__(self, regions, chrom):
         """
-        currently start is 1-indexed and stop is 2-indexed!!! this to match
-        the .vcf format with less computation.
+        Note that regions have 0-indexed starts and 1-indexed ends.
 
+        Instances of this class are associated explicitly with single
+        chromosomes by the chrom attribute
 
-        :param regions:
-        :param chrom: string
+        :param regions: 2d array of region starts/stops. shape (l, 2)
+        :type regions: np.ndarray
+        :param chrom: names the associated chromosome
+        :type chrom: str
         """
         self.regions = regions
         self.chrom = chrom
 
     @classmethod
     def new(cls, file_name):
+        """
+        Instantiate from a .vcf.gz file by recording all continuous regions
+
+        :param file_name: .vcf.gz file name
+        :type file_name: str
+        :return: class instance
+        """
         starts = []
         stops = []
         pos0 = -1
@@ -44,18 +54,24 @@ class Bed:
                     if pos - pos0 > 1:
                         starts.append(pos)
                         stops.append(pos0)
-                    x0 = pos
+                    pos0 = pos
             stops.append(pos)
         length = len(starts) - 1
         regions = np.zeros((length, 2), dtype=np.int64)
         regions[:, 0] = starts[1:]
+        regions[:, 0] -= 1  # set starts to 0 index
         regions[:, 1] = stops[1:]
-        regions[:, 0] -= 1
         chrom = vcf_util.parse_chrom(file_name)
         return cls(regions, chrom)
 
     @classmethod
     def load(cls, file_name):
+        """
+        Instantiate from an existing .bed file
+
+        :param file_name:
+        :return:
+        """
         starts = []
         stops = []
         with open(file_name, mode='r') as file:
@@ -71,10 +87,21 @@ class Bed:
         self = cls(regions, chrom)
 
     def __len__(self):
+        """
+        Return the number of regions recorded in self.regions, which is the
+        same as the length of that array.
+
+        :return:
+        """
         return len(self.regions)
 
     def __getitem__(self, index):
+        """
+        Return a new instance holding the regions indexed by index
 
+        :param index:
+        :return:
+        """
         if isinstance(index, slice):
             index = range(*index.indices(len(self)))
         reg = self.regions[index]
@@ -82,10 +109,20 @@ class Bed:
 
     @property
     def starts(self):
+        """
+        Return all start positions
+
+        :return:
+        """
         return self.regions[:, 0]
 
     @property
     def stops(self):
+        """
+        Return all stop positions
+
+        :return:
+        """
         return self.regions[:, 1]
 
     @property
@@ -215,6 +252,7 @@ class Bed:
         Save the regions array as a .bed file
 
         :param file_name:
+        :type file_name: str
         :return:
         """
         with open(file_name, 'w') as file:
@@ -222,6 +260,5 @@ class Bed:
                 file.write("\t".join([self.chrom,
                                       str(self.regions[i, 0]),
                                       str(self.regions[i, 1])])
-                           + "\n"
-                           )
+                           + "\n")
         return 0

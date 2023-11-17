@@ -5,3 +5,12 @@ env/
 svg/
 __pycache__
 *.pyc
+*.vcf
+*.gz
+*.vcf.gz
+*.tar
+*.bed
+*.npz
+*.csi
+*.txt
+*.xlsx

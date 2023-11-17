@@ -47,3 +47,7 @@ def compute_divergence(alt_x, alt_y, n_x, n_y):
     coeff = 1 / (length * n_x * n_y)
     divergence = coeff * np.sum(tot)
     return divergence
+
+
+def compute_f2():
+    pass

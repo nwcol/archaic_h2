@@ -6,10 +6,10 @@ import numpy as np
 import gzip
 
 
-def read_lines(file_name, k, form='r'):
+def read_lines(file_name, k, fmt='r'):
     """
     Read and return the first k lines of a gzipped file at file_name using
-    format 'form'.
+    format 'fmt'. For manual inspection of file headers
 
     :param file_name: file to read
     :param k: number of lines to read
@@ -18,7 +18,7 @@ def read_lines(file_name, k, form='r'):
     """
     k -= 2
     lines = []
-    with gzip.open(file_name, form) as file:
+    with gzip.open(file_name, fmt) as file:
         for i, line in enumerate(file):
             lines.append(line)
             if i > k:
@@ -27,6 +27,13 @@ def read_lines(file_name, k, form='r'):
 
 
 def parse_header(input_filename):
+    """
+    Read and return header lines (lines containing b'#') as a list of bytes
+    objects
+
+    :param input_filename:
+    :return:
+    """
     headers = []
     with gzip.open(input_filename, "r") as file:
         for line in file:
@@ -38,6 +45,14 @@ def parse_header(input_filename):
 
 
 def trim_header(input_filename, fields):
+    """
+    Clear a header of all lines which do not specify a field specificed in
+    fields
+
+    :param input_filename:
+    :param fields:
+    :return:
+    """
     headers = parse_header(input_filename)
     file_format = headers.pop(0)
     column_titles = headers.pop(-1)
@@ -96,8 +111,10 @@ def get_format_bytes(sorted_formats):
 
 
 def simplify_line(line, format_bytes, format_index, sample_index):
+    info_col = 7
     format_col = 8
     elements = line.split()
+    elements[info_col] = b'.'
     elements[format_col] = format_bytes
     for i in sample_index:
         data = elements[i].split(b':')
@@ -176,8 +193,10 @@ def parse_genotype(line, sample_index, geno_index=0):
     :return:
     """
     genotype = read_genotype(line, sample_index, geno_index=0)
-    code = {b'0/0': 0, b'0/1': 1, '1/0': 1, b'1/1': 2, b'1/2': 2}[genotype]
-    return code
+    codes = {b'0/0': 0, b'0/1': 1, b'0/2': 1,
+             b'1/0': 1, b'1/1': 2, b'1/2': 1,
+             b'2/0': 1, b'2/1': 1, b'2/2': 2}
+    return codes[genotype]
 
 
 def scan_genotypes(file_name, sample):
@@ -230,6 +249,21 @@ def parse_position(line):
     return position
 
 
+def count_heterozygosities(file_name, sample):
+    sample = sample.encode()
+    sample_col_0 = 9
+    samples = parse_samples(file_name)
+    sample_index = samples.index(sample) + sample_col_0
+    n_positions = count_positions(file_name)
+    h = 0
+    i = 0
+    with gzip.open(file_name, 'r') as file:
+        for line in file:
+            if b'#' not in line:
+                if parse_genotype(line, sample_index) == 1:
+                    h += 1
+                i += 1
+    return h
 
 
 
