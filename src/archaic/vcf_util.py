@@ -111,9 +111,11 @@ def get_format_bytes(sorted_formats):
 
 
 def simplify_line(line, format_bytes, format_index, sample_index):
+    ref_col = 2
     info_col = 7
     format_col = 8
     elements = line.split()
+    elements[ref_col] = b'.'
     elements[info_col] = b'.'
     elements[format_col] = format_bytes
     for i in sample_index:

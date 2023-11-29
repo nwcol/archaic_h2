@@ -2,7 +2,6 @@
 /workspace.xml
 .idea/
 env/
-svg/
 __pycache__
 *.pyc
 *.vcf
@@ -14,3 +13,8 @@ __pycache__
 *.csi
 *.txt
 *.xlsx
+archaic_genomes/
+genomes/
+masks/
+statistics/
+yamls/
