@@ -6,19 +6,32 @@ import numpy as np
 import gzip
 
 
-def read_lines(file_name, k, fmt='r'):
+# names the 8 mandatory .vcf format columns and two additional useful ones
+vcf_cols = {"#CHROM": 0,
+            "POS": 1,
+            "ID": 2,
+            "REF": 3,
+            "ALT": 4,
+            "QUAL": 5,
+            "FILTER": 6,
+            "INFO": 7,
+            "FORMAT": 8,
+            "sample_0": 9}
+
+
+def read_first_lines(path, k, fmt='r'):
     """
     Read and return the first k lines of a gzipped file at file_name using
     format 'fmt'. For manual inspection of file headers
 
-    :param file_name: file to read
+    :param path: path to file
     :param k: number of lines to read
-    :param form: return bytes if 'r' and strings if 'rt'
+    :param fmt: return bytes if 'r' and strings if 'rt'
     :return:
     """
     k -= 2
     lines = []
-    with gzip.open(file_name, fmt) as file:
+    with gzip.open(path, fmt) as file:
         for i, line in enumerate(file):
             lines.append(line)
             if i > k:
@@ -26,16 +39,16 @@ def read_lines(file_name, k, fmt='r'):
     return lines
 
 
-def parse_header(input_filename):
+def read_header(path):
     """
     Read and return header lines (lines containing b'#') as a list of bytes
     objects
 
-    :param input_filename:
+    :param path:
     :return:
     """
     headers = []
-    with gzip.open(input_filename, "r") as file:
+    with gzip.open(path, "r") as file:
         for line in file:
             if b'#' in line:
                 headers.append(line)
@@ -44,16 +57,16 @@ def parse_header(input_filename):
     return headers
 
 
-def trim_header(input_filename, fields):
+def trim_header(path, fields):
     """
-    Clear a header of all lines which do not specify a field specificed in
-    fields
+    Clear a header of all lines which do not specify a field specified in the
+    fields argument
 
-    :param input_filename:
+    :param path:
     :param fields:
     :return:
     """
-    headers = parse_header(input_filename)
+    headers = read_header(path)
     file_format = headers.pop(0)
     column_titles = headers.pop(-1)
     field_names = [b'##FORMAT=<ID=' + field for field in fields]
@@ -66,9 +79,16 @@ def trim_header(input_filename, fields):
     return header
 
 
-def parse_format(input_filename, formats):
+def read_format(path, formats):
+    """
+
+
+    :param path:
+    :param formats:
+    :return:
+    """
     format_col = 8
-    with gzip.open(input_filename, "r") as file:
+    with gzip.open(path, "r") as file:
         for line in file:
             if b'#' not in line:
                 format_fields = line.split()[format_col].split(b':')
@@ -82,27 +102,26 @@ def parse_format(input_filename, formats):
     return format_index, sorted_formats
 
 
-def parse_samples(input_filename):
+def read_samples(path):
     """
     Return a list of sample names in a .vcf.gz file in bytes format. With
     only one sample, a singleton list is returned.
 
-    :param input_filename:
+    :param path:
     :return:
     """
-    sample_col_0 = 9
-    with gzip.open(input_filename, "r") as file:
+    with gzip.open(path, "r") as file:
         for line in file:
             if b'#CHROM' in line:
                 columns = line.split()
                 break
-    samples = columns[sample_col_0:]
+    samples = columns[vcf_cols["sample_0"]:]
     return samples
 
 
-def get_sample_index(input_filename):
-    n_samples = len(parse_samples(input_filename))
-    index = list(range(9, 9 + n_samples))
+def get_sample_index(path):
+    n_samples = len(read_samples(path))
+    index = list(range(vcf_cols["sample_0"], vcf_cols["sample_0"] + n_samples))
     return index
 
 
@@ -111,13 +130,19 @@ def get_format_bytes(sorted_formats):
 
 
 def simplify_line(line, format_bytes, format_index, sample_index):
-    ref_col = 2
-    info_col = 7
-    format_col = 8
+    """
+    Simplify one line
+
+    :param line:
+    :param format_bytes:
+    :param format_index:
+    :param sample_index:
+    :return:
+    """
     elements = line.split()
-    elements[ref_col] = b'.'
-    elements[info_col] = b'.'
-    elements[format_col] = format_bytes
+    elements[vcf_cols["REF"]] = b'.'
+    elements[vcf_cols["INFO"]] = b'.'
+    elements[vcf_cols["FORMAT"]] = format_bytes
     for i in sample_index:
         data = elements[i].split(b':')
         elements[i] = b':'.join([data[j] for j in format_index])
@@ -125,14 +150,14 @@ def simplify_line(line, format_bytes, format_index, sample_index):
     return line
 
 
-def count_positions(file_name):
+def count_positions(path):
     """
     Count the number of positions recorded in a .vcf.gz file
 
-    :param file_name:
+    :param path:
     :return:
     """
-    with gzip.open(file_name, 'r') as file:
+    with gzip.open(path, 'r') as file:
         count = np.sum([1 for line in file if b'#' not in line])
     return count
 
@@ -149,83 +174,109 @@ def count_lines(file_name):
     return count
 
 
-def read_genotypes(file_name, sample):
+def read_genotypes(path, sample, n_positions=None):
     """
     Return a vector of alternate allele counts for a sample in a .vcf.gz file
 
-    :param file_name:
-    :param sample:
+    Maps any heterozygous genotype to 1 and any homozygous genotype to 0
+
+    :param path: path to a .vcf.gz file
+    :param sample: the sample in the .vcf.gz to be read
+    :type sample: string
     :return:
     """
     sample = sample.encode()
-    sample_col_0 = 9
-    samples = parse_samples(file_name)
-    sample_index = samples.index(sample) + sample_col_0
-    n_positions = count_positions(file_name)
+    samples = read_samples(path)
+    column = samples.index(sample) + vcf_cols["sample_0"]
+    if not n_positions:
+        n_positions = count_positions(path)
     alts = np.zeros(n_positions, dtype=np.uint8)
     i = 0
-    with gzip.open(file_name, 'r') as file:
+    with gzip.open(path, 'r') as file:
         for line in file:
             if b'#' not in line:
-                alts[i] = parse_genotype(line, sample_index)
+                genotype = parse_genotype(line, column)
+                alts[i] = eval_genotype(genotype)
                 i += 1
     return alts
 
 
-def read_genotype(line, sample_index, geno_index=0):
+def parse_position(line):
     """
-    Read the genotype in a line and return it as bytes
+    Return an integer position value for a .vcf file line
 
     :param line:
-    :param geno_index: index of the genotype in the sample column
     :return:
     """
-    sample = line.split()[sample_index]
-    genotype = sample.split(b':')[geno_index]
+    position = int(line.split()[vcf_cols["POS"]])
+    return position
+
+
+def parse_genotype(line, column):
+    """
+    Parse the genotype from a line and return it as a bytes object. Assumes
+    that the genotype is the first field appearing in the sample column.
+
+    :param line:
+    :param column: column to parse, 0-indexed
+    :return: genotype as bytes
+    """
+    sample = line.split()[column]
+    genotype = sample.split(b':')[0]
     return genotype
 
 
-def parse_genotype(line, sample_index, geno_index=0):
+def eval_genotype(genotype):
     """
-    Parse the genotype in a line and return 0 for reference homozygote,
-    1 for heterozygote, 2 for alternate homozygote
+    Evaluate a genotype, returning a 0 if homozygous for the reference, 1 if
+    heterozygous in any combination, 2 if homozygous for an alternate allele
 
-    :param line:
-    :param geno_index: index of the genotype in the sample column
+    :param genotype: bytes object of the form b'0/0' or b'0|0'
     :return:
     """
-    genotype = read_genotype(line, sample_index, geno_index=0)
-    codes = {b'0/0': 0, b'0/1': 1, b'0/2': 1,
-             b'1/0': 1, b'1/1': 2, b'1/2': 1,
-             b'2/0': 1, b'2/1': 1, b'2/2': 2}
-    return codes[genotype]
+    if b'/' in genotype:
+        allele_0, allele_1 = genotype.split(b'/')
+    elif b'|' in genotype:
+        allele_0, allele_1 = genotype.split(b'|')
+    else:
+        raise ValueError(f"invalid genotype format: {genotype}")
+    code = None
+    if allele_0 == allele_1:
+        if allele_0 == b'0':
+            code = 0
+        elif allele_1 != b'0':
+            code = 2
+    elif allele_0 != allele_1:
+        code = 1
+    return code
 
 
-def scan_genotypes(file_name, sample):
+def count_genotypes(path, sample):
     """
-    Count the numbers of genotypes in a .vcf.gz file
+    Count the numbers of each genotype state present in a .vcf.gz file
 
-    :param file_name:
+    :param path:
     :param sample:
     :return:
     """
-    counts = {b'0/0': 0, b'0/1': 0, b'1/0': 0, b'1/1': 0, b'1/2': 0}
-    sample_col_0 = 9
-    samples = parse_samples(file_name)
-    sample_index = samples.index(sample) + sample_col_0
-    i = 0
-    with gzip.open(file_name, 'r') as file:
+    sample = sample.encode()
+    samples = read_samples(path)
+    column = samples.index(sample) + vcf_cols["sample_0"]
+    counts = dict()
+    with gzip.open(path, 'r') as file:
         for line in file:
             if b'#' not in line:
-                geno = parse_genotype(line, sample_index)
-                counts[geno] += 1
-                i += 1
+                genotype = parse_genotype(line, column)
+                if genotype not in counts:
+                    counts[genotype] = 1
+                else:
+                    counts[genotype] += 1
     return counts
 
 
-def parse_chrom(file_name):
+def read_chrom(file_name):
     """
-    Return the chromosome number as a string
+    Return the first chromosome number in a .vcf file as a string
 
     :param file_name:
     :return:
@@ -239,34 +290,25 @@ def parse_chrom(file_name):
     return chrom
 
 
-def parse_position(line):
+def count_hets(path, sample):
     """
-    Return an integer position value for a .vcf file line
+    Tally and return the number of heterozygous sites and total number of sites
+     in a .vcf.gz file
 
-    :param line:
-    :return:
+    :param path: path to .vcf.gz file
+    :param sample: sample for which to tally heterozygous sites
+    :return: number of heterozygous sites
     """
-    pos_index = 1
-    position = int(line.split()[pos_index])
-    return position
-
-
-def count_heterozygosities(file_name, sample):
     sample = sample.encode()
-    sample_col_0 = 9
-    samples = parse_samples(file_name)
-    sample_index = samples.index(sample) + sample_col_0
-    n_positions = count_positions(file_name)
+    samples = read_samples(path)
+    col = samples.index(sample) + vcf_cols["sample_0"]
     h = 0
     i = 0
-    with gzip.open(file_name, 'r') as file:
+    with gzip.open(path, 'r') as file:
         for line in file:
             if b'#' not in line:
-                if parse_genotype(line, sample_index) == 1:
+                genotype = parse_genotype(line, col)
+                if eval_genotype(genotype) == 1:
                     h += 1
                 i += 1
-    return h
-
-
-
-
+    return h, i

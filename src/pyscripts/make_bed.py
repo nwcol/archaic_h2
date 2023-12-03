@@ -5,9 +5,11 @@ import gzip
 
 import sys
 
+sys.path.insert(0, "c:/archaic/src")
+
 import bed_util
 
-import vcf_util
+from archaic import vcf_util
 
 
 def main(file_name, out_file_name, min_size=None):

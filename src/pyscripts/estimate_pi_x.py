@@ -1,12 +1,14 @@
 import sys
 
+sys.path.insert(0, "c:/archaic/src")
+
 import statistics
 
-import vcf_util
+from archaic import vcf_util
 
 
 def main(file_name, sample):
-    samples = vcf_util.parse_samples(file_name)
+    samples = vcf_util.read_samples(file_name)
     if sample.encode() not in samples:
         raise ValueError("Invalid sample specified")
     alt = vcf_util.read_genotypes(file_name, sample)

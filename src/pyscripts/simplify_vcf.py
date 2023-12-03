@@ -4,7 +4,7 @@ import numpy as np
 
 import sys
 
-import vcf_util as vc
+from archaic import vcf_util as vc
 
 
 def main(in_filename, out_filename, *args):
@@ -18,7 +18,7 @@ def main(in_filename, out_filename, *args):
     """
     out_formats = [arg.encode() for arg in args]
     out_file = open(out_filename, 'wb')
-    fmt_index, sorted_formats = vc.parse_format(in_filename, out_formats)
+    fmt_index, sorted_formats = vc.read_format(in_filename, out_formats)
     fmt_bytes = vc.get_format_bytes(sorted_formats)
     sample_index = vc.get_sample_index(in_filename)
     header = vc.trim_header(in_filename, out_formats)

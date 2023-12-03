@@ -4,13 +4,15 @@ import numpy as np
 
 import sys
 
-import vcf_util
+sys.path.insert(0, "c:/archaic/src")
+
+from archaic import vcf_util
 
 import statistics
 
 
 def main(file_name):
-    samples = [x.decode() for x in vcf_util.parse_samples(file_name)]
+    samples = [x.decode() for x in vcf_util.read_samples(file_name)]
     samples.sort()
     n_samples = len(samples)
     n = 2

@@ -4,11 +4,13 @@
 
 import sys
 
-import vcf_util
+sys.path.insert(0, "c:/archaic/src")
+
+from archaic import vcf_util
 
 
 def main(file_name, sample):
-    heteros = vcf_util.count_heterozygosities(file_name, sample)
+    heteros = vcf_util.count_hets(file_name, sample)
     return heteros
 
 

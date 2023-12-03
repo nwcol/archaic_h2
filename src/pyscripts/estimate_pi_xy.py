@@ -1,12 +1,14 @@
 import sys
 
+sys.path.insert(0, "c:/archaic/src")
+
 import statistics
 
-import vcf_util
+from archaic import vcf_util
 
 
 def main(file_name, sample_0, sample_1):
-    samples = vcf_util.parse_samples(file_name)
+    samples = vcf_util.read_samples(file_name)
     if sample_0.encode() not in samples:
         raise ValueError("Invalid sample_0 specified")
     if sample_1.encode() not in samples:
