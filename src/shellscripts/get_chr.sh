@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Parse one chromosome out of a .vcf.gz using bcftools, simplify it, and apply a mask
+
 # arg -f file name to parse from
 # arg -o output file name
 # arg -c chromosome to parse
@@ -25,7 +26,7 @@ done
 
 bcftools index $file_name
 bcftools view -r $chrom -o raw_chr.vcf.gz $file_name 
-python /c/archaic/src/work/simplify_vcf.py raw_chr.vcf.gz simplified_chr.vcf GT
+python /c/archaic/src/pyscripts/simplify_vcf.py raw_chr.vcf.gz simplified_chr.vcf GT
 rm raw_chr.vcf.gz
 bgzip simplified_chr.vcf
 bcftools index simplified_chr.vcf.gz

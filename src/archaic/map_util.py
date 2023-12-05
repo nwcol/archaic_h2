@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 from bed_util import Bed
 
 
+if __name__ == "__main__":
+    plt.rcParams['figure.dpi'] = 100
+    matplotlib.use('Qt5Agg')
+
 
 class Map:
     """
@@ -55,6 +59,7 @@ class MaskedMap:
     def __init__(self, positions, map_values):
         self.positions = positions
         self.map_values = map_values
+        self.length = len(self.positions)
 
     @classmethod
     def from_class(cls, map, bed):
@@ -115,6 +120,41 @@ class MaskedMap:
         r_about_i = self.compute_r(i)
         sites = np.nonzero((r_about_i > r_0) & (r_about_i <= r_1))[0]
         return sites
+
+    def approximate_r_bins(self, i, d_bins):
+        """
+        Only searches UPWARDS
+        bounds are [, ), so subtracting column 0 from 1 gives length
+
+        :param r_bounds:
+        :return:
+        """
+        start = self.map_values[i]
+        bins = d_bins + start
+        pos_bins = np.searchsorted(self.map_values, bins)
+        pos_bins[0, 0] = i + 1
+        return pos_bins
+
+
+def count_pairings(maskedmap, d_bins):
+    sums = np.zeros(len(d_bins), dtype=np.int64)
+    n = maskedmap.length
+    for i in np.arange(n):
+        counts = maskedmap.approximate_r_bins(i, d_bins)
+        sums += counts[:, 1] - counts[:, 0]
+    return sums
+
+
+def r_bins_to_d_bins(r_bins):
+    """
+    Convert bins given in recombination frequency r to bins given in units
+    of map distance (cM)
+
+    :param r_bins:
+    :return:
+    """
+    d_bins = np.log(1 - 2 * r_bins) / -0.02
+    return d_bins
 
 
 map = Map.load_txt(

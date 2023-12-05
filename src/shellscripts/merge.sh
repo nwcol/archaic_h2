@@ -1,24 +1,6 @@
 #!/bin/bash
 
-# merge some .vcfs
+# Take "RAW" eg unprocessed .vcf.gz files, simplify them, combine them, intersect them, apply a mask, and apply a lower bound to continuous region length
 
-mkdir scratch
-
-out="OUT"
-directory="scratch/"
-filename="test.vcf"
-
-echo $#
-
-for i 
-do 
-	echo "$i"
-done
-
-
-
-#for ARGUMENT in "$@"
-#do
-	#python ./work/simplify_vcf.py "$ARGUMENT" "$directory$filename" "GT"
-#done
-
+source /c/anaconda3/etc/profile.d/conda.sh
+conda activate archaic_conda_env

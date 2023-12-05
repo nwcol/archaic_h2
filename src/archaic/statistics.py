@@ -7,11 +7,15 @@ import matplotlib
 
 import numpy as np
 
+import time
+
 from bed_util import Bed
 
 import vcf_util
 
 from map_util import Map, MaskedMap
+
+import map_util
 
 
 if __name__ == "__main__":
@@ -152,26 +156,109 @@ def manual_joint_het(genotype_vector, masked_map, i, r_0, r_1):
     return pi_2
 
 
-def test(genotype_vector, masked_map, max_i):
-    n_r_bins = len(r_bins)
-    x = genotype_vector.position_index  # vector of position indices
-    for i in np.arange(max_i + 1):
-        r_vec = masked_map.compute_r(i)
-        for k, r_0, r_1 in enumerate(r_bins):
-            sites = np.nonzero((r_vec > r_0) & (r_vec <= r_1) & (x > i))
-            hets = genotype_vector.het_indicator[sites]
+def compute_pi_2(genotype_vector, masked_map, r_bins, max_i=None):
+    n_bins = len(r_bins)
+    d_bins = map_util.r_bins_to_d_bins(r_bins)
+    sum_pairs = np.zeros(n_bins, dtype=np.int64)
+    sum_joint_het = np.zeros(n_bins, dtype=np.int64)
+    if not max_i:
+        max_i = genotype_vector.length
+    for i in np.arange(max_i):
+        pos_bins = masked_map.approximate_r_bins(i, d_bins)
+        counts = pos_bins[:, 1] - pos_bins[:, 0]
+        sum_pairs += counts
+        if genotype_vector.het_indicator[i] == 1:
+            sum_joint_het += compute_n_joint_hets(genotype_vector, i, pos_bins)
+        if i % 1e6 == 0:
+            print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
+    print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
+    pi_2 = np.zeros(n_bins)
+    non_zero = np.where(sum_pairs > 0)[0]
+    pi_2[non_zero] = sum_joint_het[non_zero] / sum_pairs[non_zero]
+    return sum_joint_het, sum_pairs
 
 
-def count_pairs(masked_map, genotype_vector, min_i, max_i):
-    n_pairs_per_site = np.zeros((max_i, len(r_bins)))
-    x = genotype_vector.position_index
-    for i in np.arange(min_i, max_i):
-        r_vec = masked_map.compute_r(i)
-        for k, r_bin in enumerate(r_bins):
-            r_0, r_1 = r_bin
-            sites = np.nonzero((r_vec > r_0) & (r_vec <= r_1) & (x > i))[0]
-            n_pairs_per_site[i, k] = len(sites)
-    return n_pairs_per_site
+def linear_approx_pi_2(genotype_vector, r_bins, max_i=None):
+    n_bins = len(r_bins)
+    base_bins = r_bins * 1e8  # linear approximation
+    base_bins = base_bins.astype(dtype=np.int64)
+    sum_pairs = np.zeros(n_bins, dtype=np.int64)
+    sum_joint_het = np.zeros(n_bins, dtype=np.int64)
+    if not max_i:
+        max_i = genotype_vector.length
+    for i in np.arange(max_i):
+        binz = base_bins + genotype_vector.positions[i]
+        pos_bins = np.searchsorted(genotype_vector.positions, + binz)
+        counts = pos_bins[:, 1] - pos_bins[:, 0]
+        sum_pairs += counts
+        if genotype_vector.het_indicator[i] == 1:
+            sum_joint_het += compute_n_joint_hets(genotype_vector, i, pos_bins)
+        if i % 1e6 == 0:
+            print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
+    print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
+    pi_2 = np.zeros(n_bins, dtype=np.float64)
+    non_zero = np.where(sum_pairs > 0)[0]
+    pi_2[non_zero] = sum_joint_het[non_zero] / sum_pairs[non_zero]
+    return sum_joint_het, sum_pairs
+
+
+def compute_n_joint_hets(genotype_vector, i, pos_bins):
+    if genotype_vector.het_indicator[i] != 1:
+        het_sum = np.zeros(len(pos_bins), dtype=np.int64)
+    else:
+        het_sum = np.zeros(len(pos_bins), dtype=np.int64)
+        counts = pos_bins[:, 1] - pos_bins[:, 0]
+        for i, pos_bin in enumerate(pos_bins):
+            if counts[i] > 0:
+                b0, b1 = pos_bin
+                het_sum[i] = np.sum(genotype_vector.het_indicator[b0:b1])
+    return het_sum
+
+
+def joint_het_distribution(genotype_vector, masked_map, r_bins):
+    """
+    Return a vector of heterozygote pair counts per r bin
+
+    :param genotype_vector:
+    :param maskedmap:
+    :param i:
+    :param r_bins:
+    :return:
+    """
+    n_bins = len(r_bins)
+    het_pair_count = np.zeros(n_bins, dtype=np.int64)
+    het_index = genotype_vector.het_index
+    map_values = masked_map.map_values
+    for i in het_index:
+        right_hets = het_index[het_index > i]
+        d_distance = map_values[right_hets] - map_values[i]
+        distances = d_to_r(d_distance)
+        for k, (b0, b1) in enumerate(r_bins):
+            count = np.sum((distances >= b0) & (distances < b1))
+            het_pair_count[k] += count
+    return het_pair_count
+
+
+def d_to_r(d_distance):
+    """
+    Use Haldane's map function to convert cM to r
+
+    :param d_distance:
+    :return:
+    """
+    r_distance = 0.5 * (1 - np.exp(-0.02 * d_distance))
+    return r_distance
+
+
+def r_to_d(r_distance):
+    """
+    Use Haldane's map function to convert r to cM
+
+    :param r_distance:
+    :return:
+    """
+    d_distance = np.log(1 - 2 * r_distance) / -0.02
+    return d_distance
 
 
 # functions that take alt indicator vectors or other statistics as arguments
@@ -251,27 +338,38 @@ def compute_F_st():
     pass
 
 
-_r_bins = [(0, 1e-7), (1e-7, 2e-7), (2e-7, 3e-7), (3e-7, 5e-7), (5e-7, 1e-6),
-          (1e-6, 2e-6), (2e-6, 3e-6), (3e-6, 5e-6), (5e-6, 1e-5),
-          (1e-5, 2e-5), (2e-5, 3e-5), (3e-5, 5e-5), (5e-5, 1e-4),
-          (1e-4, 2e-4), (2e-4, 3e-4), (3e-4, 5e-4), (5e-4, 1e-4),
-          (1e-3, 2e-3), (2e-3, 3e-3), (3e-3, 5e-3), (5e-3, 1e-3),
-          (1e-2, 2e-2), (2e-2, 3e-2), (3e-2, 5e-2), (5e-2, 1e-2),
-          (1e-1, 2e-1), (2e-1, 3e-1), (3e-1, 5e-1)]
+r_bins_0 = np.array([[0, 1e-7],
+                     [1e-7, 1e-6],
+                     [1e-6, 1e-5],
+                     [1e-5, 1e-4],
+                     [1e-4, 1e-3],
+                     [1e-3, 1e-2],
+                     [1e-2, 1e-1],
+                     [1e-1, 5e-1]], dtype=np.float32)
 
-r_bins = [(0, 1e-7), (2e-7, 5e-7), (2e-7, 5e-7),
-          (1e-6, 2e-6), (2e-6, 5e-6), (5e-6, 1e-5),
-          (1e-5, 2e-5), (2e-5, 5e-5), (5e-5, 1e-4),
-          (1e-4, 2e-4), (2e-4, 5e-4), (5e-4, 1e-4),
-          (1e-3, 2e-3), (2e-3, 5e-3), (5e-3, 1e-3),
-          (1e-2, 2e-2), (2e-2, 5e-2), (5e-2, 1e-2),
-          (1e-1, 2e-1), (2e-1, 5e-1)]
+r_bins_1 = np.array([[0, 1e-8], [1e-8, 2e-8], [2e-8, 5e-8], [5e-8, 1e-7],
+                     [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
+                     [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
+                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
+                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
+                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2],
+                     [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
+                     [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
 
-map = Map.load_txt(
+r_bins_2 = np.array([[0, 1e-7], [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
+                     [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
+                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
+                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
+                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2],
+                     [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
+                     [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
+
+
+_map = Map.load_txt(
     "c:/archaic/data/chromosomes/maps/chr22/genetic_map_GRCh37_chr22.txt")
-bed = Bed.load_bed(
+_bed = Bed.load_bed(
     "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed")
-maskedmap = MaskedMap.from_class(map, bed)
-genotype_vector = GenotypeVector.read_vcf(
+maskedmap = MaskedMap.from_class(map, _bed)
+genotypevector = GenotypeVector.read_vcf(
     "c:/archaic/data/chromosomes/merged/chr22/complete_chr22.vcf.gz",
-    "Denisova")
+    "SS6004475")

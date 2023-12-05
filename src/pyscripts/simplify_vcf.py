@@ -4,6 +4,8 @@ import numpy as np
 
 import sys
 
+sys.path.insert(0, "c:/archaic/src")
+
 from archaic import vcf_util as vc
 
 
