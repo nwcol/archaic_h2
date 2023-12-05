@@ -145,16 +145,41 @@ def count_pairings(maskedmap, d_bins):
     return sums
 
 
-def r_bins_to_d_bins(r_bins):
+def d_to_r(d_distance):
     """
-    Convert bins given in recombination frequency r to bins given in units
-    of map distance (cM)
+    Use Haldane's map function to convert map units cM to recombination
+    frequency r
 
-    :param r_bins:
+    Examples:
+    d_to_r(200) = 0.4908421805556329
+    d_to_r(30) = 0.22559418195298675
+    d_to_r(1) = 0.009900663346622374
+
+    :param d_distance: distance given in map units
+    :type d_distance: float or array of floats
     :return:
     """
-    d_bins = np.log(1 - 2 * r_bins) / -0.02
-    return d_bins
+    r_distance = 0.5 * (1 - np.exp(-0.02 * d_distance))
+    return r_distance
+
+
+def r_to_d(r_distance):
+    """
+    Use Haldane's map function to convert recombination frequency r to map
+    units cM
+
+    Examples:
+    r_to_d(0.49) = 195.60115027140725
+    r_to_d(0.01) = 1.0101353658759733 about one Mb
+    r_to_d(0.0001) = 0.010001000133352235 about one kb
+    r_to_d(1e-8) = 1.0000000094736444e-06 about one bp
+
+    :param r_distance: recombination frequency r
+    :type r_distance: float or array of floats
+    :return:
+    """
+    d_distance = -50 * np.log(1 - 2 * r_distance)
+    return d_distance
 
 
 map = Map.load_txt(

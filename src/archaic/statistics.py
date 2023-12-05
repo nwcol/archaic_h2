@@ -215,6 +215,34 @@ def compute_n_joint_hets(genotype_vector, i, pos_bins):
     return het_sum
 
 
+def new_joint_het_distribution(genotype_vector, masked_map, r_bins):
+    """
+
+
+    :param genotype_vector:
+    :param masked_map:
+    :param r_bins: bins, given in recombination frequencies r
+    :return:
+    """
+    n_bins = len(r_bins)
+    n_het = genotype_vector.n_het
+    het_pair_counts = np.zeros(n_bins, dtype=np.int64)
+    het_map = masked_map.map_values[genotype_vector.het_index]
+    for i in np.arange(n_het):
+        right_hets = het_map[i+1:]
+        focus = het_map[i]
+        d_distance = right_hets - focus
+        r_distances = map_util.d_to_r(d_distance)
+        for k, (b0, b1) in enumerate(r_bins):
+            count = np.sum((r_distances >= b0) & (r_distances < b1))
+            het_pair_counts[k] += count
+    expected_n_pairs = n_het * (n_het - 1) / 2
+    n_pairs = int(np.sum(het_pair_counts))
+    diff = n_pairs - expected_n_pairs
+    print(f"{n_pairs} recorded out of {expected_n_pairs}, difference {diff}")
+    return het_pair_counts
+
+
 def joint_het_distribution(genotype_vector, masked_map, r_bins):
     """
     Return a vector of heterozygote pair counts per r bin
@@ -232,38 +260,57 @@ def joint_het_distribution(genotype_vector, masked_map, r_bins):
     for i in het_index:
         right_hets = het_index[het_index > i]
         d_distance = map_values[right_hets] - map_values[i]
-        distances = d_to_r(d_distance)
+        distances = map_util.d_to_r(d_distance)
         for k, (b0, b1) in enumerate(r_bins):
             count = np.sum((distances >= b0) & (distances < b1))
             het_pair_count[k] += count
     return het_pair_count
 
 
-def d_to_r(d_distance):
+def joint_het_distribution000(genotype_vector, masked_map, r_bins):
     """
-    Use Haldane's map function to convert cM to r
+    Return a vector of heterozygote pair counts per r bin
 
-    :param d_distance:
+    :param genotype_vector:
+    :param maskedmap:
+    :param i:
+    :param r_bins:
     :return:
     """
-    r_distance = 0.5 * (1 - np.exp(-0.02 * d_distance))
-    return r_distance
+    n_bins = len(r_bins)
+    n_het = genotype_vector.n_het
+    het_pair_counts = np.zeros(n_bins, dtype=np.int64)
+    het_map = masked_map.map_values[genotype_vector.het_index]
+    d_bins = map_util.r_to_d(r_bins)
+    for i in np.arange(n_het):
+        right_map = het_map[i + 1:]
+        map_value_i = het_map[i]
+        map_distances = right_map - map_value_i
+        for k, (b0, b1) in enumerate(d_bins):
+            count = np.sum((map_distances >= b0) & (map_distances < b1))
+            het_pair_counts[k] += count
+    return het_pair_counts
 
 
-def r_to_d(r_distance):
+def get_expected_pi_2(genotype_vector):
     """
-    Use Haldane's map function to convert r to cM
+    Compute pi_2 without bins
 
-    :param r_distance:
+    :param genotype_vector:
+    :param masked_map:
     :return:
     """
-    d_distance = np.log(1 - 2 * r_distance) / -0.02
-    return d_distance
+    n = genotype_vector.length
+    n_hets = np.sum(genotype_vector.het_indicator)
+    n_pairs = n * (n - 1) / 2
+    n_het_pairs = n_hets * (n_hets - 1) / 2
+    pi_2 = n_het_pairs / n_pairs
+    return pi_2
 
 
 # functions that take alt indicator vectors or other statistics as arguments
 
-def compute_diversity(alt_x, n_x):
+def compute_pi_x(alt_x, n_x):
     """
     Compute an estimator for diversity from a vector of alternate allele counts
 
@@ -279,7 +326,7 @@ def compute_diversity(alt_x, n_x):
     return diversity
 
 
-def compute_divergence(alt_x, alt_y, n_x, n_y):
+def compute_pi_xy(alt_x, alt_y, n_x, n_y):
     """
     Compute an estimator for divergence from two vectors of alternate allele
     counts.
@@ -369,7 +416,7 @@ _map = Map.load_txt(
     "c:/archaic/data/chromosomes/maps/chr22/genetic_map_GRCh37_chr22.txt")
 _bed = Bed.load_bed(
     "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed")
-maskedmap = MaskedMap.from_class(map, _bed)
+maskedmap = MaskedMap.from_class(_map, _bed)
 genotypevector = GenotypeVector.read_vcf(
     "c:/archaic/data/chromosomes/merged/chr22/complete_chr22.vcf.gz",
     "SS6004475")
