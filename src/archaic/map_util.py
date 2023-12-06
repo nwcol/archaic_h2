@@ -23,7 +23,7 @@ class Map:
     def __init__(self, positions, rates, map_values):
         self.positions = positions
         self.rates = rates
-        self.map_values = map_values
+        self.values = map_values
 
     @classmethod
     def load_txt(cls, path):
@@ -63,16 +63,43 @@ class MaskedMap:
 
     @classmethod
     def from_class(cls, map, bed):
-        bed_positions = bed.get_positions_1()
-        approx_map_values = cls.approximate(bed_positions, map.positions,
-                                            map.map_values, map.rates)
-        return cls(bed_positions, approx_map_values)
+        positions = bed.get_positions_1()
+        approx_map_values = cls.approximate_map(bed, map)
+        return cls(positions, approx_map_values)
 
     @classmethod
     def from_file(cls, map_path, bed_path):
         map = Map.load_txt(map_path)
         bed = Bed.load_bed(bed_path)
         return cls.from_class(map, bed)
+
+    @staticmethod
+    def approximate_map(bed, map):
+        """
+        Approximate the map values for a vector of vcf positions using the
+        map values and rates from a recombination map
+
+        assume map file is 1 indexed
+
+        :param bed_positions:
+        :param map_positions:
+        :param map_values:
+        :param rates:
+        :return:
+        """
+
+        n_positions = bed.n_positions
+        positions = bed.get_positions_1()
+        index = np.searchsorted(map.positions, positions, "right") - 1
+        floor = map.values[index]
+        floor_positions = map.positions[index]
+        bp_to_floor = positions - floor_positions
+        #Mb_to_floor = bp_to_floor * 1e-6
+        approx_rates = np.diff(map.values) / np.diff(map.positions)# * 1e6
+        pos_approx_rates = approx_rates[index]
+        approx_map = np.zeros(n_positions, dtype=np.float64)
+        approx_map[:] = floor + bp_to_floor * pos_approx_rates
+        return approx_map
 
     @staticmethod
     def approximate(bed_positions, map_positions, map_values, rates):
@@ -154,6 +181,7 @@ def d_to_r(d_distance):
     d_to_r(200) = 0.4908421805556329
     d_to_r(30) = 0.22559418195298675
     d_to_r(1) = 0.009900663346622374
+    d_to_r(0.5) = 0.004975083125415947
 
     :param d_distance: distance given in map units
     :type d_distance: float or array of floats

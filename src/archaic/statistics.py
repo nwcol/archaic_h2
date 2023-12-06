@@ -132,92 +132,10 @@ class GenotypeVector:
 
 # functions that operate on a GenotypeVector
 
-def manual_joint_het(genotype_vector, masked_map, i, r_0, r_1):
+
+def get_joint_het_dist(genotype_vector, masked_map, r_bins):
     """
-    Testing!!
-
-    :param genotype_vector:
-    :param masked_map:
-    :param i:
-    :param r_0:
-    :param r_1:
-    :return:
-    """
-    if genotype_vector.het_indicator[i] != 1:
-        pi_2 = 0
-    else:
-        sites = masked_map.sites_in_r(i, r_0, r_1)
-        n_sites = len(sites)
-        n_hets = np.sum(genotype_vector.het_indicator[sites])
-        if n_sites > 0:
-            pi_2 = n_hets / n_sites
-        else:
-            pi_2 = 0
-    return pi_2
-
-
-def compute_pi_2(genotype_vector, masked_map, r_bins, max_i=None):
-    n_bins = len(r_bins)
-    d_bins = map_util.r_bins_to_d_bins(r_bins)
-    sum_pairs = np.zeros(n_bins, dtype=np.int64)
-    sum_joint_het = np.zeros(n_bins, dtype=np.int64)
-    if not max_i:
-        max_i = genotype_vector.length
-    for i in np.arange(max_i):
-        pos_bins = masked_map.approximate_r_bins(i, d_bins)
-        counts = pos_bins[:, 1] - pos_bins[:, 0]
-        sum_pairs += counts
-        if genotype_vector.het_indicator[i] == 1:
-            sum_joint_het += compute_n_joint_hets(genotype_vector, i, pos_bins)
-        if i % 1e6 == 0:
-            print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
-    print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
-    pi_2 = np.zeros(n_bins)
-    non_zero = np.where(sum_pairs > 0)[0]
-    pi_2[non_zero] = sum_joint_het[non_zero] / sum_pairs[non_zero]
-    return sum_joint_het, sum_pairs
-
-
-def linear_approx_pi_2(genotype_vector, r_bins, max_i=None):
-    n_bins = len(r_bins)
-    base_bins = r_bins * 1e8  # linear approximation
-    base_bins = base_bins.astype(dtype=np.int64)
-    sum_pairs = np.zeros(n_bins, dtype=np.int64)
-    sum_joint_het = np.zeros(n_bins, dtype=np.int64)
-    if not max_i:
-        max_i = genotype_vector.length
-    for i in np.arange(max_i):
-        binz = base_bins + genotype_vector.positions[i]
-        pos_bins = np.searchsorted(genotype_vector.positions, + binz)
-        counts = pos_bins[:, 1] - pos_bins[:, 0]
-        sum_pairs += counts
-        if genotype_vector.het_indicator[i] == 1:
-            sum_joint_het += compute_n_joint_hets(genotype_vector, i, pos_bins)
-        if i % 1e6 == 0:
-            print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
-    print(f"{i} bp complete, {np.sum(sum_pairs)} pairs computed")
-    pi_2 = np.zeros(n_bins, dtype=np.float64)
-    non_zero = np.where(sum_pairs > 0)[0]
-    pi_2[non_zero] = sum_joint_het[non_zero] / sum_pairs[non_zero]
-    return sum_joint_het, sum_pairs
-
-
-def compute_n_joint_hets(genotype_vector, i, pos_bins):
-    if genotype_vector.het_indicator[i] != 1:
-        het_sum = np.zeros(len(pos_bins), dtype=np.int64)
-    else:
-        het_sum = np.zeros(len(pos_bins), dtype=np.int64)
-        counts = pos_bins[:, 1] - pos_bins[:, 0]
-        for i, pos_bin in enumerate(pos_bins):
-            if counts[i] > 0:
-                b0, b1 = pos_bin
-                het_sum[i] = np.sum(genotype_vector.het_indicator[b0:b1])
-    return het_sum
-
-
-def new_joint_het_distribution(genotype_vector, masked_map, r_bins):
-    """
-
+    Older function
 
     :param genotype_vector:
     :param masked_map:
@@ -227,7 +145,7 @@ def new_joint_het_distribution(genotype_vector, masked_map, r_bins):
     n_bins = len(r_bins)
     n_het = genotype_vector.n_het
     het_pair_counts = np.zeros(n_bins, dtype=np.int64)
-    het_map = masked_map.map_values[genotype_vector.het_index]
+    het_map = masked_map.values[genotype_vector.het_index]
     for i in np.arange(n_het):
         right_hets = het_map[i+1:]
         focus = het_map[i]
@@ -243,53 +161,136 @@ def new_joint_het_distribution(genotype_vector, masked_map, r_bins):
     return het_pair_counts
 
 
-def joint_het_distribution(genotype_vector, masked_map, r_bins):
+def linear_pair_dist(genotype_vector, r_bins):
     """
-    Return a vector of heterozygote pair counts per r bin
+    Use an unrealistic linear model of r to compute bin pair counts.
+
+    For prototyping
 
     :param genotype_vector:
-    :param maskedmap:
-    :param i:
     :param r_bins:
     :return:
     """
     n_bins = len(r_bins)
-    het_pair_count = np.zeros(n_bins, dtype=np.int64)
-    het_index = genotype_vector.het_index
-    map_values = masked_map.map_values
-    for i in het_index:
-        right_hets = het_index[het_index > i]
-        d_distance = map_values[right_hets] - map_values[i]
-        distances = map_util.d_to_r(d_distance)
-        for k, (b0, b1) in enumerate(r_bins):
-            count = np.sum((distances >= b0) & (distances < b1))
-            het_pair_count[k] += count
-    return het_pair_count
+    n_pos = genotype_vector.length
+    pair_counts = np.zeros(n_bins, dtype=np.int64)
+    pos_bins = (r_bins * 1e8).astype(np.int64)
+    # convert bins in r to bins in bp
+    i = 0
+    for i in np.arange(n_pos):
+        pos = genotype_vector.positions[i]
+        focal_bins = pos_bins + pos
+        edges = np.searchsorted(genotype_vector.positions, focal_bins)
+        edges[0, 0] = i + 1
+        pair_counts += edges[:, 1] - edges[:, 0]
+        #
+        if i % 1e6 == 0:
+            print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
+    expected_n_pairs = int(n_pos * (n_pos - 1) / 2)
+    n_pairs = int(np.sum(pair_counts))
+    diff = int(n_pairs - expected_n_pairs)
+    print(f"{n_pairs} recorded out of {expected_n_pairs}, difference {diff}")
+    return pair_counts
 
 
-def joint_het_distribution000(genotype_vector, masked_map, r_bins):
+def linear_het_pair_dist(genotype_vector, r_bins):
     """
-    Return a vector of heterozygote pair counts per r bin
+    Use an unrealistic linear model of r to get the number of site pairs per
+    bin for an array of bins in r
 
     :param genotype_vector:
-    :param maskedmap:
-    :param i:
+    :param masked_map:
     :param r_bins:
+    :param max_i:
     :return:
     """
     n_bins = len(r_bins)
     n_het = genotype_vector.n_het
-    het_pair_counts = np.zeros(n_bins, dtype=np.int64)
-    het_map = masked_map.map_values[genotype_vector.het_index]
-    d_bins = map_util.r_to_d(r_bins)
+    pair_counts = np.zeros(n_bins, dtype=np.int64)
+    pos_bins = (r_bins * 1e8).astype(np.int64)
+    het_pos = genotype_vector.het_sites
+    i = 0
     for i in np.arange(n_het):
-        right_map = het_map[i + 1:]
-        map_value_i = het_map[i]
-        map_distances = right_map - map_value_i
-        for k, (b0, b1) in enumerate(d_bins):
-            count = np.sum((map_distances >= b0) & (map_distances < b1))
-            het_pair_counts[k] += count
-    return het_pair_counts
+        pos = het_pos[i]
+        focal_bins = pos_bins + pos
+        edges = np.searchsorted(het_pos, focal_bins)
+        edges[0, 0] = i + 1
+        pair_counts += edges[:, 1] - edges[:, 0]
+        #
+        if i % 1e3 == 0:
+            print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
+    expected_n_pairs = int(n_het * (n_het - 1) / 2)
+    n_pairs = int(np.sum(pair_counts))
+    diff = int(n_pairs - expected_n_pairs)
+    print(f"{n_pairs} recorded out of {expected_n_pairs}, difference {diff}")
+    return pair_counts
+
+
+def get_pair_distribution(genotype_vector, masked_map, r_bins):
+    """
+    Get the number of site pairs per bin for an array of bins in r
+
+    :param genotype_vector:
+    :param masked_map:
+    :param r_bins:
+    :param max_i:
+    :return:
+    """
+    n_bins = len(r_bins)
+    n_pos = genotype_vector.length
+    pair_counts = np.zeros(n_bins, dtype=np.int64)
+    d_bins = map_util.r_to_d(r_bins)  # convert bins in r to bins in d
+    i = 0
+    for i in np.arange(n_pos):
+        focus = masked_map.values[i]
+        focal_bins = d_bins + focus
+        pos_bins = np.searchsorted(masked_map.map_values, focal_bins)
+        pos_bins[0, 0] = i + 1
+        pair_counts += pos_bins[:, 1] - pos_bins[:, 0]
+        #
+        if i % 1e6 == 0:
+            print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    expected_n_pairs = int(n_pos * (n_pos - 1) / 2)
+    n_pairs = int(np.sum(pair_counts))
+    diff = int(n_pairs - expected_n_pairs)
+    print(f"{n_pairs} recorded out of {expected_n_pairs}, difference {diff}")
+    return pair_counts
+
+
+def get_het_pair_distribution(genotype_vector, masked_map, r_bins):
+    """
+    Get the number of site pairs per bin for an array of bins in r
+
+    :param genotype_vector:
+    :param masked_map:
+    :param r_bins:
+    :param max_i:
+    :return:
+    """
+    n_bins = len(r_bins)
+    n_het = genotype_vector.n_het
+    pair_counts = np.zeros(n_bins, dtype=np.int64)
+    d_bins = map_util.r_to_d(r_bins)  # convert bins in r to bins in d
+    het_map = masked_map.values[genotype_vector.het_index]
+    i = 0
+    for i in np.arange(n_het):
+        focus = het_map[i]
+        focal_bins = d_bins + focus
+        pos_bins = np.searchsorted(het_map, focal_bins)
+        pos_bins[0, 0] = i + 1
+        pair_counts += pos_bins[:, 1] - pos_bins[:, 0]
+        #
+        if i % 1e3 == 0:
+            print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
+    expected_n_pairs = int(n_het * (n_het - 1) / 2)
+    n_pairs = int(np.sum(pair_counts))
+    diff = int(n_pairs - expected_n_pairs)
+    print(f"{n_pairs} recorded out of {expected_n_pairs}, difference {diff}")
+    return pair_counts
 
 
 def get_expected_pi_2(genotype_vector):
@@ -394,7 +395,8 @@ r_bins_0 = np.array([[0, 1e-7],
                      [1e-2, 1e-1],
                      [1e-1, 5e-1]], dtype=np.float32)
 
-r_bins_1 = np.array([[0, 1e-8], [1e-8, 2e-8], [2e-8, 5e-8], [5e-8, 1e-7],
+r_bins_1 = np.array([[0, 1e-8],
+                     [1e-8, 2e-8], [2e-8, 5e-8], [5e-8, 1e-7],
                      [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
                      [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
                      [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
@@ -403,13 +405,22 @@ r_bins_1 = np.array([[0, 1e-8], [1e-8, 2e-8], [2e-8, 5e-8], [5e-8, 1e-7],
                      [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
                      [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
 
-r_bins_2 = np.array([[0, 1e-7], [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
+r_bins_2 = np.array([[0, 1e-7],
+                     [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
                      [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
                      [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
                      [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
                      [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2],
                      [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
                      [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
+
+r_bins_3 = np.array([[1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
+                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
+                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
+                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2]],
+                    dtype=np.float32)
+
+r_edges = 
 
 
 _map = Map.load_txt(
