@@ -1,3 +1,6 @@
+
+# Script for eliminating superfluous data from .vcf files
+
 import gzip
 
 import numpy as np
@@ -6,38 +9,19 @@ import sys
 
 sys.path.insert(0, "c:/archaic/src")
 
-from archaic import vcf_util as vc
+from archaic import vcf_util
 
 
-def main(in_filename, out_filename, *args):
+def main(path, *args):
     """
-
-
-    :param in_filename:
-    :param out_filename:
+    :param path:
     :param args:
     :return:
     """
-    out_formats = [arg.encode() for arg in args]
-    out_file = open(out_filename, 'wb')
-    fmt_index, sorted_formats = vc.read_format(in_filename, out_formats)
-    fmt_bytes = vc.get_format_bytes(sorted_formats)
-    sample_index = vc.get_sample_index(in_filename)
-    header = vc.trim_header(in_filename, out_formats)
-    for line in header:
-        out_file.write(line)
-    with gzip.open(in_filename, 'r') as file:
-        for i, line in enumerate(file):
-            if b"#" not in line:
-                out_file.write(
-                    vc.simplify_line(line, fmt_bytes, fmt_index, sample_index)
-                )
-    out_file.close()
-    return i
+    i = vcf_util.simplify(path, None, *args)
+    print(i)
 
 
-in_filename = str(sys.argv[1])
-out_filename = str(sys.argv[2])
-args = [str(x) for x in sys.argv[3:]]
-i = main(in_filename, out_filename, *args)
-print(f"{i} lines simplified. written at {out_filename}")
+path = str(sys.argv[1])
+args = [str(x) for x in sys.argv[2:]]
+main(path, *args)

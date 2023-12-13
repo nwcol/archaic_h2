@@ -7,14 +7,15 @@ import sys
 
 sys.path.insert(0, "c:/archaic/src")
 
-import bed_util
-
 from archaic import vcf_util
 
+from archaic import bed_util
 
-def main(file_name, out_file_name, min_size=None):
+
+def main(path, out, min_size=None):
     """
     Make a .bed file describing continuously covered regions in a .vcg.gz file
+
 
     If min_size, exclude regions smaller than min_size
 
@@ -23,16 +24,16 @@ def main(file_name, out_file_name, min_size=None):
     :param min_size:
     :return:
     """
-    bed = bed_util.Bed.new(file_name)
+    bed = bed_util.Bed.from_vcf(path)
     if min_size:
         bed = bed.exclude(min_size)
-    bed.write_bed(out_file_name)
+    bed.write_bed(out)
 
 
-file_name = str(sys.argv[1])
-out_file_name = str(sys.argv[2])
+path = str(sys.argv[1])
+out = str(sys.argv[2])
 if len(sys.argv) == 4:
     min_size = int(sys.argv[3])
 else:
     min_size = None
-main(file_name, out_file_name, min_size=min_size)
+main(path, out, min_size=min_size)

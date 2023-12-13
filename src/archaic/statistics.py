@@ -9,9 +9,13 @@ import numpy as np
 
 import time
 
-from bed_util import Bed
+import os
 
-import vcf_util
+import sys
+
+from src.archaic import vcf_util
+
+from src.archaic.bed_util import Bed
 
 from map_util import Map, MaskedMap
 
@@ -56,6 +60,28 @@ class GenotypeVector:
         positions = bed.get_positions_1()
         n_positions = bed.n_positions
         genotypes = vcf_util.read_genotypes(vcf_path, sample, n_positions)
+        return cls(positions, genotypes)
+
+
+    @classmethod
+    def read_abbrev_vcf(cls, vcf_path, bed_path, sample):
+        """
+        Read a simulated .vcf which records only alternate alleles into the
+        positions defined in a .bed file
+
+        :param vcf_path:
+        :param bed_path:
+        :param sample:
+        :return:
+        """
+        bed = Bed.load_bed(bed_path)
+        positions = bed.get_positions_1()
+        n_positions = bed.n_positions
+        genotypes = np.zeros(n_positions, dtype=np.uint8)
+        abbrev_genotypes = vcf_util.read_genotypes(vcf_path, sample)
+        abbrev_positions = vcf_util.read_positions(vcf_path)
+        index = np.searchsorted(positions, abbrev_positions)
+        genotypes[index] = abbrev_genotypes
         return cls(positions, genotypes)
 
     @property
@@ -228,7 +254,7 @@ def linear_het_pair_dist(genotype_vector, r_bins):
     return pair_counts
 
 
-def get_pair_distribution(genotype_vector, masked_map, r_bins):
+def get_pair_distribution(genotype_vector, masked_map, r_edges):
     """
     Get the number of site pairs per bin for an array of bins in r
 
@@ -238,18 +264,18 @@ def get_pair_distribution(genotype_vector, masked_map, r_bins):
     :param max_i:
     :return:
     """
-    n_bins = len(r_bins)
+    n_bins = len(r_edges) - 1
     n_pos = genotype_vector.length
     pair_counts = np.zeros(n_bins, dtype=np.int64)
-    d_bins = map_util.r_to_d(r_bins)  # convert bins in r to bins in d
+    d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
+    d_edges[0] -= 1e-4
+    values = masked_map.values
     i = 0
     for i in np.arange(n_pos):
-        focus = masked_map.values[i]
-        focal_bins = d_bins + focus
-        pos_bins = np.searchsorted(masked_map.map_values, focal_bins)
-        pos_bins[0, 0] = i + 1
-        pair_counts += pos_bins[:, 1] - pos_bins[:, 0]
-        #
+        pos_value = values[i]
+        edges_for_i = d_edges + pos_value
+        pos_edges = np.searchsorted(values[i+1:], edges_for_i)
+        pair_counts += np.diff(pos_edges)
         if i % 1e6 == 0:
             print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
     print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
@@ -260,7 +286,7 @@ def get_pair_distribution(genotype_vector, masked_map, r_bins):
     return pair_counts
 
 
-def get_het_pair_distribution(genotype_vector, masked_map, r_bins):
+def get_het_pair_distribution(genotype_vector, masked_map, r_edges):
     """
     Get the number of site pairs per bin for an array of bins in r
 
@@ -270,18 +296,23 @@ def get_het_pair_distribution(genotype_vector, masked_map, r_bins):
     :param max_i:
     :return:
     """
-    n_bins = len(r_bins)
+    n_bins = len(r_edges) - 1
     n_het = genotype_vector.n_het
     pair_counts = np.zeros(n_bins, dtype=np.int64)
-    d_bins = map_util.r_to_d(r_bins)  # convert bins in r to bins in d
+    d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
+    d_edges[0] -= 1e-4  # ensure that the lowest bin is counted properly
+    # without this, the first few values above i may be missed
     het_map = masked_map.values[genotype_vector.het_index]
     i = 0
     for i in np.arange(n_het):
-        focus = het_map[i]
-        focal_bins = d_bins + focus
-        pos_bins = np.searchsorted(het_map, focal_bins)
-        pos_bins[0, 0] = i + 1
-        pair_counts += pos_bins[:, 1] - pos_bins[:, 0]
+        value = het_map[i]
+        edges_for_i = d_edges + value
+        pos_edges = np.searchsorted(het_map[i+1:], edges_for_i)
+        pair_counts += np.diff(pos_edges)
+        #
+        if np.sum(np.diff(pos_edges)) != n_het - i - 1:
+            exp = n_het - i - 1
+            print(f"{i}, exp {exp} got {np.sum(np.diff(pos_edges))}")
         #
         if i % 1e3 == 0:
             print(f"{i} bp scanned, {np.sum(pair_counts)} pairs binned")
@@ -386,48 +417,54 @@ def compute_F_st():
     pass
 
 
-r_bins_0 = np.array([[0, 1e-7],
-                     [1e-7, 1e-6],
-                     [1e-6, 1e-5],
-                     [1e-5, 1e-4],
-                     [1e-4, 1e-3],
-                     [1e-3, 1e-2],
-                     [1e-2, 1e-1],
-                     [1e-1, 5e-1]], dtype=np.float32)
-
-r_bins_1 = np.array([[0, 1e-8],
-                     [1e-8, 2e-8], [2e-8, 5e-8], [5e-8, 1e-7],
-                     [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
-                     [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
-                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
-                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
-                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2],
-                     [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
-                     [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
-
-r_bins_2 = np.array([[0, 1e-7],
-                     [1e-7, 2e-7], [2e-7, 5e-7], [5e-7, 1e-6],
-                     [1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
-                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
-                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
-                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2],
-                     [1e-2, 2e-2], [2e-2, 5e-2], [5e-2, 1e-1],
-                     [1e-1, 2e-1], [2e-1, 5e-1]], dtype=np.float32)
-
-r_bins_3 = np.array([[1e-6, 2e-6], [2e-6, 5e-6], [5e-6, 1e-5],
-                     [1e-5, 2e-5], [2e-5, 5e-5], [5e-5, 1e-4],
-                     [1e-4, 2e-4], [2e-4, 5e-4], [5e-4, 1e-3],
-                     [1e-3, 2e-3], [2e-3, 5e-3], [5e-3, 1e-2]],
-                    dtype=np.float32)
-
-r_edges = 
+def load_simulated_vcfs(dir, r_edges):
+    hets = np.zeros(len(r_edges) - 1, dtype=np.int64)
+    files = os.listdir(dir)
+    for file in files:
+        vec = GenotypeVector.read_abbrev_vcf(
+            dir + '/' + file,
+            "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed",
+            "tsk_0")
+        hets += get_het_pair_distribution(vec, maskedmap, r_edges)
+    return hets
 
 
-_map = Map.load_txt(
-    "c:/archaic/data/chromosomes/maps/chr22/genetic_map_GRCh37_chr22.txt")
-_bed = Bed.load_bed(
-    "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed")
-maskedmap = MaskedMap.from_class(_map, _bed)
-genotypevector = GenotypeVector.read_vcf(
-    "c:/archaic/data/chromosomes/merged/chr22/complete_chr22.vcf.gz",
-    "SS6004475")
+def load():
+    """
+    load all samples
+
+    :return:
+    """
+    name_map = {"Vindija33.19": "Neanderthal Vindija",
+                "Chagyrskaya-Phalanx": "Neanderthal Chagyrskaya",
+                "AltaiNeandertal": "Neanderthal Altai",
+                "Denisova": "Denisova",
+                "LP6005442-DNA_B02": "Yoruba-1",
+                "SS6004475": "Yoruba-3",
+                "LP6005592-DNA_C05": "Khomani_San-2",
+                "LP6005441-DNA_A05": "French-1",
+                "LP6005441-DNA_D05": "Han-1",
+                "LP6005443-DNA_H07": "Papuan-2"}
+
+
+r_edges = np.array([0,
+                    1e-7, 2e-7, 5e-7,
+                    1e-6, 2e-6, 5e-6,
+                    1e-5, 2e-5, 5e-5,
+                    1e-4, 2e-4, 5e-4,
+                    1e-3, 2e-3, 5e-3,
+                    1e-2, 2e-2, 5e-2,
+                    1e-1, 2e-1, 5e-1], dtype=np.float32)
+
+r = r_edges[1:]
+
+
+bed = Bed.load_bed("c:/archaic/data/chromosomes/merged/chr22_og/chr22_merge.bed")
+map = Map.load_txt("c:/archaic/data/chromosomes/maps/GRCh37/genetic_map_GRCh37_chr22.txt")
+
+maskedmap = MaskedMap.from_class(map, bed)
+
+og_vector = GenotypeVector.read_vcf("c:/archaic/data/chromosomes/merged/chr22_og/complete_chr22.vcf.gz", "Denisova")
+new_vector = GenotypeVector.read_vcf("c:/archaic/TEST/chr22_merged.vcf.gz", "Denisova")
+
+chr22_pairs = np.loadtxt("c:/archaic/data/chromosomes/joint_counts/chr22/chr22_pair_counts.txt")

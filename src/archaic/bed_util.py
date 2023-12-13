@@ -9,7 +9,15 @@ import matplotlib
 
 import numpy as np
 
-import vcf_util
+import sys
+
+sys.path.append("c:/archaic")
+
+if __name__ == "__main__":
+    import vcf_util
+
+else:
+    from src.archaic import vcf_util
 
 
 if __name__ == "__main__":
@@ -32,8 +40,6 @@ class Bed:
         :type chrom: str
         """
         self.regions = regions
-        if 'chr' not in chrom:
-            chrom = 'chr' + str(chrom)
         self.chrom = chrom
 
     @classmethod
@@ -327,7 +333,6 @@ class Bed:
         :return:
         """
         with open(file_name, 'w') as file:
-            file.write("chrom\tchromStart\tchromStop\n")
             for i in np.arange(self.n_regions):
                 file.write("\t".join([self.chrom,
                                       str(self.regions[i, 0]),

@@ -49,6 +49,11 @@ class Map:
         map_values = np.array(map_values, dtype=np.float64)
         return cls(positions, rates, map_values)
 
+    def approximate_rates(self):
+
+
+        return 0
+
 
 class MaskedMap:
     """
@@ -56,9 +61,9 @@ class MaskedMap:
     of map coordinates for every position in the bed
     """
 
-    def __init__(self, positions, map_values):
+    def __init__(self, positions, values):
         self.positions = positions
-        self.map_values = map_values
+        self.values = values
         self.length = len(self.positions)
 
     @classmethod
@@ -130,7 +135,7 @@ class MaskedMap:
         :param pos:
         :return:
         """
-        d = np.abs(self.map_values - self.map_values[i])
+        d = np.abs(self.values - self.values[i])
         r = 0.5 * (1 - np.exp(-0.02 * d))
         return r
     
@@ -156,9 +161,9 @@ class MaskedMap:
         :param r_bounds:
         :return:
         """
-        start = self.map_values[i]
+        start = self.values[i]
         bins = d_bins + start
-        pos_bins = np.searchsorted(self.map_values, bins)
+        pos_bins = np.searchsorted(self.values, bins)
         pos_bins[0, 0] = i + 1
         return pos_bins
 
@@ -208,10 +213,3 @@ def r_to_d(r_distance):
     """
     d_distance = -50 * np.log(1 - 2 * r_distance)
     return d_distance
-
-
-map = Map.load_txt(
-    "c:/archaic/data/chromosomes/maps/chr22/genetic_map_GRCh37_chr22.txt")
-bed = Bed.load_bed(
-    "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed")
-maskedmap = MaskedMap.from_class(map, bed)
