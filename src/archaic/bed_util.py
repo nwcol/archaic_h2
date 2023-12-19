@@ -73,6 +73,12 @@ class Bed:
         return cls(regions, chrom)
 
     @classmethod
+    def from_vcf_vectorized(cls, path):
+        positions = vcf_util.read_positions(path) - 1
+        chrom = vcf_util.read_chrom(path)
+        return cls.from_positions(positions, chrom)
+
+    @classmethod
     def load_bed(cls, file_name):
         """
         Instantiate from an existing .bed file. If there are many chromosomes
@@ -97,7 +103,7 @@ class Bed:
         return cls(regions, chrom)
 
     @classmethod
-    def from_position_vec(cls, position_vec, chrom):
+    def from_positions(cls, positions, chrom):
         """
         Initialize from a vector of positions, 0-indexed
 
@@ -105,19 +111,16 @@ class Bed:
         :param chrom:
         :return:
         """
-        high = np.max(position_vec)
-        low = np.min(position_vec)
-        mask = np.zeros(high - low + 1, dtype=np.int32)
-        mask[position_vec] = 1
+        high = np.max(positions)
+        mask = np.zeros(high + 3, dtype=np.int32)
+        mask[positions + 1] = 1
         dif = np.diff(mask)
-        starts = np.where(dif == 1)[0] + 1
-        stops = np.where(dif == -1)[0] + 1  # to be 1-indexed
-        length = len(starts) + 1
+        starts = np.where(dif == 1)[0]
+        stops = np.where(dif == -1)[0]
+        length = len(starts)
         regions = np.zeros((length, 2), dtype=np.int64)
-        regions[1:, 0] = starts + low
-        regions[0, 0] = low
-        regions[:-1, 1] = stops + low
-        regions[-1, 1] = high
+        regions[:, 0] = starts
+        regions[:, 1] = stops
         return cls(regions, chrom)
 
     def __getitem__(self, index):
@@ -131,6 +134,18 @@ class Bed:
             index = range(*index.indices(self.n_regions))
         reg = self.regions[index]
         return Bed(reg, self.chrom)
+
+    def trim(self, lower, upper):
+        """
+        Trim all regions below lower or above upper from the regions array
+
+        :param lower:
+        :param upper:
+        :return:
+        """
+        lower_index = np.searchsorted(self.regions[:, 0], lower)
+        upper_index = np.searchsorted(self.regions[:, 1], upper)
+        self.regions = self.regions[lower_index:upper_index]
 
     @property
     def n_regions(self):
@@ -312,7 +327,8 @@ class Bed:
 
     def get_position_mask(self, max_pos=None):
         """
-        Return a vector holding 1s where positions exist in the Bed instance
+        Return a vector holding 1s where positions exist in the Bed instance.
+        1-indexed
 
         :param max_pos:
         :return:
@@ -338,3 +354,50 @@ class Bed:
                                       str(self.regions[i, 0]),
                                       str(self.regions[i, 1])]) + "\n")
         return 0
+
+
+def intersect(*beds):
+    n_beds = len(beds)
+    chrom = beds[0].chrom
+    maximums = []
+    for bed in beds:
+        maximums.append(bed.max_pos)
+    maximum = max(maximums)
+    masks = []
+    for bed in beds:
+        masks.append(bed.get_position_mask(max_pos=maximum))
+    tally = np.sum(masks, axis=0)
+    overlaps = np.where(tally == n_beds)[0]
+    intersect = Bed.from_positions(overlaps, chrom)
+    return intersect
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

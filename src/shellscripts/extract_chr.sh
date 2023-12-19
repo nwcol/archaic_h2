@@ -24,11 +24,6 @@ do
 		stem="chr$1_${arg:0:-7}" # .vcf.gz is 7 characters
 		
 		bcftools view -r "$1" -o "$stem.vcf.gz" "$arg"
-		python /c/archaic/src/pyscripts/simplify_vcf.py "$stem.vcf.gz" GT
-		rm "$stem.vcf.gz"
-		bgzip "$stem.vcf"
-		bcftools index "$stem.vcf.gz"
-		
 	fi
 	let i++
 done

@@ -21,9 +21,6 @@ then
 fi
 
 
-mkdir temp
-
-
 i=0
 for arg in "$@";
 do
@@ -36,15 +33,13 @@ do
 		
 		stem="${arg:0:-7}" 
 		
-		bcftools view -R "$mask_file" -o "temp/$stem.vcf.gz" "$arg"
-		bcftools index "temp/$stem.vcf.gz"
+		bcftools view -o "$stem.vcf" -R "$mask_file" "$arg"
+		bgzip -f "$stem.vcf"
+		bcftools index "$stem.vcf.gz"
 		
 	fi
 	let i++
 done
 
 
-bcftools merge -o "$out" -0 "$base" temp/*.vcf.gz
-
-
-#rm -r temp
+bcftools merge -o "$out" -0 "$base" "${@:4}"

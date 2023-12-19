@@ -12,7 +12,7 @@ import statistics
 
 
 def main(file_name):
-    samples = [x.decode() for x in vcf_util.read_samples(file_name)]
+    samples = [x.decode() for x in vcf_util.read_sample_ids(file_name)]
     samples.sort()
     n_samples = len(samples)
     n = 2
@@ -23,7 +23,7 @@ def main(file_name):
     sample_pairs = [(samples[i], samples[j]) for i, j in idxs]
     alt_vectors = dict()
     for sample in samples:
-        alt_vectors[sample] = vcf_util.read_genotypes(file_name, sample)
+        alt_vectors[sample] = vcf_util.read_sample(file_name, sample)
         pi_x = statistics.compute_diversity(alt_vectors[sample], n)
         out = dict(statistic="pi_x", sample=(sample,), value=pi_x)
         print(str(out))

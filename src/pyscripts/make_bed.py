@@ -1,18 +1,16 @@
 
 # Create a bed file describing continuous coverage in a .vcf or .vcf.gz file
 
-import gzip
-
 import sys
 
 sys.path.insert(0, "c:/archaic/src")
 
-from archaic import vcf_util
-
 from archaic import bed_util
 
+from archaic import map_util
 
-def main(path, out, min_size=None):
+
+def main(path, map_path):
     """
     Make a .bed file describing continuously covered regions in a .vcg.gz file
 
@@ -24,16 +22,11 @@ def main(path, out, min_size=None):
     :param min_size:
     :return:
     """
-    bed = bed_util.Bed.from_vcf(path)
-    if min_size:
-        bed = bed.exclude(min_size)
-    bed.write_bed(out)
+    bed = bed_util.Bed.from_vcf_vectorized(path)
+    map = map_util.Map.load_txt(map_path)
+    bed.trim(map.lower, map.upper)
+    bed_path = path.replace(".vcf.gz", ".bed")
+    bed.write_bed(bed_path)
 
 
-path = str(sys.argv[1])
-out = str(sys.argv[2])
-if len(sys.argv) == 4:
-    min_size = int(sys.argv[3])
-else:
-    min_size = None
-main(path, out, min_size=min_size)
+main(sys.argv[1], sys.argv[2])

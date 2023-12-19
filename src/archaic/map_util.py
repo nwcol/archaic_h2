@@ -7,7 +7,15 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 
-from bed_util import Bed
+import sys
+
+sys.path.append("c:/archaic")
+
+if __name__ == "__main__":
+    import bed_util
+
+else:
+    from src.archaic import bed_util
 
 
 if __name__ == "__main__":
@@ -49,10 +57,13 @@ class Map:
         map_values = np.array(map_values, dtype=np.float64)
         return cls(positions, rates, map_values)
 
-    def approximate_rates(self):
+    @property
+    def lower(self):
+        return self.positions[0]
 
-
-        return 0
+    @property
+    def upper(self):
+        return self.positions[-1]
 
 
 class MaskedMap:

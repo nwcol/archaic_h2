@@ -1,10 +1,6 @@
 
 # Script for eliminating superfluous data from .vcf files
 
-import gzip
-
-import numpy as np
-
 import sys
 
 sys.path.insert(0, "c:/archaic/src")
