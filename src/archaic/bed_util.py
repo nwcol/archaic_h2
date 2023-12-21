@@ -26,6 +26,9 @@ if __name__ == "__main__":
 
 
 class Bed:
+    """
+    Class of genetic masks which imitate the .bed file format in structure.
+    """
 
     def __init__(self, regions, chrom):
         """
@@ -69,13 +72,19 @@ class Bed:
         regions[:, 0] = starts[1:]
         regions[:, 0] -= 1  # set starts to 0 index
         regions[:, 1] = stops[1:]
-        chrom = vcf_util.read_chrom(path)
+        chrom = vcf_util.read_chrom(path).decode()
         return cls(regions, chrom)
 
     @classmethod
     def from_vcf_vectorized(cls, path):
+        """
+
+
+        :param path:
+        :return:
+        """
         positions = vcf_util.read_positions(path) - 1
-        chrom = vcf_util.read_chrom(path)
+        chrom = vcf_util.read_chrom(path).decode()
         return cls.from_positions(positions, chrom)
 
     @classmethod
@@ -105,7 +114,7 @@ class Bed:
     @classmethod
     def from_positions(cls, positions, chrom):
         """
-        Initialize from a vector of positions, 0-indexed
+        Initialize from a vector of 0-indexed positions.
 
         :param position_vec:
         :param chrom:
@@ -122,6 +131,20 @@ class Bed:
         regions[:, 0] = starts
         regions[:, 1] = stops
         return cls(regions, chrom)
+
+    @classmethod
+    def from_genetic_map(cls, genetic_map):
+        """
+        Create a Bed instance with a single region describing area covered
+        by the map. Assumes that maps are 1-indexed.
+
+        :param genetic_map:
+        :return:
+        """
+        pos_0 = genetic_map.positions[0] - 1
+        pos_1 = genetic_map.positions[-1]
+        regions = np.array([[pos_0, pos_1]], dtype=np.int64)
+        return cls(regions, genetic_map.chrom)
 
     def __getitem__(self, index):
         """
@@ -356,7 +379,7 @@ class Bed:
         return 0
 
 
-def intersect(*beds):
+def intersect_beds(*beds):
     n_beds = len(beds)
     chrom = beds[0].chrom
     maximums = []
@@ -370,34 +393,3 @@ def intersect(*beds):
     overlaps = np.where(tally == n_beds)[0]
     intersect = Bed.from_positions(overlaps, chrom)
     return intersect
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

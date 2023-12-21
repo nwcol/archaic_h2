@@ -8,7 +8,7 @@ from archaic import bed_util
 
 def main(out, min_size, *args):
     beds = [bed_util.Bed.load_bed(arg) for arg in args]
-    intersected = bed_util.intersect(*beds)
+    intersected = bed_util.intersect_beds(*beds)
     intersected = intersected.exclude(min_size)
     intersected.write_bed(out)
     return 0

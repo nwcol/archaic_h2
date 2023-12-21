@@ -10,6 +10,7 @@
 source /c/anaconda3/etc/profile.d/conda.sh
 conda activate archaic_conda_env
 
+chr=$1
 
 i=0
 for arg in "$@";
@@ -21,9 +22,8 @@ do
 			bcftools index "$arg"
 		fi
 		
-		stem="chr$1_${arg:0:-7}" # .vcf.gz is 7 characters
-		
-		bcftools view -r "$1" -o "$stem.vcf.gz" "$arg"
+		stem=${arg:0:-7} # .vcf.gz is 7 characters
+		bcftools view -r "$1" -o chr"$chr"_"$stem".vcf.gz $arg
 	fi
 	let i++
 done

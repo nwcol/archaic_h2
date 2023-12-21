@@ -23,15 +23,12 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
 
 
-class Map:
-    """
-    For loading .txt map files
-    """
+class GeneticMap:
 
-    def __init__(self, positions, rates, map_values):
+    def __init__(self, positions, values, chrom):
         self.positions = positions
-        self.rates = rates
-        self.values = map_values
+        self.values = values
+        self.chrom = chrom
 
     @classmethod
     def load_txt(cls, path):
@@ -43,27 +40,37 @@ class Map:
         :return:
         """
         positions = []
-        rates = []
-        map_values = []
+        values = []
         with open(path, mode="r") as file:
             for i, line in enumerate(file):
                 if i > 0:
                     fields = line.strip().split()
                     positions.append(fields[1])
-                    rates.append(fields[2])
-                    map_values.append(fields[3])
+                    values.append(fields[3])
+        chrom = fields[0].strip("chr")
         positions = np.array(positions, dtype=np.int64)
-        rates = np.array(rates, dtype=np.float64)
-        map_values = np.array(map_values, dtype=np.float64)
-        return cls(positions, rates, map_values)
+        values = np.array(values, dtype=np.float64)
+        return cls(positions, values, chrom)
 
     @property
-    def lower(self):
+    def first_pos(self):
         return self.positions[0]
 
     @property
-    def upper(self):
+    def last_pos(self):
         return self.positions[-1]
+
+    def approximate_map_values(self, positions):
+        index = np.searchsorted(self.positions, positions, "right") - 1
+        floor = self.values[index]
+        floor_positions = self.positions[index]
+        bp_to_floor = positions - floor_positions
+        approx_rates = np.diff(self.values) / np.diff(self.positions)
+        approx_rates = np.append(approx_rates, 0)  # in case last site exists
+        pos_approx_rates = approx_rates[index]
+        approx_map = np.zeros(len(positions), dtype=np.float64)
+        approx_map[:] = floor + bp_to_floor * pos_approx_rates
+        return approx_map
 
 
 class MaskedMap:

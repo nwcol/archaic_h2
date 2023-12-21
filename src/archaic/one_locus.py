@@ -10,10 +10,118 @@ import os
 
 import sys
 
+import vcf_samples
+
 
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
     matplotlib.use('Qt5Agg')
+
+
+def compute_pi(samples, *sample_ids):
+    """
+    Compute diversity for one sample in a Samples index
+
+    :param samples:
+    :param sample_ids: sample ids to compute pi for
+    :return:
+    """
+    n = len(sample_ids) * 2
+    alts = [samples.alts(sample_id) for sample_id in sample_ids]
+    alt_sum = np.sum(alts, axis=0)
+    ref_sum = n - alt_sum
+    tot = alt_sum * ref_sum
+    pi = 2 / (samples.n_positions * n * (n - 1)) * np.sum(tot)
+    return pi
+
+
+def compute_h(samples, sample_id):
+    """
+    Compute heterozygosity for one sample in a Samples index
+
+    :param samples:
+    :param sample_id:
+    :return:
+    """
+    h = samples.n_hets(sample_id) / samples.n_positions
+    return h
+
+
+def compute_pi_xy(samples, id_x, id_y):
+    """
+    Compute divergence between two samples
+
+    :param samples:
+    :param id_x:
+    :param id_y:
+    :return:
+    """
+    n = 2
+    alt_x = samples.alts(id_x)
+    alt_y = samples.alts(id_y)
+    ref_x = n - alt_x
+    ref_y = n - alt_y
+    tot = (ref_x * alt_y) + (alt_x * ref_y)
+    pi_xy = 1 / (samples.n_positions * n * n) * np.sum(tot)
+    return pi_xy
+
+
+def compute_all_pi(samples):
+    """
+    Compute diversity for each sample in a Samples instance
+
+    :param samples:
+    :return:
+    """
+    pi_dict = {sample_id: None for sample_id in samples.sample_ids}
+    for sample_id in pi_dict:
+        pi_dict[sample_id] = compute_pi(samples, sample_id)
+    return pi_dict
+
+
+def compute_all_pi_xy(samples):
+    """
+    Compute divergence between all pairs of samples
+
+    :param samples:
+    :return:
+    """
+    n_samples = samples.n_samples
+    sample_ids = samples.sample_ids
+    pi_xy_matrix = np.zeros((n_samples, n_samples), dtype=np.float64)
+    for i in np.arange(n_samples):
+        for j in np.arange(i + 1, n_samples):
+            x = sample_ids[i]
+            y = sample_ids[j]
+            pi_xy_matrix[i, j] = compute_pi_xy(samples, x, y)
+    return pi_xy_matrix, sample_ids
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -145,11 +253,9 @@ class GenotypeVector:
         return joint_H
 
 
-
-
 # functions that take alt indicator vectors or other statistics as arguments
 
-def compute_pi_x(alt_x, n_x):
+def compute_pi_xxx(alt_x, n_x):
     """
     Compute an estimator for diversity from a vector of alternate allele counts
 
@@ -165,7 +271,7 @@ def compute_pi_x(alt_x, n_x):
     return diversity
 
 
-def compute_pi_xy(alt_x, alt_y, n_x, n_y):
+def compute_pi_xyxx(alt_x, alt_y, n_x, n_y):
     """
     Compute an estimator for divergence from two vectors of alternate allele
     counts.
@@ -214,3 +320,6 @@ def compute_F_3(pi_x, pi_1, pi_2, pi_x1, pi_x2, pi_12):
     F_2_12 = compute_F_2(pi_12, pi_1, pi_2)
     F_3 = 0.5 * F_2_x1 * F_2_x2 * F_2_12
     return F_3
+
+
+samples = vcf_samples.Samples.dir("c:/archaic/data/chromosomes/merged/chr22/")

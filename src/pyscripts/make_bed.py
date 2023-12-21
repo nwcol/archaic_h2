@@ -10,7 +10,7 @@ from archaic import bed_util
 from archaic import map_util
 
 
-def main(path, map_path):
+def main(path):
     """
     Make a .bed file describing continuously covered regions in a .vcg.gz file
 
@@ -23,10 +23,8 @@ def main(path, map_path):
     :return:
     """
     bed = bed_util.Bed.from_vcf_vectorized(path)
-    map = map_util.Map.load_txt(map_path)
-    bed.trim(map.lower, map.upper)
     bed_path = path.replace(".vcf.gz", ".bed")
     bed.write_bed(bed_path)
 
 
-main(sys.argv[1], sys.argv[2])
+main(sys.argv[1])

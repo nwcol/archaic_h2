@@ -43,7 +43,7 @@ def read_first_lines(path, k, fmt='r'):
 
 def read_chrom(file_name):
     """
-    Return the first chromosome number in a .vcf file as a string
+    Return the first chromosome number in a .vcf file as bytes
 
     :param file_name:
     :return:
@@ -52,7 +52,7 @@ def read_chrom(file_name):
     with gzip.open(file_name, "r") as file:
         for line in file:
             if b'#' not in line:
-                chrom = line.split()[chrom_col].decode()
+                chrom = line.split()[chrom_col]
                 break
     return chrom
 
@@ -75,31 +75,9 @@ def read_header(path):
     return header
 
 
-def simplify_header(header, format_fields):
-    """
-    Simplify a header
-
-    :param header:
-    :param format_fields:
-    :return:
-    """
-    simplified_header = [header[0]]
-    for line in header:
-        if b'##FORMAT' in line:
-            for field in format_fields:
-                if b'##FORMAT=<ID=' + field in line:
-                    simplified_header.append(line)
-        elif b'##FILTER' in line:
-            simplified_header.append(line)
-        else:
-            pass
-    simplified_header.append(header[-1])
-    return simplified_header
-
-
 def read_format_fields(path):
     """
-    Read the format fields and return them as a dictionary
+    Read the format fields in the first and return them as a dictionary
 
     :param path:
     :return:
@@ -209,11 +187,36 @@ def eval_genotype(genotype):
     if allele_0 == allele_1:
         if allele_0 == b'0':
             code = 0
+        elif allele_0 == b'.':
+            code = -1
         elif allele_1 != b'0':
             code = 2
     elif allele_0 != allele_1:
         code = 1
     return code
+
+
+def simplify_header(header, format_fields):
+    """
+    Simplify a header
+
+    :param header: list of bytes; the original file header
+    :param format_fields: list of bytes; the formats to retain in the header
+    :return:
+    """
+    simplified_header = [header.pop(0)]
+    column_titles = header.pop(-1)
+    for line in header:
+        if b'##FORMAT' in line:
+            for field in format_fields:
+                if b'##FORMAT=<ID=' + field in line:
+                    simplified_header.append(line)
+        elif b'##FILTER' in line:
+            simplified_header.append(line)
+        else:
+            pass
+    simplified_header.append(column_titles)
+    return simplified_header
 
 
 def simplify_line(line, format_fields, format_index, sample_index):
@@ -243,17 +246,25 @@ def simplify_line(line, format_fields, format_index, sample_index):
 
 def simplify(path, out, *args):
     """
+    Write a .vcf copy of a .vcf.gz file, removing everything from the ID and
+    INFO columns and truncating FORMAT to the fields specified in *args
 
-    :param path:
-    :param out:
+    I output files as .vcf because I do not know how to produce a gzipped
+    file from within python.
+
+    :param path: path to .vcf.gz file
+    :param out: name of the .vcf output file
     :param args:
     :return:
     """
     format_fields = [arg.encode() for arg in args]
-    formats = b':'.join(format_fields)
     format_dict = read_format_fields(path)
+    for field in format_fields:
+        if field not in format_dict:
+            raise ValueError(f"{field} is not a valid format field")
     format_index = [format_dict[key] for key in format_dict
                     if key in format_fields]
+    format_col = b':'.join(format_fields)
     sample_index = list(read_sample_ids(path).values())
     header = read_header(path)
     simplified_header = simplify_header(header, format_fields)
@@ -263,13 +274,13 @@ def simplify(path, out, *args):
     for line in simplified_header:
         out_file.write(line)
     with gzip.open(path, 'r') as file:
-        for i, line in enumerate(file):
+        for line in file:
             if b"#" not in line:
                 out_file.write(
-                    simplify_line(line, formats, format_index, sample_index)
-                               )
+                    simplify_line(line, format_col, format_index, sample_index)
+                )
     out_file.close()
-    return i
+    return 0
 
 
 def read_sample(path, sample_id, n_positions=None):
@@ -320,8 +331,6 @@ def read_samples(path):
                 genotypes = parse_genotypes(line)
                 genotype_arr[i] = eval_genotypes(genotypes)
                 i += 1
-                if i % 1e6 == 0:
-                    print(f"{i} positions read")
     inverted_ids = {sample_ids[key]:key for key in sample_ids}
     sample_dict = {}
     for i in np.arange(n_samples):

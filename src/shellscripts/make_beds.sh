@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # args: .vcf.gz files to make .bed files for
 
 source /c/anaconda3/etc/profile.d/conda.sh
