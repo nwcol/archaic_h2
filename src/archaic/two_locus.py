@@ -185,9 +185,6 @@ def save_het_pairs(het_pairs, path):
     return 0
 
 
-
-
-
 def plot_pi_2_dict(pi_2_dict, r=r):
 
     fig = plt.figure(figsize=(8, 6))
@@ -202,17 +199,6 @@ def plot_pi_2_dict(pi_2_dict, r=r):
     plt.tight_layout()
     fig.show()
     return 0
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -255,77 +241,53 @@ def joint_het_test(sample_0, sample_1):
     hap_probs_1 = haplotype_probs(sample_1)
     hets = hap_probs_0 * np.flip(hap_probs_1)
     joint_het = np.sum(hets)
-    return hets, joint_het
+    return joint_het
 
 
 def joint_het_arrs(sample_0, sample_1):
 
+    n_positions = len(sample_0)
+    n_pairs = int(0.5 * n_positions * (n_positions - 1))
+    joint_hets = np.zeros(n_pairs)
+    tot = 0
+
+    for i in np.arange(n_positions):
 
 
-    return 0
+        for j in np.arange(i + 1, n_positions):
+
+            joint_hets[tot] = joint_het_test(sample_0[[i, j]], sample_1[[i, j]])
+            tot += 1
+
+    joint_het = np.sum(joint_hets) / tot
+
+    return joint_hets, tot, joint_het
 
 
+def fast_haplotype_probs(alt_counts):
+    """
+    np.array([#A, #B])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    :param alt_counts:
+    :return:
+    """
+    alt_freqs = alt_counts / 2
+    prob_matrix = np.outer(alt_freqs, 1 - alt_freqs)
+    return prob_matrix
 
 
 
-def setup_bootstrap(dir, pair_counts, sample="tsk_0"):
-    files = [dir + file for file in os.listdir(dir)]
-    bed_path = [file for file in files if ".bed" in file][0]
-    pi_2s = []
-    for file in files:
-        if ".vcf.gz" in file:
-            vec = GenotypeVector.read_abbrev_vcf(file, bed_path, sample)
-            hets = get_het_pair_distribution(vec, maskedmap, r_edges)
-            pi_2s.append(hets/pair_counts)
-    return pi_2s
 
 
-def bootstrap(pi_2s, B, x):
-    pi_2s = np.array(pi_2s)
-    n_samples = len(pi_2s)
-    means = np.zeros((B, len(pi_2s[0])))
-    for i in np.arange(B):
-        samples = np.random.randint(0, n_samples, x)
-        means[i, :] = np.mean(pi_2s[samples], axis=0)
-    return means
 
 
-def load_simulated_vcfs(dir, r_edges):
-    hets = np.zeros(len(r_edges) - 1, dtype=np.int64)
-    files = os.listdir(dir)
-    for file in files:
-        vec = GenotypeVector.read_abbrev_vcf(
-            dir + '/' + file,
-            "c:/archaic/data/chromosomes/merged_masks/chr22/chr22_merge.bed",
-            "tsk_0")
-        hets += get_het_pair_distribution(vec, maskedmap, r_edges)
-    return hets
 
 
-chr22_samples = vcf_samples.Samples.dir("c:/archaic/data/chromosomes/merged/chr22/")
+
+
+
+
+
+
+chr22_samples = vcf_samples.UnphasedSamples.dir(
+    "c:/archaic/data/chromosomes/merged/chr22/")

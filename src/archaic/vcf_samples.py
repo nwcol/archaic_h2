@@ -17,7 +17,7 @@ else:
     from src.archaic import bed_util
 
 
-class Samples:
+class UnphasedSamples:
 
     def __init__(self, samples, alt_positions, genetic_map, bed):
         """
@@ -144,4 +144,4 @@ class Samples:
         return n_hets
 
 
-samples = Samples.dir("c:/archaic/data/chromosomes/merged/chr22/")
+samples = UnphasedSamples.dir("c:/archaic/data/chromosomes/merged/chr22/")

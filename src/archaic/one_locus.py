@@ -12,6 +12,8 @@ import sys
 
 import vcf_samples
 
+import vcf_util
+
 
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
@@ -322,4 +324,4 @@ def compute_F_3(pi_x, pi_1, pi_2, pi_x1, pi_x2, pi_12):
     return F_3
 
 
-samples = vcf_samples.Samples.dir("c:/archaic/data/chromosomes/merged/chr22/")
+samples = vcf_samples.UnphasedSamples.dir("c:/archaic/data/chromosomes/merged/chr22/")
