@@ -1,7 +1,6 @@
-/shelf/
-/workspace.xml
+.git/
 .idea/
-env/
+.venv/
 __pycache__
 *.pyc
 *.vcf
@@ -11,10 +10,8 @@ __pycache__
 *.bed
 *.npz
 *.csi
-*.txt
 *.xlsx
-archaic_genomes/
+chromosomes/
 genomes/
-masks/
-statistics/
-yamls/
+model_statistics/
+models/
