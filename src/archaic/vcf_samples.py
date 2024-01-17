@@ -2,19 +2,11 @@ import numpy as np
 
 import os
 
-if __name__ == "__main__":
-    import vcf_util
+import archaic.vcf_util as vcf_util
 
-    import map_util
+import archaic.map_util as map_util
 
-    import bed_util
-
-else:
-    from src.archaic import vcf_util
-
-    from src.archaic import map_util
-
-    from src.archaic import bed_util
+import archaic.bed_util as bed_util
 
 
 class UnphasedSamples:
@@ -144,4 +136,4 @@ class UnphasedSamples:
         return n_hets
 
 
-samples = UnphasedSamples.dir("c:/archaic/data/chromosomes/merged/chr22/")
+samples = UnphasedSamples.dir("/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")

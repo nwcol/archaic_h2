@@ -9,13 +9,7 @@ import matplotlib.pyplot as plt
 
 import sys
 
-sys.path.append("c:/archaic")
-
-if __name__ == "__main__":
-    import bed_util
-
-else:
-    from src.archaic import bed_util
+import archaic.bed_util as bed_util
 
 
 if __name__ == "__main__":

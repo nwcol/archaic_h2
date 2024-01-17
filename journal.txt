@@ -1,0 +1,29 @@
+01-15-2024 Monday: Setup on new debian install. approx 10am-2pm (sporadically throughout the day)
+	Cloned github repository 'archaic' locally and copied the data folder into it
+	Rearranged the data folder and deleted some deprecated merged chromosomes etc
+	Created a personal github token and figured out how to use it to push local changes onto github
+	Installed pip, venv
+	Set up virtual environment- msprime installed without issue- and used pip freeze to recreate an accurate requirements.txt file
+	Updated .gitignore and specifically excluded directories in data/
+	Installed and configured pycharm
+	Tested some python files and corrected file paths to the Linux hierarchy a little
+	Tested out bcftools and confirmed that it's working
+	
+To-do:
+	I need to get bgzip set up
+	Tomorrow I will do some productive work and start attacking the problem of efficiently computing joint heteterozygosity
+	
+	
+01-16-2024 Tuesday: No serious work. Distracted.
+	Spent some time learning C
+
+To-do:
+	Above. 
+	
+
+01-17-2024 Wednesday: 11am-12:40pm
+	- Deleted old analysis module; obselete because it operated on .txt files with stats in them, which I no longer use
+	- Spent some time screwing around with imports to iron out an elegant way to handle them. Sample:
+		>>> import sys
+		>>> sys.path.append("/home/nick/Projects/archaic/src")
+		>>> import archaic.bed_util as bed_util

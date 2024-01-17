@@ -3,11 +3,11 @@
 
 import sys
 
-sys.path.insert(0, "c:/archaic/src")
+sys.path.append("/home/nick/Projects/archaic/src")
 
-from archaic import bed_util
+import archaic.bed_util as bed_util
 
-from archaic import map_util
+import archaic.map_util as map_util
 
 
 def main(path):

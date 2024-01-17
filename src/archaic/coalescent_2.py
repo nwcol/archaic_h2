@@ -19,11 +19,11 @@ import time
 
 import os
 
-import bed_util
+import archaic.bed_util as bed_util
 
-import vcf_util
+import archaic.vcf_util as vcf_util
 
-import map_util
+import archaic.map_util as map_util
 
 
 if __name__ == "__main__":

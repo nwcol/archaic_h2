@@ -11,18 +11,14 @@ import numpy as np
 
 import sys
 
-sys.path.append("c:/archaic")
+#from archaic import vcf_util
 
-if __name__ == "__main__":
-    import vcf_util
-
-else:
-    from src.archaic import vcf_util
+import archaic.vcf_util as vcf_util
 
 
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
-    matplotlib.use('Qt5Agg')
+    # matplotlib.use('Qt5Agg')
 
 
 class Bed:
@@ -116,7 +112,7 @@ class Bed:
         """
         Initialize from a vector of 0-indexed positions.
 
-        :param position_vec:
+        :param positions:
         :param chrom:
         :return:
         """

@@ -1,9 +1,9 @@
 
 import sys
 
-sys.path.insert(0, "c:/archaic/src")
+sys.path.append("/home/nick/Projects/archaic/src")
 
-from archaic import bed_util
+import archaic.bed_util as bed_util
 
 
 def main(out, min_size, *args):

@@ -10,9 +10,9 @@ import os
 
 import sys
 
-import vcf_samples
+import archaic.vcf_samples as vcf_samples
 
-import map_util
+import archaic.map_util as map_util
 
 
 if __name__ == "__main__":
@@ -285,9 +285,5 @@ def fast_haplotype_probs(alt_counts):
 
 
 
-
-
-
-
 chr22_samples = vcf_samples.UnphasedSamples.dir(
-    "c:/archaic/data/chromosomes/merged/chr22/")
+    "~/Projects/archaic/data/chromosomes/merged/chr22/")
