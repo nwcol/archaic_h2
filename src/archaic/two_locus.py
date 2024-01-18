@@ -1,23 +1,14 @@
 import matplotlib.pyplot as plt
 
-import matplotlib
-
 import numpy as np
 
-import time
-
-import os
-
 import sys
+
+sys.path.append("/home/nick/Projects/archaic/src")
 
 import archaic.vcf_samples as vcf_samples
 
 import archaic.map_util as map_util
-
-
-if __name__ == "__main__":
-    plt.rcParams['figure.dpi'] = 100
-    matplotlib.use('Qt5Agg')
 
 
 r_edges = np.array([0,
@@ -43,7 +34,7 @@ def bin_pairs(samples, r_edges=r_edges):
     n_positions = samples.n_positions
     pair_counts = np.zeros(n_bins, dtype=np.int64)
     d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
-    #d_edges[0] -= 1e-4
+    # d_edges[0] -= 1e-4
     map_values = samples.map_values
     i = 0
     for i in np.arange(n_positions):
@@ -74,7 +65,7 @@ def bin_het_pairs(samples, sample_id, r_edges=r_edges):
     n_het = samples.n_het(sample_id)
     pair_counts = np.zeros(n_bins, dtype=np.int64)
     d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
-    #d_edges[0] -= 1e-4  # ensure that the lowest bin is counted properly
+    # d_edges[0] -= 1e-4  # ensure that the lowest bin is counted properly
     het_map = samples.map_values[samples.het_index(sample_id)]
     i = 0
     for i in np.arange(n_het):
@@ -201,8 +192,6 @@ def plot_pi_2_dict(pi_2_dict, r=r):
     return 0
 
 
-
-
 # two sample joint heterozygosity
 
 
@@ -253,7 +242,6 @@ def joint_het_arrs(sample_0, sample_1):
 
     for i in np.arange(n_positions):
 
-
         for j in np.arange(i + 1, n_positions):
 
             joint_hets[tot] = joint_het_test(sample_0[[i, j]], sample_1[[i, j]])
@@ -283,7 +271,85 @@ def fast_haplotype_probs(alt_counts):
 
 
 
+def get_sample_hap_arr(samples, sample_id):
+    """
+    return an array of haplotype sample probabilities for unphased samples
+
+    capital letters = alt alleles
+
+    :param sample:
+    :return:
+    """
+    alts = samples.samples[sample_id] / 2
+    refs = 1 - alts
+
+
+
+    A_freq = 0
+    B_freq = 1
+    a_freq = 1 - A_freq
+    b_freq = 1 - B_freq
+    probs = np.array([f_A * f_B, f_A * f_b, f_a * f_B, f_a * f_b],
+                     dtype=np.float64)
+    return 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 chr22_samples = vcf_samples.UnphasedSamples.dir(
-    "~/Projects/archaic/data/chromosomes/merged/chr22/")
+    "/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")

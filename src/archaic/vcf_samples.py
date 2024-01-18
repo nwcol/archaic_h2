@@ -13,6 +13,8 @@ class UnphasedSamples:
 
     def __init__(self, samples, alt_positions, genetic_map, bed):
         """
+        alt_positions gives the chromosomal positions with variants, and
+        alt_index gives the index of these sites in the positions vector.
 
         :param samples:
         :param alt_positions:
@@ -25,8 +27,9 @@ class UnphasedSamples:
         self.alt_positions = alt_positions
         self.positions = bed.get_positions_1()
         self.n_positions = len(self.positions)
-        self.map_values = genetic_map.approximate_map_values(self.positions)
         self.alt_index = np.searchsorted(self.positions, self.alt_positions)
+        self.n_variants = len(self.alt_positions)
+        self.map_values = genetic_map.approximate_map_values(self.positions)
         self.alt_map_values = self.map_values[self.alt_index]
 
     @classmethod
@@ -136,4 +139,5 @@ class UnphasedSamples:
         return n_hets
 
 
-samples = UnphasedSamples.dir("/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
+# samples = UnphasedSamples.dir(
+# "/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
