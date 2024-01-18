@@ -264,13 +264,6 @@ def fast_haplotype_probs(alt_counts):
     return prob_matrix
 
 
-
-
-
-
-
-
-
 def get_sample_hap_arr(samples, sample_id):
     """
     return an array of haplotype sample probabilities for unphased samples
@@ -282,9 +275,6 @@ def get_sample_hap_arr(samples, sample_id):
     """
     alts = samples.samples[sample_id] / 2
     refs = 1 - alts
-
-
-
     A_freq = 0
     B_freq = 1
     a_freq = 1 - A_freq
@@ -292,63 +282,6 @@ def get_sample_hap_arr(samples, sample_id):
     probs = np.array([f_A * f_B, f_A * f_b, f_a * f_B, f_a * f_b],
                      dtype=np.float64)
     return 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 chr22_samples = vcf_samples.UnphasedSamples.dir(

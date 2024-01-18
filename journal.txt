@@ -1,4 +1,5 @@
-01-15-2024 Monday: Setup on new debian install. approx 10am-2pm (sporadically throughout the day)
+01-15-2024 Monday: approx 10am-2pm (sporadically throughout the day)
+	- Setup on new debian install
 	- Cloned github repository 'archaic' locally and copied the data folder into it
 	- Rearranged the data folder and deleted some deprecated merged chromosomes etc
 	- Created a personal github token and figured out how to use it to push local changes onto github
@@ -27,6 +28,72 @@ To-do:
 		>>> import sys
 		>>> sys.path.append("/home/nick/Projects/archaic/src")
 		>>> import archaic.bed_util as bed_util
+	- Started seriously working on joint het computation
+	
+To-do:
+	- Joint het!
 
 
-01-18-2024 Thursday: 9:30am-
+01-18-2024 Thursday: 9:30am-12:30pm, 1:30pm-2pm
+	- Created a new file (maybe temporary) called joint_het.py
+	- Wasted a lot of time trying to find efficient ways of computing joint het with matrices
+	- Experimented with computing two sample joint het
+	- Wrote a function (which I have called "idea()" for the present) which computes two-sample joint het across an entire chromosome in about 35s for 90,000 alts in 19 Mb
+		- No bins yet
+		- Operates explictly on only those sites which have >= 1 variant across samples
+		- It seems to be safe to ignore all sites which lack alternate alleles in the computation, as any site pair with 0/0 at at least one site in every sample will always give a joint het. of zero
+	
+To-do:
+	- Understand and maybe improve the r-binning method that I previously used for single-sample joint het
+	- Implement r binning in the two-sample computation
+	- Clean things up and figure out how I want to conduct analysis in the future (in IDE? from terminal? lots of python or shell scripts or not?)
+	- Tidy up and improve the vcf_samples class, which is highly useful but could be further refined
+	- Docstrings, function and variable names
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

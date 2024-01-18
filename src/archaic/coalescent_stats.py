@@ -1,8 +1,13 @@
+
+# An older module: for running large numbers of multi-window coalescent
+# simulations, given demographies defined in demes. Intended mostly to produce
+# expectations of single-locus statistics, given demographies.
+
+# probably in need of some work
+
 import demes
 
 import demesdraw
-
-from IPython.display import display
 
 import matplotlib.pyplot as plt
 
@@ -950,40 +955,3 @@ def simulate_and_write(filename, n_reps=100):
     null.compute_f2()
     null.compute_Fst()
     null.write()
-
-
-a02_b02_names = ['rogers_a02_b02_d00_g00',
-                 'rogers_a02_b02_d00_g03',
-                 'rogers_a02_b02_d00_g06',
-                 'rogers_a02_b02_d03_g00',
-                 'rogers_a02_b02_d03_g03',
-                 'rogers_a02_b02_d03_g06',
-                 'rogers_a02_b02_d05_g00',
-                 'rogers_a02_b02_d05_g03',
-                 'rogers_a02_b02_d05_g06']
-
-
-a02_b00_names = ['rogers_a02_b00_d00_g00',
-                 'rogers_a02_b00_d00_g03',
-                 'rogers_a02_b00_d00_g06',
-                 'rogers_a02_b00_d03_g00',
-                 'rogers_a02_b00_d03_g03',
-                 'rogers_a02_b00_d03_g06',
-                 'rogers_a02_b00_d05_g00',
-                 'rogers_a02_b00_d05_g03',
-                 'rogers_a02_b00_d05_g06']
-
-
-a02_b02_groups = [Group.load_data(name) for name in a02_b02_names]
-a02_b00_groups = [Group.load_data(name) for name in a02_b00_names]
-
-# set up 2 more cluster groups with different beta proportions
-
-
-
-
-
-
-
-
-
