@@ -5,8 +5,6 @@ import numpy as np
 
 import gzip
 
-import json
-
 
 # names the 8 mandatory .vcf format columns and two additional useful ones
 vcf_cols = {"#CHROM": 0,

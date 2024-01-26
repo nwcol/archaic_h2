@@ -1,8 +1,15 @@
+
+#
+
+import matplotlib
+
 import matplotlib.pyplot as plt
 
 import numpy as np
 
 import sys
+
+import time
 
 sys.path.append("/home/nick/Projects/archaic/src")
 
@@ -11,18 +18,24 @@ import archaic.vcf_samples as vcf_samples
 import archaic.map_util as map_util
 
 
-r_edges = np.array([0,
-                    1e-7, 2e-7, 5e-7,
-                    1e-6, 2e-6, 5e-6,
-                    1e-5, 2e-5, 5e-5,
-                    1e-4, 2e-4, 5e-4,
-                    1e-3, 2e-3, 5e-3,
-                    1e-2, 2e-2, 5e-2,
-                    1e-1, 2e-1, 5e-1], dtype=np.float64)
-r = r_edges[1:]
+if __name__ == "__main__":
+    plt.rcParams['figure.dpi'] = 100
+    matplotlib.use('Qt5Agg')
 
 
-def bin_pairs(samples, r_edges=r_edges):
+edges = np.array([0,
+                  1e-7, 2e-7, 5e-7,
+                  1e-6, 2e-6, 5e-6,
+                  1e-5, 2e-5, 5e-5,
+                  1e-4, 2e-4, 5e-4,
+                  1e-3, 2e-3, 5e-3,
+                  1e-2, 2e-2, 5e-2,
+                  1e-1, 2e-1, 5e-1], dtype=np.float64)
+
+r = edges[1:]
+
+
+def count_site_pairs(samples, r_edges=edges):
     """
     Get the number of site pairs per bin using bins specified by r_edges
 
@@ -33,10 +46,8 @@ def bin_pairs(samples, r_edges=r_edges):
     n_bins = len(r_edges) - 1
     n_positions = samples.n_positions
     pair_counts = np.zeros(n_bins, dtype=np.int64)
-    d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
-    # d_edges[0] -= 1e-4
+    d_edges = map_util.r_to_d(r_edges)
     map_values = samples.map_values
-    i = 0
     for i in np.arange(n_positions):
         pos_value = map_values[i]
         edges_for_i = d_edges + pos_value
@@ -46,14 +57,13 @@ def bin_pairs(samples, r_edges=r_edges):
             print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
     print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
     exp = int(n_positions * (n_positions - 1) / 2)
-    emp = int(np.sum(pair_counts))
-    diff = emp - exp
+    emp = np.sum(pair_counts)
     print(f"{emp} pairs detected for {i+1} sites, expected {exp}, "
-          f"difference {diff}")
+          f"difference {emp - exp}")
     return pair_counts
 
 
-def bin_het_pairs(samples, sample_id, r_edges=r_edges):
+def count_heterozygous_pairs(samples, sample_id, r_edges=edges):
     """
 
     :param samples:
@@ -64,24 +74,57 @@ def bin_het_pairs(samples, sample_id, r_edges=r_edges):
     n_bins = len(r_edges) - 1
     n_het = samples.n_het(sample_id)
     pair_counts = np.zeros(n_bins, dtype=np.int64)
-    d_edges = map_util.r_to_d(r_edges)  # convert bins in r to bins in d
-    # d_edges[0] -= 1e-4  # ensure that the lowest bin is counted properly
+    d_edges = map_util.r_to_d(r_edges)
     het_map = samples.map_values[samples.het_index(sample_id)]
-    i = 0
     for i in np.arange(n_het):
         value = het_map[i]
         edges_for_i = d_edges + value
         pos_edges = np.searchsorted(het_map[i+1:], edges_for_i)
         pair_counts += np.diff(pos_edges)
     exp = int(n_het * (n_het - 1) / 2)
-    emp = int(np.sum(pair_counts))
-    diff = emp - exp
+    emp = np.sum(pair_counts)
     print(f"{emp} pairs / {exp} expected for {i+1} sites, "
-          f"difference {diff}")
+          f"difference {emp - exp}")
     return pair_counts
 
 
-def save_pair_counts(pair_counts, path, r_edges=r_edges):
+def count_cross_pop_heterozygous_pairs(samples, sample_id_x, sample_id_y,
+                                       r_edges=edges):
+    """
+
+    :param samples:
+    :param sample_id_x:
+    :param sample_id_y:
+    :param r_edges:
+    :return:
+    """
+    time_0 = time.time()
+    alt_map = samples.alt_map_values
+    freq_x = (samples.samples[sample_id_x] / 2).astype(np.float64)
+    freq_y = (samples.samples[sample_id_y] / 2).astype(np.float64)
+    n_alts = samples.n_variants
+    n_bins = len(r_edges) - 1
+    joint_het = np.zeros(n_bins)
+
+    for i in np.arange(n_alts):
+
+        if freq_x[i] != 0 or freq_y[i] != 0:
+
+            pr_x = get_haplotype_prob_arr(freq_x[i], freq_x[i + 1:])
+            pr_y = get_haplotype_prob_arr(freq_y[i], freq_y[i + 1:])
+            hets = compute_hets(pr_x, pr_y)
+            bin_idx = assign_bins(i, alt_map, r_edges)
+
+            for b in np.arange(n_bins):
+                joint_het[b] += np.sum(hets[bin_idx == b])
+
+        if i % 10_000 == 0 and i > 0:
+            print(i, np.round(time.time() - time_0, 2), " s")
+
+    return joint_het
+
+
+def save_pair_counts(pair_counts, path, r_edges=edges):
     """
     Save a vector of pair counts
 
@@ -96,7 +139,75 @@ def save_pair_counts(pair_counts, path, r_edges=r_edges):
     file.close()
 
 
-def compute_pi_2(samples, sample_id, pair_counts, r_edges=r_edges):
+def get_haplotype_prob_arr(A, B_vec):
+    """
+    For unphased samples; given the frequencies of alternate alleles, compute
+    the probabilities that the haplotypes AB, Ab, aB, ab would be sampled from
+    a phased sample.
+
+    Operates on a single focal locus with alleles named a, A and a vector of
+    other loci named the B_vec.
+
+    :param A: alternate allele frequency at a site of interest
+    :type A: float
+    :param B_vec: vector of alternate allele frequencies outside side of
+        interest
+    :type B_vec: 1d array of np.float64
+    :return: 2d array of with probabilities arrayed in columns, shape (4, n)
+    """
+    a = 1 - A
+    b_vec = 1 - B_vec
+    probs = np.array([A * B_vec, A * b_vec, a * B_vec, a * b_vec],
+                     dtype=np.float64)
+    return probs
+
+
+def compute_hets(pr_x, pr_y):
+    """
+    Compute the probability of sampling doubly heterozygous haplotypes in
+    both populations x and y
+
+    Operates on arrays of haplotype sample probabilities; probabilities are
+    used because our samples are unphased.
+
+    :param pr_x: haplotype sample probs for population x
+    :param pr_y: haplotype sample probs for pop y
+    :return:
+    """
+    pr_y = np.flip(pr_y, axis=0)
+    return np.sum(pr_x * pr_y, axis=0)
+
+
+def assign_bins(i, alt_map, r_edges):
+    """
+    Assign the positions mapped by alt_map above index i to recombination
+    distance bins given by r_edges and return a vector of indices
+
+    :param i: index to which r values are relative
+    :param alt_map: vector of map values
+    :param r_edges: vector of r bin edges
+    :return:
+    """
+    d_dist = alt_map[i + 1:] - alt_map[i]
+    r_dist = map_util.d_to_r(d_dist)
+    return np.searchsorted(r_edges, r_dist) - 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def compute_pi_2(samples, sample_id, pair_counts, r_edges=edges):
     """
     Compute joint heterozygosity for one sample in a Samples instance
 
@@ -106,12 +217,12 @@ def compute_pi_2(samples, sample_id, pair_counts, r_edges=r_edges):
     :param r_edges:
     :return:
     """
-    het_pairs = bin_het_pairs(samples, sample_id, r_edges=r_edges)
+    het_pairs = count_heterozygous_pairs(samples, sample_id, r_edges=r_edges)
     pi_2 = het_pairs / pair_counts
     return pi_2
 
 
-def compute_pi_2s(samples, pair_counts, r_edges=r_edges):
+def compute_pi_2s(samples, pair_counts, r_edges=edges):
     """
     Compute joint heterozygosity for each sample in a Samples instance, given
     the vector of pair counts.
@@ -128,7 +239,7 @@ def compute_pi_2s(samples, pair_counts, r_edges=r_edges):
     return pi_2_dict
 
 
-def get_het_pairs(samples, r_edges=r_edges):
+def get_het_pairs(samples, r_edges=edges):
     """
     Get a dictionary of heterozygous pair counts for bins given by r_edges
 
@@ -138,8 +249,7 @@ def get_het_pairs(samples, r_edges=r_edges):
     """
     het_pairs = {sample_id: None for sample_id in samples.sample_ids}
     for sample_id in het_pairs:
-        het_pairs[sample_id] = bin_het_pairs(samples, sample_id,
-                                              r_edges=r_edges)
+        het_pairs[sample_id] = count_heterozygous_pairs(samples, sample_id)
     return het_pairs
 
 
@@ -192,97 +302,28 @@ def plot_pi_2_dict(pi_2_dict, r=r):
     return 0
 
 
-# two sample joint heterozygosity
-
-
-def haplotype_probs(sample):
+def enumerate_pairs(items):
     """
-    Return [P(AB), P(Ab), P(aB), P(ab)]
-    Given a 2-tuple/vector/list of alternate allele counts for an unphased
-    sample, compute the probabilities of sampling the possible phased
-    haplotypes.
+    Return a list of 2-tuples containing all pairs of objects in items
 
-    :param sample: vector of length 2; alternate allele counts for 2 sites
+    :param items: list of objects to pair
     :return:
     """
-    f_A = sample[0] / 2
-    f_B = sample[1] / 2
-    f_a = 1 - f_A
-    f_b = 1 - f_B
-    probs = np.array([f_A * f_B, f_A * f_b, f_a * f_B, f_a * f_b],
-                     dtype=np.float64)
-    return probs
+    n = len(items)
+    pairs = []
+    for i in np.arange(n):
+        for j in np.arange(i + 1, n):
+            pairs.append((items[i], items[j]))
+    return pairs
 
+"""
+samples = {x: vcf_samples.UnphasedSamples.dir(
+    f"/home/nick/Projects/archaic/data/chromosomes/merged/chr{x}/")
+    for x in np.arange(13, 23)}
 
-def joint_het_test(sample_0, sample_1):
-    """
-    For two 2-tuples/vectors/lists of alternate allele counts at two sites in
-    two samples, compute the joint heterozygosity.
+pair_counts = {x: np.loadtxt(
+    f"/home/nick/Projects/archaic/data/statistics/pair_counts/chr{x}"
+    "_pair_counts.txt")
+    for x in np.arange(13, 23)}
 
-    The joint heterozygosity for unphased samples equals
-    P_0(AB)P_1(ab) + P_0(Ab)P_1(bA) + P_0(aB)P_1(Ab) + P_0(ab)P_1(AB)
-
-    :param sample_0:
-    :param sample_1:
-    :return:
-    """
-    hap_probs_0 = haplotype_probs(sample_0)
-    hap_probs_1 = haplotype_probs(sample_1)
-    hets = hap_probs_0 * np.flip(hap_probs_1)
-    joint_het = np.sum(hets)
-    return joint_het
-
-
-def joint_het_arrs(sample_0, sample_1):
-
-    n_positions = len(sample_0)
-    n_pairs = int(0.5 * n_positions * (n_positions - 1))
-    joint_hets = np.zeros(n_pairs)
-    tot = 0
-
-    for i in np.arange(n_positions):
-
-        for j in np.arange(i + 1, n_positions):
-
-            joint_hets[tot] = joint_het_test(sample_0[[i, j]], sample_1[[i, j]])
-            tot += 1
-
-    joint_het = np.sum(joint_hets) / tot
-
-    return joint_hets, tot, joint_het
-
-
-def fast_haplotype_probs(alt_counts):
-    """
-    np.array([#A, #B])
-
-    :param alt_counts:
-    :return:
-    """
-    alt_freqs = alt_counts / 2
-    prob_matrix = np.outer(alt_freqs, 1 - alt_freqs)
-    return prob_matrix
-
-
-def get_sample_hap_arr(samples, sample_id):
-    """
-    return an array of haplotype sample probabilities for unphased samples
-
-    capital letters = alt alleles
-
-    :param sample:
-    :return:
-    """
-    alts = samples.samples[sample_id] / 2
-    refs = 1 - alts
-    A_freq = 0
-    B_freq = 1
-    a_freq = 1 - A_freq
-    b_freq = 1 - B_freq
-    probs = np.array([f_A * f_B, f_A * f_b, f_a * f_B, f_a * f_b],
-                     dtype=np.float64)
-    return 0
-
-
-chr22_samples = vcf_samples.UnphasedSamples.dir(
-    "/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
+"""

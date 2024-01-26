@@ -53,16 +53,57 @@ To-do:
 
 
 
-22-01-2024 Monday: 2pm-4pm
+22-01-2024 Monday: 2pm-4pm, 7:30pm-8:45pm
 	- Added a means of organizing alternate alleles by r-bin to joint_het.py
 	- Implemented binning into "idea()" and renamed it "main()" in joint_het.py
 	- Wrote a function called naive() to compute joint het by directly looping over all variant pairs; as I might have expected, it was impractically slow (taking potentially many hours to execute)
 	- Ended up rewriting the joint het. function completely and testing it on a few samples, for chromosomes 22 and 13
 		- Chromosome 22 returned strange results and took under 50 seconds
 		- Chromosome 13 has close to 3 times as many variant sites and took close to 500 seconds; these results conformed slightly better to expectation but still appeared very noisy. 
-		
 
+
+23-01-2024 Tuesday: 3pm-4:45pm, 8pm-9pm
+	- Figured out why the naive function gave different results; typo in variable name
+	- Lab meeting
+	- Moved stuff from joint_het.py into two_locus.py, leaving only detritus and naive() in joint_het.py
+	
 To-do:
+	(a lot of this is excessive)
+	- Rewrite vcf_util.py; possibly adding some classes and etc to improve clarity
+	- Write a class called UnphasedSampleSet to better handle the information from .vcf files
+	- Determine how you want to work on the project (from IDE, terminal etc) and the extent to which I want to make automated scripts
+	- Determine the most desirable package structure and set it up
+	- Figure out the imports
+	- Check out the python and shell scripts; tidy them up, make sure they're working properly
+		- Set up symbolic links so they can be used easily from terminal
+	- Find the most convenient way to operate on UnphasedSampleSets 
+	- remember that you don't need to rush or panic about the project
+
+
+24-01-2024 Wednesday 10am-10:45am, 11:45am-12:30pm, 3pm-4pm
+	- Worked up all the pair counts for chromosomes 13-22
+	- Met with Aaron and discussed next steps; these should be summarized here tomorrow
+	
+To-do:
+	=> Simulations as discussed with Aaron (summarize tomorrow)
+		- Any of the changes listed below which might make this more convenient
+	- Learn to use vim
+	- Directory structure
+	- Especially: verification and tests, data etc
+	- Figure out how python packages actually work 
+	- Then restructure src based on this
+	- Symbolic links to make python, shell scripts ez to use
+	- Get used to using the terminal
+
+
+
+
+
+
+
+
+
+
 
 
 

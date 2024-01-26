@@ -1,6 +1,7 @@
 .git/
 .idea/
 .venv/
+.directory
 __pycache__
 *.pyc
 *.vcf
