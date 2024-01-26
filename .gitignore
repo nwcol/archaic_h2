@@ -12,6 +12,8 @@ __pycache__
 *.npz
 *.csi
 *.xlsx
+archaic_project.egg-info/
+build/
 chromosomes/
 genomes/
 model_statistics/
