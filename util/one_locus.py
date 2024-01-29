@@ -8,11 +8,9 @@ import time
 
 import os
 
-import sys
+from util import vcf_samples
 
-import vcf_samples
-
-import vcf_util
+from util import vcf_util
 
 
 if __name__ == "__main__":
@@ -322,6 +320,3 @@ def compute_F_3(pi_x, pi_1, pi_2, pi_x1, pi_x2, pi_12):
     F_2_12 = compute_F_2(pi_12, pi_1, pi_2)
     F_3 = 0.5 * F_2_x1 * F_2_x2 * F_2_12
     return F_3
-
-
-samples = vcf_samples.UnphasedSamples.dir("c:/archaic/data/chromosomes/merged/chr22/")

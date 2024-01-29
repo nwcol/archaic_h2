@@ -1,11 +1,10 @@
 
-# Script for eliminating superfluous data from .vcf files
+# A script for eliminating all INFO fields and any FORMAT fields not 
+# specified as arguments from .vcf files
 
 import sys
 
-sys.path.append("/home/nick/Projects/archaic/src")
-
-import archaic.vcf_util as vcf_util
+from util import vcf_util
 
 
 def main(path, *args):
@@ -14,10 +13,11 @@ def main(path, *args):
     :param args:
     :return:
     """
-    i = vcf_util.simplify(path, None, *args)
-    print(i)
+    vcf_util.simplify(path, None, *args)
+    return 0
 
 
 path = str(sys.argv[1])
 args = [str(x) for x in sys.argv[2:]]
 main(path, *args)
+

@@ -11,9 +11,7 @@ import numpy as np
 
 import sys
 
-#from archaic import vcf_util
-
-import archaic.vcf_util as vcf_util
+from util import vcf_util
 
 
 if __name__ == "__main__":

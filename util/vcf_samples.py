@@ -1,3 +1,6 @@
+
+#
+
 import numpy as np
 
 import os
@@ -6,13 +9,11 @@ import sys
 
 import gzip
 
-sys.path.append("/home/nick/Projects/archaic/src")
+from util import vcf_util
 
-import archaic.vcf_util as vcf_util
+from util import map_util
 
-import archaic.map_util as map_util
-
-import archaic.bed_util as bed_util
+from util import bed_util
 
 
 class UnphasedSampleSet:
@@ -29,7 +30,7 @@ class UnphasedSampleSet:
         self.variant_map_values = self.map_values[self.variant_idx]
 
     @classmethod
-    def from_one_vcf(cls, vcf_path, bed_path, map_path):
+    def from_vcf(cls, vcf_path, bed_path, map_path):
 
         sample_ids = [x.decode() for x in vcf_util.read_sample_ids(vcf_path)]
         genotypes = {sample_id: load_genotypes(vcf_path, sample_id)

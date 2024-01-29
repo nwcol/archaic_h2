@@ -1,3 +1,4 @@
+-e git+https://github.com/nwcol/archaic.git@51d6561e55ea8cc6e17a4eebc9f4b203e71fa46c#egg=archaic_project
 attrs==23.2.0
 contourpy==1.2.0
 cycler==0.12.1

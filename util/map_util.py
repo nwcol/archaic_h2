@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 import sys
 
-import archaic.bed_util as bed_util
+from util import bed_util
 
 
 if __name__ == "__main__":

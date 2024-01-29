@@ -1,29 +1,16 @@
 #!/bin/bash
+#
+# Give the contig to extract as the first argument (eg 22)
 
-# Parse one chromosome out of a .vcf.gz using bcftools, simplify it,
-# and apply a mask
+CONTIG=$1
 
-# arg 1: contig/chromosome to extract
-# additional args: .vcf.gz to extract from
-
-
-source /c/anaconda3/etc/profile.d/conda.sh
-conda activate archaic_conda_env
-
-chr=$1
-
-i=0
-for arg in "$@";
+for FILENAME in "${@:2}";
 do
-	if [ "$i" -ge 1 ]
+	if ! test -f "$FILENAME.csi";
 	then
-		if ! test -f "$arg.csi";
-		then
-			bcftools index "$arg"
-		fi
-		
-		stem=${arg:0:-7} # .vcf.gz is 7 characters
-		bcftools view -r "$1" -o chr"$chr"_"$stem".vcf.gz $arg
+		bcftools index $FILENAME
 	fi
-	let i++
+	NEWFILENAME="chr${CONTIG}_${FILENAME}"
+	bcftools view -r $CONTIG -o $NEWFILENAME $FILENAME
+	bcftools index $NEWFILENAME
 done

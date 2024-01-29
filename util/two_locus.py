@@ -11,11 +11,9 @@ import sys
 
 import time
 
-sys.path.append("/home/nick/Projects/archaic/src")
+from util import vcf_samples
 
-import archaic.vcf_samples as vcf_samples
-
-import archaic.map_util as map_util
+from util import map_util
 
 
 if __name__ == "__main__":
