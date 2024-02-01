@@ -21,19 +21,27 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
 
 
-edges = np.array([0,
-                  1e-7, 2e-7, 5e-7,
-                  1e-6, 2e-6, 5e-6,
-                  1e-5, 2e-5, 5e-5,
-                  1e-4, 2e-4, 5e-4,
-                  1e-3, 2e-3, 5e-3,
-                  1e-2, 2e-2, 5e-2,
-                  1e-1, 2e-1, 5e-1], dtype=np.float64)
+r_edges = np.array([0,
+                   1e-7, 2e-7, 5e-7,
+                   1e-6, 2e-6, 5e-6,
+                   1e-5, 2e-5, 5e-5,
+                   1e-4, 2e-4, 5e-4,
+                   1e-3, 2e-3, 5e-3,
+                   1e-2, 2e-2, 5e-2,
+                   1e-1, 2e-1, 5e-1], dtype=np.float64)
 
-r = edges[1:]
+r_mids = np.array([5.0e-8, 1.5e-7, 3.5e-7,
+                   7.5e-7, 1.5e-6, 3.5e-6,
+                   7.5e-6, 1.5e-5, 3.5e-5,
+                   7.5e-5, 1.5e-4, 3.5e-4,
+                   7.5e-4, 1.5e-3, 3.5e-3,
+                   7.5e-3, 1.5e-2, 3.5e-2,
+                   7.5e-2, 1.5e-1, 3.5e-1])
+
+r = r_edges[1:]
 
 
-def count_site_pairs(samples, r_edges=edges):
+def count_site_pairs(samples, r_edges=r_edges):
     """
     Get the number of site pairs per bin using bins specified by r_edges
 
@@ -61,7 +69,7 @@ def count_site_pairs(samples, r_edges=edges):
     return pair_counts
 
 
-def count_heterozygous_pairs(samples, sample_id, r_edges=edges):
+def count_heterozygous_pairs(samples, sample_id, r_edges=r_edges):
     """
 
     :param samples:
@@ -87,7 +95,7 @@ def count_heterozygous_pairs(samples, sample_id, r_edges=edges):
 
 
 def count_cross_pop_heterozygous_pairs(samples, sample_id_x, sample_id_y,
-                                       r_edges=edges):
+                                       r_edges=r_edges):
     """
 
     :param samples:
@@ -122,7 +130,7 @@ def count_cross_pop_heterozygous_pairs(samples, sample_id_x, sample_id_y,
     return joint_het
 
 
-def save_pair_counts(pair_counts, path, r_edges=edges):
+def save_pair_counts(pair_counts, path, r_edges=r_edges):
     """
     Save a vector of pair counts
 
@@ -205,7 +213,7 @@ def assign_bins(i, alt_map, r_edges):
 
 
 
-def compute_pi_2(samples, sample_id, pair_counts, r_edges=edges):
+def compute_pi_2(samples, sample_id, pair_counts, r_edges=r_edges):
     """
     Compute joint heterozygosity for one sample in a Samples instance
 
@@ -220,7 +228,7 @@ def compute_pi_2(samples, sample_id, pair_counts, r_edges=edges):
     return pi_2
 
 
-def compute_pi_2s(samples, pair_counts, r_edges=edges):
+def compute_pi_2s(samples, pair_counts, r_edges=r_edges):
     """
     Compute joint heterozygosity for each sample in a Samples instance, given
     the vector of pair counts.
@@ -237,7 +245,7 @@ def compute_pi_2s(samples, pair_counts, r_edges=edges):
     return pi_2_dict
 
 
-def get_het_pairs(samples, r_edges=edges):
+def get_het_pairs(samples, r_edges=r_edges):
     """
     Get a dictionary of heterozygous pair counts for bins given by r_edges
 

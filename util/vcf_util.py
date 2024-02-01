@@ -1,9 +1,258 @@
 
-# Utilities for parsing information from .vcf.gz format files
-
 import numpy as np
-
 import gzip
+import time
+
+
+class Header:
+
+    def __init__(self, lines, chrom):
+        self.lines = lines
+        self.chrom = chrom
+
+    @classmethod
+    def read(cls, path):
+        lines = []
+        with gzip.open(path, "r") as file:
+            for line in file:
+                if b'#' in line:
+                    lines.append(line)
+                else:
+                    chrom = Line(line).chrom
+                    break
+        return cls(lines, chrom)
+
+    def simplify(self, retain_formats, retain_infos=None, retain_id=False,
+                 retain_filter=False, retain_qual=False):
+
+        simplified = [self.lines[0]]
+        simplified.append(self.get_file_date())
+
+        if retain_filter:
+            simplified += [line for line in self.lines if b'FILTER' in line]
+
+        for line in self.lines[1:-1]:
+            if b'contig' in line:
+                if b'ID=' + self.chrom in line:
+                    simplified.append(line)
+
+            elif b'INFO' in line:
+                if retain_infos:
+                    if self.get_field_id(line) in retain_infos:
+                        simplified.append(line)
+
+            elif b'FILTER' in line:
+                if retain_filter:
+                    simplified.append(line)
+
+            elif b'FORMAT' in line:
+                if self.get_field_id(line) in retain_formats:
+                    simplified.append(line)
+
+            elif b'ALT' in line:
+                simplified.append(line)
+
+            else:
+                pass
+
+        simplified.append(self.get_contig_line(self.chrom))
+        simplified.append(self.lines[-1])
+        self.lines = simplified
+
+    @staticmethod
+    def get_field_id(line):
+        """
+        Extract the ID of an INFO or FORMAT header line, eg
+
+        INFO=<ID=XX, ...>\n returns XX
+
+        :param line:
+        :return:
+        """
+        ret = line.split(b'=')[1]
+        ret = ret.split(b',')[0]
+        return ret
+
+    @staticmethod
+    def get_contig_line(chrom):
+        return b'contig=<ID=' + chrom + b'>'
+
+    @staticmethod
+    def get_file_date():
+        date = time.strftime("%Y%m%d").encode()
+        return b'fileDate=' + date
+
+
+class Line:
+
+    CHROM_idx = 0
+    POS_idx = 1
+    ID_idx = 2
+    REF_idx = 3
+    ALT_idx = 4
+    QUAL_idx = 5
+    FILTER_idx = 6
+    INFO_idx = 7
+    FORMAT_idx = 8
+
+    def __init__(self, line):
+        self.fields = line.strip(b'\n').split(b'\t')
+        self.n_fields = len(self.fields)
+
+    @classmethod
+    def get_first_line(cls, path):
+        """
+        Scan a vcf.gz file until the first non-header line is reached and
+        get a Line instance containing it
+
+        :param path:
+        :return:
+        """
+        with gzip.open(path, 'r') as in_file:
+            for line in in_file:
+                if b'#' in line:
+                    pass
+                else:
+                    break
+        return cls(line)
+
+    def out(self):
+        return b'\t'.join(self.fields) + b'\n'
+
+    def simplify(self, retain_formats, retain_infos=None, retain_id=False,
+                 retain_filter=False, retain_qual=False):
+        # 0 CHROM
+        # 1 POSITION
+        if not retain_id:
+            self.fields[self.ID_idx] = b'.'
+
+        # 3 REF
+        # 4 ALT
+        if not retain_qual:
+            self.fields[self.QUAL_idx] = b'.'
+
+        if not retain_filter:
+            self.fields[self.FILTER_idx] = b'.'
+
+        if not retain_infos:
+            self.fields[self.INFO_idx] = b'.'
+        else:
+            info = self.fields[self.INFO_idx].split(b':')
+            retained_info = [x for x in info if x in retain_infos]
+            self.fields[self.INFO_idx] = b':'.join(retained_info)
+
+        formats = self.fields[self.FORMAT_idx].split(b':')
+        retained_formats = [x for x in formats if x in retain_formats]
+        self.fields[self.FORMAT_idx] = b':'.join(retained_formats)
+
+        format_idx = [retained_formats.index(x) for x in retained_formats]
+        for i in np.arange(9, self.n_fields):
+            sample_fields = self.fields[i].split(b':')
+            self.fields[i] = b':'.join(sample_fields[j] for j in format_idx)
+
+    def fast_simplify(self, format_fields, format_idx, info_idx=None,
+                      retain_id=False, retain_filter=False, retain_qual=False):
+        # 0 CHROM
+        # 1 POSITION
+        if not retain_id:
+            self.fields[self.ID_idx] = b'.'
+
+        # 3 REF
+        # 4 ALT
+        if not retain_qual:
+            self.fields[self.QUAL_idx] = b'.'
+
+        if not retain_filter:
+            self.fields[self.FILTER_idx] = b'.'
+
+        if not info_idx:
+            self.fields[self.INFO_idx] = b'.'
+        else:
+            info = self.fields[self.INFO_idx].split(b':')
+            self.fields[self.INFO_idx] = b';'.join([info[i] for i in info_idx])
+
+        self.fields[self.FORMAT_idx] = format_fields
+
+        for i in np.arange(9, self.n_fields):
+            sample_fields = self.fields[i].split(b':')
+            self.fields[i] = b':'.join(sample_fields[j] for j in format_idx)
+
+    def get_format_idx(self, retained_formats):
+
+        format_idx = [self.format_list.index(x) for x in retained_formats]
+        format_idx.sort()
+        return format_idx
+
+    def get_info_idx(self, retained_info):
+
+        info_idx = [self.info_list.index(x) for x in retained_info]
+        info_idx.sort()
+        return info_idx
+
+    @property
+    def chrom(self):
+
+        return self.fields[self.CHROM_idx]
+
+    @property
+    def info(self):
+
+        return self.fields[self.INFO_idx]
+
+    @property
+    def info_list(self):
+
+        return self.info.split(b';')
+
+    @property
+    def format(self):
+
+        return self.fields[self.FORMAT_idx]
+
+    @property
+    def format_list(self):
+
+        return self.format.split(b':')
+
+
+
+def test(in_path, out_path, retain_formats, retain_infos=None, retain_id=False,
+         retain_filter=False, retain_qual=False):
+
+    header = Header.read(in_path)
+    header.simplify(retain_formats,
+                    retain_infos=retain_infos,
+                    retain_id=retain_id,
+                    retain_filter=retain_filter,
+                    retain_qual=retain_qual
+                    )
+
+    test_line = Line.get_first_line(in_path)
+    format_idx =
+
+    out_file = open(out_path, 'wb')
+    for line in header.lines:
+        out_file.write(line)
+    with gzip.open(in_path, 'r') as in_file:
+        for line in in_file:
+            if b'#' not in line:
+                line = Line(line)
+                line.simplify(retain_formats,
+                              retain_infos=retain_infos,
+                              retain_id=retain_id,
+                              retain_filter=retain_filter,
+                              retain_qual=retain_qual
+                              )
+                out_file.write(line.out())
+    out_file.close()
+    return 0
+
+
+
+
+
+
+
 
 
 # names the 8 mandatory .vcf format columns and two additional useful ones
@@ -96,6 +345,7 @@ def read_format_fields(path):
     for i, field in enumerate(format_col.split(b':')):
         format_dict[field] = i
     return format_dict
+
 
 
 def read_sample_ids(path):
@@ -378,50 +628,3 @@ def read_positions(path):
                 positions.append(parse_position(line))
     positions = np.array(positions, dtype=np.int64)
     return positions
-
-
-def count_genotypes(path, sample):
-    """
-    Count the numbers of each genotype state present in a .vcf.gz file
-
-    :param path:
-    :param sample:
-    :return:
-    """
-    sample = sample.encode()
-    samples = read_sample_ids(path)
-    column = samples[sample]
-    counts = dict()
-    with gzip.open(path, 'r') as file:
-        for line in file:
-            if b'#' not in line:
-                genotype = parse_genotype(line, column)
-                if genotype not in counts:
-                    counts[genotype] = 1
-                else:
-                    counts[genotype] += 1
-    return counts
-
-
-def count_hets(path, sample):
-    """
-    Tally and return the number of heterozygous sites and total number of sites
-     in a .vcf.gz file
-
-    :param path: path to .vcf.gz file
-    :param sample: sample for which to tally heterozygous sites
-    :return: number of heterozygous sites
-    """
-    sample = sample.encode()
-    samples = read_sample_ids(path)
-    col = samples.index(sample) + vcf_cols["sample_0"]
-    h = 0
-    i = 0
-    with gzip.open(path, 'r') as file:
-        for line in file:
-            if b'#' not in line:
-                genotype = parse_genotype(line, col)
-                if eval_genotype(genotype) == 1:
-                    h += 1
-                i += 1
-    return h, i

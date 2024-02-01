@@ -1,4 +1,3 @@
-
 #
 
 import numpy as np
@@ -19,18 +18,18 @@ from util import bed_util
 class UnphasedSampleSet:
 
     def __init__(self, sample_ids, positions, variant_positions, genotypes,
-                 genetic_map):
+                 map_values):
 
         self.sample_ids = sample_ids
         self.genotypes = genotypes
         self.positions = positions
         self.variant_positions = variant_positions
         self.variant_idx = np.searchsorted(positions, variant_positions)
-        self.map_values = genetic_map.approximate_map_values(positions)
+        self.map_values = map_values
         self.variant_map_values = self.map_values[self.variant_idx]
 
     @classmethod
-    def from_vcf(cls, vcf_path, bed_path, map_path):
+    def from_files(cls, vcf_path, bed_path, map_path):
 
         sample_ids = [x.decode() for x in vcf_util.read_sample_ids(vcf_path)]
         genotypes = {sample_id: load_genotypes(vcf_path, sample_id)
@@ -38,9 +37,9 @@ class UnphasedSampleSet:
         variant_positions = vcf_util.read_positions(vcf_path)
         genetic_map = map_util.GeneticMap.load_txt(map_path)
         positions = bed_util.Bed.load_bed(bed_path).get_positions_1()
+        map_values = genetic_map.approximate_map_values(positions)
         return cls(sample_ids, positions, variant_positions, genotypes,
-                   genetic_map)
-
+                   map_values)
 
     @classmethod
     def from_dir(cls, path):
@@ -62,7 +61,29 @@ class UnphasedSampleSet:
             raise ValueError("no merged .bed!")
         if not map_path:
             raise ValueError("no genetic map!")
-        return cls.from_one_vcf(vcf_path, bed_path, map_path)
+        return cls.from_files(vcf_path, bed_path, map_path)
+
+    def slice(self, start_pos, end_pos):
+        """
+        Return a positional subset of the UnphasedSampleSet.
+
+        start_pos and end_pos are 1-indexed and refer to positions along the 
+        chromosome. end_pos is non-inclusive.
+        """
+        sample_ids = self.sample_ids
+        pos = self.positions
+        pos_idx = np.where((pos >= start_pos) & (pos < end_pos))[0]
+        positions = self.positions[pos_idx]
+
+        var_pos = self.variant_positions
+        variant_idx = np.where((var_pos >= start_pos) & (var_pos < end_pos))[0]
+        variant_positions = var_pos[variant_idx]
+        genotypes = {sample_id: self.genotypes[sample_id][variant_idx] for
+                     sample_id in self.sample_ids}
+
+        map_values = self.map_values[pos_idx]
+        return UnphasedSampleSet(sample_ids, positions, variant_positions,
+                                 genotypes, map_values)
 
     @property
     def n_samples(self):
@@ -94,7 +115,6 @@ class UnphasedSampleSet:
         genotypes = self.genotypes[sample_id]
         return np.nonzero(genotypes[:, 0] != genotypes[:, 1])[0]
 
-
     def heterozygous_loci(self, sample_id):
         """
         Return a vector which indexes heterozygous loci in the positions array
@@ -108,7 +128,6 @@ class UnphasedSampleSet:
 
 
 def count_alternate_alleles(genotype):
-
     alleles = genotype.split(b'/')
     count = 0
     for allele in alleles:
@@ -118,7 +137,6 @@ def count_alternate_alleles(genotype):
 
 
 def decode_genotype(genotype_bytes):
-
     alleles = np.array(
         [allele.decode() for allele in genotype_bytes.split(b'/')],
         dtype=np.uint8)
@@ -126,7 +144,6 @@ def decode_genotype(genotype_bytes):
 
 
 def load_genotypes(path, sample_id):
-
     sample_id = sample_id.encode()
     samples = vcf_util.read_sample_ids(path)
     column = samples[sample_id]
@@ -139,6 +156,10 @@ def load_genotypes(path, sample_id):
     return np.array(genotypes)
 
 
+class PhasedSampleSet:
+
+    def __init__(self):
+        pass
 
 
 class UnphasedSamples:
@@ -272,7 +293,3 @@ class UnphasedSamples:
         """
         n_hets = np.sum(self.samples[sample_id] == 1)
         return n_hets
-
-
-# samples = UnphasedSamples.dir(
-# "/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
