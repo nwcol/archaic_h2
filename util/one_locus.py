@@ -1,15 +1,10 @@
+
+# Functions for computing one-locus genetic statistics
+
 import matplotlib.pyplot as plt
-
 import matplotlib
-
 import numpy as np
-
-import time
-
-import os
-
-from util import vcf_samples
-
+from util import sample_sets
 from util import vcf_util
 
 
@@ -18,33 +13,17 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
 
 
-def compute_pi(samples, *sample_ids):
+def compute_pi(sample_set, *sample_ids):
     """
-    Compute diversity for one sample in a Samples index
-
-    :param samples:
-    :param sample_ids: sample ids to compute pi for
-    :return:
+    Compute nucleotide diversity
     """
-    n = len(sample_ids) * 2
-    alts = [samples.alts(sample_id) for sample_id in sample_ids]
-    alt_sum = np.sum(alts, axis=0)
-    ref_sum = n - alt_sum
-    tot = alt_sum * ref_sum
-    pi = 2 / (samples.n_positions * n * (n - 1)) * np.sum(tot)
-    return pi
-
-
-def compute_h(samples, sample_id):
-    """
-    Compute heterozygosity for one sample in a Samples index
-
-    :param samples:
-    :param sample_id:
-    :return:
-    """
-    h = samples.n_hets(sample_id) / samples.n_positions
-    return h
+    if len(sample_ids) == 0:
+        sample_ids = sample_set.sample_ids
+    L = sample_set.n_positions
+    pi_dict = {sample_id: 0 for sample_id in sample_ids}
+    for sample_id in pi_dict:
+        pi_dict[sample_id] = sample_set.n_het(sample_id) / L
+    return pi_dict
 
 
 def compute_pi_xy(samples, id_x, id_y):
@@ -251,72 +230,3 @@ class GenotypeVector:
         window_length = self.window_length(window)
         joint_H = window_het / window_length
         return joint_H
-
-
-# functions that take alt indicator vectors or other statistics as arguments
-
-def compute_pi_xxx(alt_x, n_x):
-    """
-    Compute an estimator for diversity from a vector of alternate allele counts
-
-    :param alt_x:
-    :param n_x:
-    :return:
-    """
-    length = len(alt_x)
-    ref_x = n_x - alt_x
-    tot = alt_x * ref_x
-    coeff = 2 / (length * n_x * (n_x - 1))
-    diversity = coeff * np.sum(tot)
-    return diversity
-
-
-def compute_pi_xyxx(alt_x, alt_y, n_x, n_y):
-    """
-    Compute an estimator for divergence from two vectors of alternate allele
-    counts.
-
-    :param alt_x:
-    :param alt_y:
-    :param n_x:
-    :param n_y:
-    :return:
-    """
-    length = len(alt_x)
-    if len(alt_y) != length:
-        raise ValueError("Alt vector lengths do not match")
-    ref_x = n_x - alt_x
-    ref_y = n_y - alt_y
-    tot = (ref_x * alt_y) + (alt_x * ref_y)
-    coeff = 1 / (length * n_x * n_y)
-    divergence = coeff * np.sum(tot)
-    return divergence
-
-
-def compute_F_2(pi_1, pi_2, pi_12):
-    """
-    Compute an estimator for the F2 statistic
-
-    :return:
-    """
-    F_2 = pi_12 - (pi_1 + pi_2) / 2
-    return F_2
-
-
-def compute_F_3(pi_x, pi_1, pi_2, pi_x1, pi_x2, pi_12):
-    """
-    Compute an estimator for the F_3 statistic
-
-    :param pi_x:
-    :param pi_1:
-    :param pi_2:
-    :param pi_x1:
-    :param pi_x2:
-    :param pi_12:
-    :return:
-    """
-    F_2_x1 = compute_F_2(pi_x1, pi_x, pi_1)
-    F_2_x2 = compute_F_2(pi_x2, pi_x, pi_2)
-    F_2_12 = compute_F_2(pi_12, pi_1, pi_2)
-    F_3 = 0.5 * F_2_x1 * F_2_x2 * F_2_12
-    return F_3

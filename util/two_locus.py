@@ -1,18 +1,11 @@
 
-#
+# Functions for computing two-locus genetic statistics
 
 import matplotlib
-
 import matplotlib.pyplot as plt
-
 import numpy as np
-
-import sys
-
 import time
-
-from util import vcf_samples
-
+from util import sample_sets
 from util import map_util
 
 
@@ -21,90 +14,75 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
 
 
-r_edges = np.array([0,
-                   1e-7, 2e-7, 5e-7,
-                   1e-6, 2e-6, 5e-6,
-                   1e-5, 2e-5, 5e-5,
-                   1e-4, 2e-4, 5e-4,
-                   1e-3, 2e-3, 5e-3,
-                   1e-2, 2e-2, 5e-2,
-                   1e-1, 2e-1, 5e-1], dtype=np.float64)
+r_bin_edges = np.array([0,
+                        1e-7, 2e-7, 5e-7,
+                        1e-6, 2e-6, 5e-6,
+                        1e-5, 2e-5, 5e-5,
+                        1e-4, 2e-4, 5e-4,
+                        1e-3, 2e-3, 5e-3,
+                        1e-2, 2e-2, 5e-2,
+                        1e-1, 2e-1, 5e-1], dtype=np.float64)
 
-r_mids = np.array([5.0e-8, 1.5e-7, 3.5e-7,
-                   7.5e-7, 1.5e-6, 3.5e-6,
-                   7.5e-6, 1.5e-5, 3.5e-5,
-                   7.5e-5, 1.5e-4, 3.5e-4,
-                   7.5e-4, 1.5e-3, 3.5e-3,
-                   7.5e-3, 1.5e-2, 3.5e-2,
-                   7.5e-2, 1.5e-1, 3.5e-1])
+r_bin_mids = np.array([5.0e-8, 1.5e-7, 3.5e-7,
+                       7.5e-7, 1.5e-6, 3.5e-6,
+                       7.5e-6, 1.5e-5, 3.5e-5,
+                       7.5e-5, 1.5e-4, 3.5e-4,
+                       7.5e-4, 1.5e-3, 3.5e-3,
+                       7.5e-3, 1.5e-2, 3.5e-2,
+                       7.5e-2, 1.5e-1, 3.5e-1], dtype=np.float64)
 
-r = r_edges[1:]
+r_bin_right_edges = r_bin_edges[1:]
 
 
-def count_site_pairs(samples, r_edges=r_edges):
-    """
-    Get the number of site pairs per bin using bins specified by r_edges
+def count_site_pairs(sample_set, r_edges):
 
-    :param samples:
-    :param r_edges:
-    :return:
-    """
-    n_bins = len(r_edges) - 1
-    n_positions = samples.n_positions
-    pair_counts = np.zeros(n_bins, dtype=np.int64)
     d_edges = map_util.r_to_d(r_edges)
-    map_values = samples.map_values
+    n_positions = sample_set.n_positions
+    map_values = sample_set.map_values
+
+    n_bins = len(r_edges) - 1
+    pair_counts = np.zeros(n_bins, dtype=np.int64)
     for i in np.arange(n_positions):
-        pos_value = map_values[i]
-        edges_for_i = d_edges + pos_value
-        pos_edges = np.searchsorted(map_values[i+1:], edges_for_i)
+        edges_for_i = d_edges + map_values[i]
+        pos_edges = np.searchsorted(map_values[i + 1:], edges_for_i)
         pair_counts += np.diff(pos_edges)
-        if i % 1e6 == 0:
+        if i % 1e6 == 0 and i > 0:
             print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
-    print(f"{i + 1} bp scanned, {np.sum(pair_counts)} pairs binned")
-    exp = int(n_positions * (n_positions - 1) / 2)
-    emp = np.sum(pair_counts)
-    print(f"{emp} pairs detected for {i+1} sites, expected {exp}, "
-          f"difference {emp - exp}")
     return pair_counts
 
 
-def count_heterozygous_pairs(samples, sample_id, r_edges=r_edges):
-    """
+def count_het_pairs(sample_set, sample_id, r_edges):
 
-    :param samples:
-    :param sample_id:
-    :param r_edges:
-    :return:
-    """
-    n_bins = len(r_edges) - 1
-    n_het = samples.n_het(sample_id)
-    pair_counts = np.zeros(n_bins, dtype=np.int64)
     d_edges = map_util.r_to_d(r_edges)
-    het_map = samples.map_values[samples.het_index(sample_id)]
+    n_het = sample_set.n_het(sample_id)
+    het_map = sample_set.get_het_map(sample_id)
+
+    n_bins = len(r_edges) - 1
+    het_pair_counts = np.zeros(n_bins, dtype=np.int64)
     for i in np.arange(n_het):
-        value = het_map[i]
-        edges_for_i = d_edges + value
-        pos_edges = np.searchsorted(het_map[i+1:], edges_for_i)
-        pair_counts += np.diff(pos_edges)
-    exp = int(n_het * (n_het - 1) / 2)
-    emp = np.sum(pair_counts)
-    print(f"{emp} pairs / {exp} expected for {i+1} sites, "
-          f"difference {emp - exp}")
-    return pair_counts
+        edges_for_i = d_edges + het_map[i]
+        pos_edges = np.searchsorted(het_map[i + 1:], edges_for_i)
+        het_pair_counts += np.diff(pos_edges)
+    return het_pair_counts
 
 
-def count_cross_pop_heterozygous_pairs(samples, sample_id_x, sample_id_y,
-                                       r_edges=r_edges):
-    """
+def count_cross_pop_het_pairs(sample_set, sample_id_x, sample_id_y, r_edges):
 
-    :param samples:
-    :param sample_id_x:
-    :param sample_id_y:
-    :param r_edges:
-    :return:
-    """
-    time_0 = time.time()
+
+
+    variant_map = sample_set.map_values
+
+    n_variants = sample_set.n_variants
+
+    n_bins = len(r_edges) - 1
+    het_pair_counts = np.zeros(n_bins, dtype=np.int64)
+
+
+    for i in np.arange(n_variants):
+
+        pass
+
+
     alt_map = samples.alt_map_values
     freq_x = (samples.samples[sample_id_x] / 2).astype(np.float64)
     freq_y = (samples.samples[sample_id_y] / 2).astype(np.float64)
@@ -125,12 +103,12 @@ def count_cross_pop_heterozygous_pairs(samples, sample_id_x, sample_id_y,
                 joint_het[b] += np.sum(hets[bin_idx == b])
 
         if i % 10_000 == 0 and i > 0:
-            print(i, np.round(time.time() - time_0, 2), " s")
+            print(i)
 
     return joint_het
 
 
-def save_pair_counts(pair_counts, path, r_edges=r_edges):
+def save_pair_counts(pair_counts, path, r_edges):
     """
     Save a vector of pair counts
 
@@ -213,7 +191,7 @@ def assign_bins(i, alt_map, r_edges):
 
 
 
-def compute_pi_2(samples, sample_id, pair_counts, r_edges=r_edges):
+def compute_pi_2(samples, sample_id, pair_counts, r_edges):
     """
     Compute joint heterozygosity for one sample in a Samples instance
 
@@ -228,7 +206,7 @@ def compute_pi_2(samples, sample_id, pair_counts, r_edges=r_edges):
     return pi_2
 
 
-def compute_pi_2s(samples, pair_counts, r_edges=r_edges):
+def compute_pi_2s(samples, pair_counts, r_edges):
     """
     Compute joint heterozygosity for each sample in a Samples instance, given
     the vector of pair counts.
@@ -245,7 +223,7 @@ def compute_pi_2s(samples, pair_counts, r_edges=r_edges):
     return pi_2_dict
 
 
-def get_het_pairs(samples, r_edges=r_edges):
+def get_het_pairs(samples, r_edges):
     """
     Get a dictionary of heterozygous pair counts for bins given by r_edges
 
@@ -292,28 +270,9 @@ def save_het_pairs(het_pairs, path):
     return 0
 
 
-def plot_pi_2_dict(pi_2_dict, r=r):
-
-    fig = plt.figure(figsize=(8, 6))
-    sub = fig.add_subplot(111)
-    for sample_id in pi_2_dict:
-        plt.plot(r, pi_2_dict[sample_id], marker='x', label=sample_id)
-    sub.set_xscale("log")
-    sub.set_xlabel("r bin")
-    sub.set_ylabel("pi_2")
-    sub.set_ylim(0,)
-    sub.legend()
-    plt.tight_layout()
-    fig.show()
-    return 0
-
-
 def enumerate_pairs(items):
     """
     Return a list of 2-tuples containing all pairs of objects in items
-
-    :param items: list of objects to pair
-    :return:
     """
     n = len(items)
     pairs = []
@@ -321,15 +280,3 @@ def enumerate_pairs(items):
         for j in np.arange(i + 1, n):
             pairs.append((items[i], items[j]))
     return pairs
-
-"""
-samples = {x: vcf_samples.UnphasedSamples.dir(
-    f"/home/nick/Projects/archaic/data/chromosomes/merged/chr{x}/")
-    for x in np.arange(13, 23)}
-
-pair_counts = {x: np.loadtxt(
-    f"/home/nick/Projects/archaic/data/statistics/pair_counts/chr{x}"
-    "_pair_counts.txt")
-    for x in np.arange(13, 23)}
-
-"""

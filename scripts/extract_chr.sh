@@ -1,16 +1,33 @@
 #!/bin/bash
-#
-# Give the contig to extract as the first argument (eg 22)
 
-CONTIG=$1
+FILENAMES=()
 
-for FILENAME in "${@:2}";
+while [ $# -gt 0 ];
+do
+	case $1 in
+		-c | --chrom)
+			CHROM=$2
+			shift
+			;;
+		*)
+			if [[ $1 == *.vcf.gz ]]
+			then	
+				FILENAMES+=($1)
+			else
+				echo "A non-.vcf.gz file was passed as an argument! ${1}"
+			fi
+			;;
+	esac
+	shift
+done
+
+
+for FILENAME in ${FILENAMES[@]};
 do
 	if ! test -f "$FILENAME.csi";
 	then
 		bcftools index $FILENAME
 	fi
-	NEWFILENAME="chr${CONTIG}_${FILENAME}"
-	bcftools view -r $CONTIG -o $NEWFILENAME $FILENAME
-	bcftools index $NEWFILENAME
+	NEWFILENAME="chr${CHROM}_${FILENAME}"
+	bcftools view -r $CHROM -o $NEWFILENAME $FILENAME
 done

@@ -2,7 +2,7 @@ import numpy as np
 
 import sys
 
-from util import vcf_samples
+from util import sample_sets
 
 from util import two_locus
 

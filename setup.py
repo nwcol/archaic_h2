@@ -1,11 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 setup(
-      name="archaic_project",
-      version="2024.1",
-      author="Nick Collier",
-      author_email="nwcollier@wisc.edu",
-      packages=find_packages()
-      )
-
+    name="archaic_project",
+    version="2024.1",
+    author="Nick Collier",
+    author_email="nwcollier@wisc.edu",
+    packages=["util"],
+    scripts=[
+        "util/scripts/simplify_vcf_file.py"
+    ]
+)

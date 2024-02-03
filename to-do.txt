@@ -13,7 +13,7 @@ as of January 29.
 - make a PhasedSampleSet class
 - add functionality to slice chromosomes in UnphasedSampleSets into 5-10Mb regions for analysis
 
-- figure out how to record all this analysis: think simple!!! make things streamlined, easy to understand
+- figure out how to record all this analysis: think simple!!! make things streamlined
 
 
 Order:
@@ -23,5 +23,11 @@ Order:
 3. vcf_samples (maybe refactor name to sample_sets or something) 
 4. one_locus and two_locus
 5. the systems of input and output for the above and for coalescent simulations
+
+scripts to write:
+make bed files
+intersect bed files
+make a bed file from a map file
+
 
 
