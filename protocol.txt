@@ -1,0 +1,93 @@
+
+file structure:
+
+archaic/
+    ...
+    data/
+        ur_chrs
+        chrs
+        my_masks
+
+
+
+
+Making my own .bed files representing coverage in each archaic sample:
+
+    for i in {1..22}; do make_bed -o my_masks/chr${i} ur_chrs/chr${i}/*Altai* ur_chrs/chr${i}/*Chagyrskaya* ur_chrs/chr${i}/*Vindija* ur_chrs/chr${i}/*Denisova*; done
+
+
+Making variant-only .vcf.gz files:
+
+    for i in {1..22}; do extract_variants -o chrs/chr${i} ur_chrs/chr${i}/*Altai* ur_chrs/chr${i}/*Chagyrskaya* ur_chrs/chr${i}/*Vindija* ur_chrs/chr${i}/*Denisova*; done
+
+
+Making .bed files representing map coverage (these should probably contain only 1 or 2 big regions)
+
+    for i in {1..22}; do make_map_bed maps/chr${i}_genetic_map.txt my_masks/chr${i}/map_coverage.bed; done
+
+
+Intersecting the archaic sample coverage .bed files, the strict 1000 genomes mask .bed file, and the map coverage .bed file:
+
+    for i in {1..22}; do intersect_beds -o my_masks/chr${i}/chr${i}_intersect.bed -l 50 my_masks/chr${i}/* strict_masks/chr${i}_strict_mask.bed; done
+
+
+At this point I restructured the directory:
+
+archaic/
+    ...
+    data/
+        ur_chrs/
+            chr1/
+            ...
+
+        var_chrs/
+            chr1/
+            ...
+
+        var_chrs_GT/
+            chr1/
+            ...
+
+        chrs/
+            chr1/
+            ...
+
+        my_masks/
+
+        strict_masks/
+
+        maps/
+
+        metadata/
+
+        simons_genomes/
+
+
+I first simplified the files using
+
+    for i in {1..22}; do simplify_vcf -f GT -o var_chrs_GT/chr${i} var_chrs/chr${i}/*.vcf.gz; done
+
+
+And then indexed them with
+
+    for i in {1..22}; do simplify_vcf -f GT -o var_chrs_GT/chr${i} var_chrs/chr${i}/*.vcf.gz; done
+
+
+The merge:
+
+     for i in {1..22}; do bcftools merge -R my_masks/chr${i}/chr${i}_intersect.bed -0 -o chrs/chr${i}/chr${i}_temp.vcf.gz var_chrs_GT/chr${i}/*.vcf.gz; echo $i; done
+
+
+And finally, renaming the samples by reheadering each file:
+
+    for i in {1..22}; do bcftools reader -o chrs/chr${i}/chr${i}_intersect.vcf.gz -s metadata/sample_ids.txt chrs/chr${i}/chr${i}_temp.vcf.gz; done
+
+
+
+
+
+
+
+
+
+

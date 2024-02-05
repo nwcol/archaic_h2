@@ -341,7 +341,12 @@ class Line(Columns):
         Decode an unphased genotype represented as bytes of the form b'0/0'
         into an array of the form np.array([[0, 0]], dtype=np.uint8)
         """
-        alleles = [allele.decode() for allele in genotype_bytes.split(b'/')]
+        if b'/' in genotype_bytes:
+            alleles = [allele.decode() for allele in
+                       genotype_bytes.split(b'/')]
+        else:
+            alleles = [allele.decode() for allele in
+                       genotype_bytes.split(b'|')]
         return np.array(alleles, dtype=np.uint8)
 
 

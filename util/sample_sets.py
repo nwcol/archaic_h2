@@ -8,6 +8,9 @@ from util import map_util
 from util import bed_util
 
 
+data_path = "/home/nick/Projects/archaic/data"
+
+
 class SampleSet:
 
     a = 0
@@ -16,13 +19,7 @@ class SampleSet:
 class UnphasedSampleSet:
 
     def __init__(self, genotypes, positions, variant_positions, map_values):
-        """
 
-        :param positions:
-        :param variant_positions:
-        :param genotypes: dictionary
-        :param map_values:
-        """
         self.sample_ids = list(genotypes.keys())
         self.genotypes = genotypes
         self.positions = positions
@@ -32,8 +29,14 @@ class UnphasedSampleSet:
         self.variant_map_values = self.map_values[self.variant_idx]
 
     @classmethod
-    def from_files(cls, vcf_path, bed_path, map_path):
-        
+    def read(cls, vcf_path, bed_path, map_path):
+        """
+
+        :param vcf_path:
+        :param bed_path:
+        :param map_path:
+        :return:
+        """
         variant_positions, genotypes = vcf_util.read(vcf_path)
         genetic_map = map_util.GeneticMap.read_txt(map_path)
         positions = bed_util.Bed.read_bed(bed_path).get_1_idx_positions()
@@ -41,26 +44,12 @@ class UnphasedSampleSet:
         return cls(genotypes, positions, variant_positions, map_values)
 
     @classmethod
-    def from_dir(cls, path):
-
-        vcf_path = None
-        bed_path = None
-        map_path = None
-        files = os.listdir(path)
-        for file in files:
-            if "merged.vcf.gz" in file:
-                vcf_path = path + file
-            elif ".bed" in file:
-                bed_path = path + file
-            elif "genetic_map" in file:
-                map_path = path + file
-        if not vcf_path:
-            raise ValueError("no merged .vcf.gz!")
-        if not bed_path:
-            raise ValueError("no merged .bed!")
-        if not map_path:
-            raise ValueError("no genetic map!")
-        return cls.from_files(vcf_path, bed_path, map_path)
+    def get_chr(cls, chrom):
+        # make the paths configurable!
+        vcf_path = f"{data_path}/chrs/chr{chrom}/chr{chrom}_intersect.vcf.gz"
+        bed_path = f"{data_path}/masks/chr{chrom}/chr{chrom}_intersect.bed"
+        map_path = f"{data_path}/maps/chr{chrom}_genetic_map.txt"
+        return cls.read(vcf_path, bed_path, map_path)
 
     def slice(self, start_pos, end_pos):
         """
@@ -105,18 +94,40 @@ class UnphasedSampleSet:
         return len(self.variant_positions)
 
     @property
-    def start(self):
+    def min_position(self):
         """
         Return the lowest-index position represented in the instance
         """
         return self.positions[0]
 
     @property
-    def stop(self):
+    def max_position(self):
         """
         Return the highest-index position represented in the instance
         """
         return self.positions[-1]
+
+    def get_short_variant_idx(self, sample_id):
+        """
+        Return a vector that indexes this sample's variant sites in
+        self.variant_positions
+        """
+        return np.nonzero(self.get_short_alt_counts(sample_id) > 0)[0]
+
+    def get_short_alt_counts(self, sample_id):
+        """
+        Return a vector of alternate allele counts, mapped to
+        self.variant_positions
+        """
+        alt_counts = np.sum(self.genotypes[sample_id] > 0, axis=1)
+        return alt_counts
+
+    def get_variant_idx(self, sample_id):
+        """
+        Return a vector that indexes this sample's variant sites in
+        self.positions
+        """
+        return np.nonzero(self.get_alt_counts(sample_id) > 0)[0]
 
     def get_alt_counts(self, sample_id):
         """
@@ -163,9 +174,18 @@ class UnphasedSampleSet:
         """
         return np.sum(self.get_het_indicator(sample_id))
 
+    def index_position(self, position):
+        """
+        Return the index of a given position in self.positions
+        If the position does not exist in that array, return the index which
+        accesses the next position above it
+        """
+        return np.searchsorted(self.positions, position)
 
-sample_set = UnphasedSampleSet.from_dir(
-    "/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
+    def index_het_position(self, sample_id, position):
+
+        return np.searchsorted(self.get_het_positions(sample_id), position)
+
 
 
 class PhasedSampleSet:
@@ -278,4 +298,4 @@ class UnphasedSamples:
         return n_hets
 
 
-old = UnphasedSamples.dir("/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
+#old = UnphasedSamples.dir("/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")

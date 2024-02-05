@@ -150,6 +150,10 @@ class Bed:
         return np.max(self.lengths)
 
     @property
+    def min_pos(self):
+        return self.regions[0, 0]
+
+    @property
     def max_pos(self):
         """
         Return the maximum position covered, 1-indexed
@@ -257,7 +261,7 @@ def intersect_beds(*beds):
 
     n_beds = len(beds)
     chrom = beds[0].chrom
-    maximum = max([bed.maximum for bed in beds])
+    maximum = max([bed.max_pos for bed in beds])
     masks = [bed.get_position_mask(max_pos=maximum) for bed in beds]
     tally = np.sum(masks, axis=0)
     overlaps = np.where(tally == n_beds)[0]
