@@ -47,7 +47,8 @@ def count_site_pairs(sample_set, r_edges, window=None):
     d_edges = map_util.r_to_d(r_edges)
 
     min_left_idx = sample_set.index_position(window[0])
-    max_left_idx = sample_set.index_position(window[1]) - 1
+    max_left_idx = sample_set.index_position(window[1] - 1)
+    print(min_left_idx, max_left_idx)
     max_d = d_edges[-1]
     max_right_idx = get_max_right_idx(sample_set.map_values, max_left_idx, max_d)
 
@@ -72,7 +73,7 @@ def count_het_pairs(sample_set, sample_id, r_edges, window=None):
     d_edges = map_util.r_to_d(r_edges)
 
     min_left_idx = sample_set.index_het_position(sample_id, window[0])
-    max_left_idx = sample_set.index_het_position(sample_id, window[1]) - 1
+    max_left_idx = sample_set.index_het_position(sample_id, window[1] - 1)
     max_d = d_edges[-1]
     max_right_idx = get_max_right_idx(sample_set.get_het_map(sample_id),
                                       max_left_idx, max_d)
@@ -109,12 +110,12 @@ def count_cross_pop_het_pairs(sample_set, sample_id_x, sample_id_y, r_edges,
     if not window:
         window = [
             sample_set.variant_positions[variant_idx[0]],
-            sample_set.variant_positions[variant_idx[-1]] + 1
+            sample_set.variant_positions[variant_idx[-1]]
         ]
     # these index in sample_set.genotypes
     min_left_idx = np.searchsorted(sample_set.variant_positions, window[0])
     # this is the max plus one
-    max_left_idx = np.searchsorted(sample_set.variant_positions, window[1])
+    max_left_idx = np.searchsorted(sample_set.variant_positions, window[1] - 1)
     max_d = d_edges[-1]
     # this is also the max plus one
     max_right_idx = get_max_right_idx(
@@ -192,21 +193,6 @@ def compute_pr(genotypes_x, genotypes_y):
             + np.sum(x_alleles[1] != y_alleles)
         ) / 4
     return probs
-
-
-def save_pair_counts(pair_counts, path, r_edges):
-    """
-    Save a vector of pair counts
-
-    :param pair_counts:
-    :param path:
-    :param r_edges:
-    :return:
-    """
-    header = str(r_edges)
-    file = open(path, 'w')
-    np.savetxt(file, pair_counts, header=header)
-    file.close()
 
 
 def enumerate_pairs(items):

@@ -2,7 +2,6 @@
 #
 
 import numpy as np
-import os
 from util import vcf_util
 from util import map_util
 from util import bed_util
@@ -73,8 +72,9 @@ class UnphasedSampleSet:
                      sample_id in self.sample_ids}
 
         map_values = self.map_values[pos_idx]
+        chrom = self.chrom
         return UnphasedSampleSet(genotypes, positions, variant_positions,
-                                 map_values)
+                                 map_values, chrom)
 
     @property
     def n_samples(self):
@@ -197,7 +197,6 @@ class UnphasedSampleSet:
     def index_het_position(self, sample_id, position):
 
         return np.searchsorted(self.get_het_positions(sample_id), position)
-
 
 
 class PhasedSampleSet:

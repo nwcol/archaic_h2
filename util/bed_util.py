@@ -47,14 +47,22 @@ class Bed:
 
     @classmethod
     def read_vcf(cls, path):
+        """
+        Create a mask from the positions in a .vcf.gz file
 
+        :param path: path to a .vcf.gz file
+        """
         positions = vcf_util.read_positions(path) - 1
         chrom = str(vcf_util.read_chrom(path))
         return cls.from_positions(positions, chrom)
 
     @classmethod
     def read_bed(cls, path):
+        """
+        Read a .bed file
 
+        :param path: path to a .bed file
+        """
         starts = []
         stops = []
         with open(path, mode='r') as file:
@@ -72,7 +80,12 @@ class Bed:
 
     @classmethod
     def read_map(cls, path):
+        """
+        Get a Bed instance with a single region representing the coverage of
+        a genetic map
 
+        :param path: path to a .txt map file
+        """
         genetic_map = map_util.GeneticMap.read_txt(path)
         pos_0 = genetic_map.positions[0] - 1
         pos_1 = genetic_map.positions[-1]
@@ -260,6 +273,8 @@ class Bed:
     def write_bed(self, path):
         """
         Save the regions array as a .bed file.
+
+        :param path: path to output file
         """
         with open(path, 'w') as file:
             for i in np.arange(self.n_regions):
@@ -277,7 +292,12 @@ class Bed:
 
 
 def intersect_beds(*beds):
+    """
+    Get a new Bed instance from the intersection of sites represented in an
+    arbitrary number of Bed instances.
 
+    :param beds:
+    """
     n_beds = len(beds)
     chrom = beds[0].chrom
     maximum = max([bed.max_pos for bed in beds])
