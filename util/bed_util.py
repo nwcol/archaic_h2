@@ -8,6 +8,9 @@ from util import vcf_util
 from util import map_util
 
 
+data_path = "/home/nick/Projects/archaic/data"
+
+
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
     matplotlib.use('Qt5Agg')
@@ -75,6 +78,14 @@ class Bed:
         pos_1 = genetic_map.positions[-1]
         regions = np.array([[pos_0, pos_1]], dtype=np.int64)
         return cls(regions, genetic_map.chrom)
+
+    @classmethod
+    def get_chr(cls, chrom):
+        """
+        Just an abbreviated way to load a single .bed
+        """
+        path = f"{data_path}/masks/chr{chrom}/chr{chrom}_intersect.bed"
+        return cls.read_bed(path)
 
     def __getitem__(self, index):
         """
@@ -147,18 +158,18 @@ class Bed:
         """
         Return the maximum region length
         """
-        return np.max(self.lengths)
+        return int(np.max(self.lengths))
 
     @property
     def min_pos(self):
-        return self.regions[0, 0]
+        return int(self.regions[0, 0])
 
     @property
     def max_pos(self):
         """
         Return the maximum position covered, 1-indexed
         """
-        return np.max(self.regions[:, 1])
+        return int(self.regions[-1, 1])
 
     @property
     def min_length(self):
@@ -225,6 +236,14 @@ class Bed:
         positions = np.nonzero(mask == 1)[0]
         positions += 1
         return positions
+
+    def interval_n_positions(self, start, end):
+        """
+        Get the number of positions on an interval
+        """
+        n = np.searchsorted(self.get_0_idx_positions(), end) \
+            - np.searchsorted(self.get_0_idx_positions(), start)
+        return n
 
     def get_position_mask(self, max_pos=None):
         """

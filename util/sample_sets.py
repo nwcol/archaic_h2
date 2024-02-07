@@ -18,9 +18,11 @@ class SampleSet:
 
 class UnphasedSampleSet:
 
-    def __init__(self, genotypes, positions, variant_positions, map_values):
+    def __init__(self, genotypes, positions, variant_positions, map_values,
+                 chrom):
 
         self.sample_ids = list(genotypes.keys())
+        self.chrom = chrom
         self.genotypes = genotypes
         self.positions = positions
         self.variant_positions = variant_positions
@@ -39,9 +41,11 @@ class UnphasedSampleSet:
         """
         variant_positions, genotypes = vcf_util.read(vcf_path)
         genetic_map = map_util.GeneticMap.read_txt(map_path)
-        positions = bed_util.Bed.read_bed(bed_path).get_1_idx_positions()
+        bed = bed_util.Bed.read_bed(bed_path)
+        positions = bed.get_1_idx_positions()
+        chrom = bed.chrom
         map_values = genetic_map.approximate_map_values(positions)
-        return cls(genotypes, positions, variant_positions, map_values)
+        return cls(genotypes, positions, variant_positions, map_values, chrom)
 
     @classmethod
     def get_chr(cls, chrom):
@@ -85,6 +89,14 @@ class UnphasedSampleSet:
         Return the number of positions represented in the instance
         """
         return len(self.positions)
+
+    def interval_n_positions(self, start, end):
+        """
+        Get the number of positions on an interval
+        """
+        n = np.searchsorted(self.positions, end) \
+            - np.searchsorted(self.positions, start)
+        return n
 
     @property
     def n_variants(self):
@@ -192,110 +204,3 @@ class PhasedSampleSet:
 
     def __init__(self):
         pass
-
-
-class UnphasedSamples:
-
-    def __init__(self, samples, alt_positions, genetic_map, bed):
-        """
-        alt_positions gives the chromosomal positions with variants, and
-        alt_index gives the index of these sites in the positions vector.
-
-        :param samples:
-        :param alt_positions:
-        :param genetic_map:
-        :param bed:
-        """
-        self.samples = samples
-        self.sample_ids = list(samples.keys())
-        self.n_samples = len(samples)
-        self.alt_positions = alt_positions
-        self.positions = bed.get_1_idx_positions()
-        self.n_positions = len(self.positions)
-        self.alt_index = np.searchsorted(self.positions, self.alt_positions)
-        self.n_variants = len(self.alt_positions)
-        self.map_values = genetic_map.approximate_map_values(self.positions)
-        self.alt_map_values = self.map_values[self.alt_index]
-
-    @classmethod
-    def one_file(cls, vcf_path, bed_path, map_path):
-        """
-        Load multiple samples from a single .vcf
-
-        :return:
-        """
-        encoded_samples, alt_positions = vcf_util.read_samples(vcf_path)
-        samples = dict()
-        for sample_id in encoded_samples:
-            samples[sample_id.decode()] = encoded_samples[sample_id]
-        genetic_map = map_util.GeneticMap.read_txt(map_path)
-        bed = bed_util.Bed.read_bed(bed_path)
-        return cls(samples, alt_positions, genetic_map, bed)
-
-    @classmethod
-    def dir(cls, path):
-        vcf_path = None
-        bed_path = None
-        map_path = None
-        files = os.listdir(path)
-        for file in files:
-            if "merged.vcf.gz" in file:
-                vcf_path = path + file
-            elif ".bed" in file:
-                bed_path = path + file
-            elif "genetic_map" in file:
-                map_path = path + file
-        if not vcf_path:
-            raise ValueError("no merged .vcf.gz!")
-        if not bed_path:
-            raise ValueError("no merged .bed!")
-        if not map_path:
-            raise ValueError("no genetic map!")
-        return cls.one_file(vcf_path, bed_path, map_path)
-
-    def alts(self, sample_id):
-        """
-        For a given sample, return a vector of alternate alle counts for every
-        position in self.positions
-
-        :param sample_id:
-        :return:
-        """
-        genotypes = np.zeros(self.n_positions, dtype=np.uint8)
-        genotypes[self.alt_index] = self.samples[sample_id]
-        return genotypes
-
-    def het_indicator(self, sample_id):
-        """
-        Return an indicator vector for heterozygosity in one sample.
-
-        :param sample_id:
-        :return:
-        """
-        indicator = np.zeros(self.n_positions, dtype=np.uint8)
-        indicator[self.alts(sample_id) == 1] = 1
-        return indicator
-
-    def het_index(self, sample_id):
-        """
-        Return a vector of integers that index a sample's heterozygous sites
-        in the self.positions array
-
-        :param sample_id:
-        :return:
-        """
-        het_index = self.alt_index[self.samples[sample_id] == 1]
-        return het_index
-
-    def n_het(self, sample_id):
-        """
-        Return the number of heterozygous sites for one sample
-
-        :param sample_id:
-        :return:
-        """
-        n_hets = np.sum(self.samples[sample_id] == 1)
-        return n_hets
-
-
-#old = UnphasedSamples.dir("/home/nick/Projects/archaic/data/chromosomes/merged/chr22/")
