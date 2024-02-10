@@ -1,0 +1,37 @@
+{
+    "22": {
+        "windows": {
+            "0": {
+                "bounds": [
+                    15000000,
+                    30000000
+                ],
+                "span": 15000000,
+                "n_sites": 6224812,
+                "coverage": 41.5,
+                "right_discontinuous": true
+            },
+            "1": {
+                "bounds": [
+                    35000000,
+                    40000000
+                ],
+                "span": 5000000,
+                "n_sites": 2988736,
+                "coverage": 59.77,
+                "right_discontinuous": false
+            },
+            "2": {
+                "bounds": [
+                    40000000,
+                    52000000
+                ],
+                "span": 12000000,
+                "n_sites": 6896241,
+                "coverage": 57.47,
+                "right_discontinuous": true
+            }
+        },
+        "n_missing_sites": 2932793
+    }
+}

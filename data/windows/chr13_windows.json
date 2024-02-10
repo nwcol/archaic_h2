@@ -1,0 +1,57 @@
+{
+    "13": {
+        "windows": {
+            "0": {
+                "bounds": [
+                    19000000,
+                    39000000
+                ],
+                "span": 20000000,
+                "n_sites": 11760771,
+                "coverage": 58.8,
+                "right_discontinuous": false
+            },
+            "1": {
+                "bounds": [
+                    39000000,
+                    58000000
+                ],
+                "span": 19000000,
+                "n_sites": 11891851,
+                "coverage": 62.59,
+                "right_discontinuous": false
+            },
+            "2": {
+                "bounds": [
+                    58000000,
+                    77000000
+                ],
+                "span": 19000000,
+                "n_sites": 12598220,
+                "coverage": 66.31,
+                "right_discontinuous": false
+            },
+            "3": {
+                "bounds": [
+                    77000000,
+                    96000000
+                ],
+                "span": 19000000,
+                "n_sites": 12321749,
+                "coverage": 64.85,
+                "right_discontinuous": false
+            },
+            "4": {
+                "bounds": [
+                    96000000,
+                    116000000
+                ],
+                "span": 20000000,
+                "n_sites": 12668339,
+                "coverage": 63.34,
+                "right_discontinuous": true
+            }
+        },
+        "n_missing_sites": 0
+    }
+}

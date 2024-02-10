@@ -1,5 +1,24 @@
-as of January 29. 
+as of Feb 7
 
+objectives:
+- finish adding functionality to Bed, UnphasedSampleSets
+- update
+- figure out windowing!!! how to handle the ends and sparsely covered regions
+- window size
+- window chr22 and do validation on it
+- validation with simulated data
+
+when you are happy with the whole infrastructure:
+- window the chromosomes
+- start the analysis!
+
+
+extras:
+- nucleotide divergence in one_locus
+
+
+
+as of Jan 29
 - keep learning how to use vim
 - look into ipython or something
 - clean up, document, improve modules, especially two_locus and one_locus

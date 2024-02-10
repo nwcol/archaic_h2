@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
 def get_coverage_str(bed):
     positions = bed.get_0_idx_positions()
-    approx_max = np.round(bed.max_pos, -6) + 1e6
+    approx_max = np.round(bed.last_position, -6) + 1e6
     out = []
     icons = {
         0.01: "~",
@@ -43,7 +43,7 @@ def get_coverage_str(bed):
 
 def plot(**kwargs):
 
-    r_mids = two_locus.r_bin_mids
+    r_mids = two_locus.r_mids
     fig = plt.figure(1)
     ax = plt.subplot(111)
     for i, key in enumerate(kwargs):

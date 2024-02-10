@@ -2,22 +2,24 @@
     "22": {
         "windows": {
             "0": {
-                "limits": [
+                "bounds": [
                     16000000,
                     34000000
                 ],
                 "span": 18000000,
                 "n_sites": 8489302,
-                "coverage": 47.16
+                "coverage": 47.16,
+                "right_discontinuous": false
             },
             "1": {
-                "limits": [
+                "bounds": [
                     34000000,
                     52000000
                 ],
                 "span": 18000000,
                 "n_sites": 10553280,
-                "coverage": 58.63
+                "coverage": 58.63,
+                "right_discontinuous": true
             }
         },
         "n_missing_sites": 0

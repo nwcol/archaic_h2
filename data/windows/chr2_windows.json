@@ -1,0 +1,127 @@
+{
+    "2": {
+        "windows": {
+            "0": {
+                "bounds": [
+                    0,
+                    18000000
+                ],
+                "span": 18000000,
+                "n_sites": 12181100,
+                "coverage": 67.67,
+                "right_discontinuous": false
+            },
+            "1": {
+                "bounds": [
+                    18000000,
+                    36000000
+                ],
+                "span": 18000000,
+                "n_sites": 11651189,
+                "coverage": 64.73,
+                "right_discontinuous": false
+            },
+            "2": {
+                "bounds": [
+                    36000000,
+                    54000000
+                ],
+                "span": 18000000,
+                "n_sites": 11715578,
+                "coverage": 65.09,
+                "right_discontinuous": false
+            },
+            "3": {
+                "bounds": [
+                    54000000,
+                    72000000
+                ],
+                "span": 18000000,
+                "n_sites": 11447176,
+                "coverage": 63.6,
+                "right_discontinuous": false
+            },
+            "4": {
+                "bounds": [
+                    72000000,
+                    93000000
+                ],
+                "span": 21000000,
+                "n_sites": 10181685,
+                "coverage": 48.48,
+                "right_discontinuous": true
+            },
+            "5": {
+                "bounds": [
+                    95000000,
+                    116000000
+                ],
+                "span": 21000000,
+                "n_sites": 11074633,
+                "coverage": 52.74,
+                "right_discontinuous": false
+            },
+            "6": {
+                "bounds": [
+                    116000000,
+                    137000000
+                ],
+                "span": 21000000,
+                "n_sites": 12542668,
+                "coverage": 59.73,
+                "right_discontinuous": false
+            },
+            "7": {
+                "bounds": [
+                    137000000,
+                    158000000
+                ],
+                "span": 21000000,
+                "n_sites": 14070587,
+                "coverage": 67.0,
+                "right_discontinuous": false
+            },
+            "8": {
+                "bounds": [
+                    158000000,
+                    179000000
+                ],
+                "span": 21000000,
+                "n_sites": 13766051,
+                "coverage": 65.55,
+                "right_discontinuous": false
+            },
+            "9": {
+                "bounds": [
+                    179000000,
+                    200000000
+                ],
+                "span": 21000000,
+                "n_sites": 13529339,
+                "coverage": 64.43,
+                "right_discontinuous": false
+            },
+            "10": {
+                "bounds": [
+                    200000000,
+                    222000000
+                ],
+                "span": 22000000,
+                "n_sites": 14287428,
+                "coverage": 64.94,
+                "right_discontinuous": false
+            },
+            "11": {
+                "bounds": [
+                    222000000,
+                    244000000
+                ],
+                "span": 22000000,
+                "n_sites": 13661135,
+                "coverage": 62.1,
+                "right_discontinuous": true
+            }
+        },
+        "n_missing_sites": 0
+    }
+}

@@ -1,5 +1,5 @@
 
-# Utilities for representing and manipulating recombination maps
+# A class for representing and manipulating recombination maps
 
 import numpy as np
 import matplotlib
@@ -23,9 +23,6 @@ class GeneticMap:
         """
         Assumes a file with a 1-line header, positions at column with index 1
         and map values in cM at column with index 3
-
-        :param path:
-        :return:
         """
         positions = []
         values = []
@@ -41,14 +38,23 @@ class GeneticMap:
         return cls(positions, values, chrom)
 
     @property
-    def first_pos(self):
+    def first_position(self):
+        """
+        Return the first position covered by the map
+        """
         return self.positions[0]
 
     @property
-    def last_pos(self):
+    def last_position(self):
+        """
+        Return the last position covered by the map
+        """
         return self.positions[-1]
 
     def approximate_map_values(self, positions):
+        """
+        Get approximate map values each position in positions.
+        """
         index = np.searchsorted(self.positions, positions, "right") - 1
         floor = self.values[index]
         floor_positions = self.positions[index]

@@ -17,17 +17,24 @@ class SampleSet:
 
 class UnphasedSampleSet:
 
-    def __init__(self, genotypes, positions, variant_positions, map_values,
-                 chrom):
+    def __init__(self, genotypes, positions, variant_sites, map_values, chrom):
 
+        # structural elements
         self.sample_ids = list(genotypes.keys())
-        self.chrom = chrom
         self.genotypes = genotypes
         self.positions = positions
-        self.variant_positions = variant_positions
-        self.variant_idx = np.searchsorted(positions, variant_positions)
-        self.map_values = map_values
-        self.variant_map_values = self.map_values[self.variant_idx]
+        self.variant_sites = variant_sites
+        self.variant_idx = np.searchsorted(positions, variant_sites)
+        self.position_map = map_values
+        self.variant_site_map = self.position_map[self.variant_idx]
+        # properties
+        self.chrom = chrom
+        self.n_samples = len(self.sample_ids)
+        self.n_positions = len(self.positions)
+        self.first_position = self.positions[0]
+        self.last_position = self.positions[-1]
+        self.n_variant_sites = len(self.variant_sites)
+        self.big_window = (self.first_position, self.last_position + 1)
 
     @classmethod
     def read(cls, vcf_path, bed_path, map_path):
@@ -38,168 +45,159 @@ class UnphasedSampleSet:
         :param map_path:
         :return:
         """
-        variant_positions, genotypes = vcf_util.read(vcf_path)
+        variant_sites, genotypes = vcf_util.read(vcf_path)
         genetic_map = map_util.GeneticMap.read_txt(map_path)
         bed = bed_util.Bed.read_bed(bed_path)
         positions = bed.get_1_idx_positions()
         chrom = bed.chrom
         map_values = genetic_map.approximate_map_values(positions)
-        return cls(genotypes, positions, variant_positions, map_values, chrom)
+        return cls(genotypes, positions, variant_sites, map_values, chrom)
 
     @classmethod
-    def get_chr(cls, chrom):
+    def read_chr(cls, chrom):
         # make the paths configurable!
         vcf_path = f"{data_path}/chrs/chr{chrom}/chr{chrom}_intersect.vcf.gz"
         bed_path = f"{data_path}/masks/chr{chrom}/chr{chrom}_intersect.bed"
         map_path = f"{data_path}/maps/chr{chrom}_genetic_map.txt"
         return cls.read(vcf_path, bed_path, map_path)
 
-    def slice(self, start_pos, end_pos):
-        """
-        Return a positional subset of the UnphasedSampleSet.
+    # Accessing variants for one sample
 
-        start_pos and end_pos are 1-indexed and refer to positions along the 
-        chromosome. end_pos is non-inclusive.
-        """
-        pos = self.positions
-        pos_idx = np.where((pos >= start_pos) & (pos < end_pos))[0]
-        positions = self.positions[pos_idx]
-
-        var_pos = self.variant_positions
-        variant_idx = np.where((var_pos >= start_pos) & (var_pos < end_pos))[0]
-        variant_positions = var_pos[variant_idx]
-        genotypes = {sample_id: self.genotypes[sample_id][variant_idx] for
-                     sample_id in self.sample_ids}
-
-        map_values = self.map_values[pos_idx]
-        chrom = self.chrom
-        return UnphasedSampleSet(genotypes, positions, variant_positions,
-                                 map_values, chrom)
-
-    @property
-    def n_samples(self):
-        """
-        Return the number of samples represented in the instance
-        """
-        return len(self.sample_ids)
-
-    @property
-    def n_positions(self):
-        """
-        Return the number of positions represented in the instance
-        """
-        return len(self.positions)
-
-    def interval_n_positions(self, start, end):
-        """
-        Get the number of positions on an interval
-        """
-        n = np.searchsorted(self.positions, end) \
-            - np.searchsorted(self.positions, start)
-        return n
-
-    @property
-    def n_variants(self):
-        """
-        Return the number of sites variant in one or more samples
-        """
-        return len(self.variant_positions)
-
-    @property
-    def min_position(self):
-        """
-        Return the lowest-index position represented in the instance
-        """
-        return self.positions[0]
-
-    @property
-    def max_position(self):
-        """
-        Return the highest-index position represented in the instance
-        """
-        return self.positions[-1]
-
-    def get_short_variant_idx(self, sample_id):
-        """
-        Return a vector that indexes this sample's variant sites in
-        self.variant_positions
-        """
-        return np.nonzero(self.get_short_alt_counts(sample_id) > 0)[0]
-
-    def get_short_alt_counts(self, sample_id):
+    def get_sample_alt_counts(self, sample_id):
         """
         Return a vector of alternate allele counts, mapped to
-        self.variant_positions
+        self.variant_sites
         """
-        alt_counts = np.sum(self.genotypes[sample_id] > 0, axis=1)
-        return alt_counts
+        return np.sum(self.genotypes[sample_id] > 0, axis=1)
 
-    def get_variant_idx(self, sample_id):
+    def get_sample_variant_idx(self, sample_id):
         """
         Return a vector that indexes this sample's variant sites in
-        self.positions
+        self.variant_sites
         """
-        return np.nonzero(self.get_alt_counts(sample_id) > 0)[0]
+        return np.nonzero(self.get_sample_alt_counts(sample_id) > 0)[0]
 
-    def get_alt_counts(self, sample_id):
+    def get_sample_het_idx(self, sample_id):
         """
-        Return a vector of alternate allele counts, mapped to self.positions
-        """
-        counts = np.sum(self.genotypes[sample_id] > 0, axis=1)
-        alt_counts = np.zeros(self.n_positions, dtype=np.uint8)
-        alt_counts[self.variant_idx] = counts
-        return alt_counts
-
-    def get_het_indicator(self, sample_id):
-        """
-        Return a indicator vector on self.variant_positions for heterozygosity
-        for a given sample_id
-        """
-        het_indicator = np.zeros(self.n_positions, dtype=np.int8)
-        het_indicator[self.get_het_idx(sample_id)] = 1
-        return het_indicator
-
-    def get_het_idx(self, sample_id):
-        """
-        Return the index of heterozygous positions in self.positions for a
-        given sample_id
+        Return a vector that indexes this sample's variant sites in
+        self.variant_sites
         """
         genotypes = self.genotypes[sample_id]
-        return self.variant_idx[genotypes[:, 0] != genotypes[:, 1]]
+        return np.nonzero(genotypes[:, 0] != genotypes[:, 1])[0]
 
-    def get_het_positions(self, sample_id):
+    def get_sample_het_indicator(self, sample_id, window=None):
         """
-        Return the vector of heterozygous positions for a given sample_id
+        Return an indicator vector on self.variant_positions for heterozygosity
+        for a given sample_id
         """
-        return self.positions[self.get_het_idx(sample_id)]
+        genotypes = self.genotypes[sample_id]
+        if window:
+            window_idx = self.get_window_variant_idx(window)
+            genotypes = genotypes[window_idx]
+        else:
+            pass
+        return genotypes[:, 0] != genotypes[:, 1]
 
-    def get_het_map(self, sample_id):
+    def get_n_sample_variants(self, sample_id):
+        """
+        Return the number of sites that vary from the reference for a sample
+        """
+        return len(self.get_sample_variant_idx(sample_id))
+
+    def get_n_sample_het_sites(self, sample_id, window=None):
+        """
+        Return the number of heterozygous sites for a given sample_id
+        """
+        het_indicator = self.get_sample_het_indicator(sample_id)
+        if window:
+            window_idx = self.get_window_variant_idx(window)
+            het_indicator = het_indicator[window_idx]
+        else:
+            pass
+        return np.sum(het_indicator)
+
+    # Accessing variants for multiple samples
+
+    def get_multi_sample_variant_idx(self, *sample_ids):
+        """
+        Return a vector that indexes the union of variant sites in an
+        arbitrary number of samples given by *sample_ids
+
+        :param sample_ids:
+        """
+        sample_variant_set = set(
+            np.concatenate(
+                (
+                    [self.get_sample_variant_idx(sample_id)
+                     for sample_id in sample_ids]
+                )
+            )
+        )
+        return np.sort(np.array(list(sample_variant_set), dtype=np.int64))
+
+    # Indexing variants
+
+    def get_window_variant_idx(self, window):
+        """
+        Return an index on self.variant_sites for sites inside a window
+
+        :param window:
+        """
+        window_idx = np.where(
+            (self.variant_sites >= window[0])
+            & (self.variant_sites < window[1])
+        )[0]
+        return window_idx
+
+    # Accessing positions
+
+    def get_window_position_count(self, window):
+        """
+        Return the number of positions that fall in a genomic window, treating
+        the upper window bound as noninclusive
+
+        :param window:
+        """
+        count = np.count_nonzero(
+            (self.positions >= window[0]) & (self.positions < window[1])
+        )
+        return count
+
+    def get_sample_variant_sites(self, sample_id):
+        """
+        Return a vector of sites where a sample has variants
+
+        :param sample_id:
+        """
+        return self.variant_sites[self.get_sample_variant_idx(sample_id)]
+
+    def get_sample_het_sites(self, sample_id):
+        """
+        Return a vector of sites where a sample is heterozygous
+
+        :param sample_id:
+        """
+        return self.variant_sites[self.get_sample_het_idx(sample_id)]
+
+    # Accessing map
+
+    def get_sample_variant_map(self, sample_id):
+        """
+        Return a vector of map values at variant sites for a given sample_id
+        """
+        return self.variant_site_map[self.get_sample_variant_idx(sample_id)]
+
+
+    def get_sample_het_map(self, sample_id):
         """
         Return a vector of map values at heterozygous sites for a given
         sample_id
         """
-        return self.map_values[self.get_het_idx(sample_id)]
-
-    def n_het(self, sample_id):
-        """
-        Return the number of heterozygous sites for a given sample_id
-        """
-        return np.sum(self.get_het_indicator(sample_id))
-
-    def index_position(self, position):
-        """
-        Return the index of a given position in self.positions
-        If the position does not exist in that array, return the index which
-        accesses the next position above it
-        """
-        return np.searchsorted(self.positions, position)
-
-    def index_het_position(self, sample_id, position):
-
-        return np.searchsorted(self.get_het_positions(sample_id), position)
+        return self.variant_site_map[self.get_sample_het_idx(sample_id)]
 
 
 class PhasedSampleSet:
 
     def __init__(self):
+        # there probably isn't a need for this
         pass

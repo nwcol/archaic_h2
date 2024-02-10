@@ -1,0 +1,107 @@
+{
+    "3": {
+        "windows": {
+            "0": {
+                "bounds": [
+                    0,
+                    18000000
+                ],
+                "span": 18000000,
+                "n_sites": 11685094,
+                "coverage": 64.92,
+                "right_discontinuous": false
+            },
+            "1": {
+                "bounds": [
+                    18000000,
+                    36000000
+                ],
+                "span": 18000000,
+                "n_sites": 11592977,
+                "coverage": 64.41,
+                "right_discontinuous": false
+            },
+            "2": {
+                "bounds": [
+                    36000000,
+                    54000000
+                ],
+                "span": 18000000,
+                "n_sites": 10988908,
+                "coverage": 61.05,
+                "right_discontinuous": false
+            },
+            "3": {
+                "bounds": [
+                    54000000,
+                    72000000
+                ],
+                "span": 18000000,
+                "n_sites": 12252069,
+                "coverage": 68.07,
+                "right_discontinuous": false
+            },
+            "4": {
+                "bounds": [
+                    72000000,
+                    91000000
+                ],
+                "span": 19000000,
+                "n_sites": 11607566,
+                "coverage": 61.09,
+                "right_discontinuous": true
+            },
+            "5": {
+                "bounds": [
+                    93000000,
+                    114000000
+                ],
+                "span": 21000000,
+                "n_sites": 12686683,
+                "coverage": 60.41,
+                "right_discontinuous": false
+            },
+            "6": {
+                "bounds": [
+                    114000000,
+                    135000000
+                ],
+                "span": 21000000,
+                "n_sites": 13518833,
+                "coverage": 64.38,
+                "right_discontinuous": false
+            },
+            "7": {
+                "bounds": [
+                    135000000,
+                    156000000
+                ],
+                "span": 21000000,
+                "n_sites": 13172029,
+                "coverage": 62.72,
+                "right_discontinuous": false
+            },
+            "8": {
+                "bounds": [
+                    156000000,
+                    177000000
+                ],
+                "span": 21000000,
+                "n_sites": 13408359,
+                "coverage": 63.85,
+                "right_discontinuous": false
+            },
+            "9": {
+                "bounds": [
+                    177000000,
+                    198000000
+                ],
+                "span": 21000000,
+                "n_sites": 12781914,
+                "coverage": 60.87,
+                "right_discontinuous": true
+            }
+        },
+        "n_missing_sites": 0
+    }
+}

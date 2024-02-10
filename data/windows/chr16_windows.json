@@ -2,40 +2,44 @@
     "16": {
         "windows": {
             "0": {
-                "limits": [
+                "bounds": [
                     0,
                     18000000
                 ],
                 "span": 18000000,
                 "n_sites": 9714696,
-                "coverage": 53.97
+                "coverage": 53.97,
+                "right_discontinuous": false
             },
             "1": {
-                "limits": [
+                "bounds": [
                     18000000,
                     36000000
                 ],
                 "span": 18000000,
                 "n_sites": 6660381,
-                "coverage": 37.0
+                "coverage": 37.0,
+                "right_discontinuous": true
             },
             "2": {
-                "limits": [
+                "bounds": [
                     45000000,
                     68000000
                 ],
                 "span": 23000000,
                 "n_sites": 14154409,
-                "coverage": 61.54
+                "coverage": 61.54,
+                "right_discontinuous": false
             },
             "3": {
-                "limits": [
+                "bounds": [
                     68000000,
                     91000000
                 ],
                 "span": 23000000,
                 "n_sites": 13417400,
-                "coverage": 58.34
+                "coverage": 58.34,
+                "right_discontinuous": true
             }
         },
         "n_missing_sites": 0

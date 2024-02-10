@@ -1,7 +1,8 @@
 
-# Bed class for loading and manipulating .bed files
+# A class for loading and manipulating .bed files.
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import matplotlib
 import numpy as np
 from util import vcf_util
@@ -26,6 +27,7 @@ class Bed:
         chromosomes by the chrom attribute
         """
         self.regions = regions
+        self.positions = self.get_1_idx_positions()
         self.chrom = chrom
 
     @classmethod
@@ -93,21 +95,12 @@ class Bed:
         return cls(regions, genetic_map.chrom)
 
     @classmethod
-    def get_chr(cls, chrom):
+    def read_chr(cls, chrom):
         """
         Just an abbreviated way to load a single .bed
         """
         path = f"{data_path}/masks/chr{chrom}/chr{chrom}_intersect.bed"
         return cls.read_bed(path)
-
-    def __getitem__(self, index):
-        """
-        Return a new instance holding the regions indexed by index
-        """
-        if isinstance(index, slice):
-            index = range(*index.indices(self.n_regions))
-        reg = self.regions[index]
-        return Bed(reg, self.chrom)
 
     def trim(self, lower, upper):
         """
@@ -116,6 +109,15 @@ class Bed:
         lower_index = np.searchsorted(self.regions[:, 0], lower)
         upper_index = np.searchsorted(self.regions[:, 1], upper)
         self.regions = self.regions[lower_index:upper_index]
+
+    def exclude(self, limit):
+        """
+        Create a new instance excluding all regions with size smaller than
+        limit
+        """
+        mask = np.nonzero(self.lengths >= limit)[0]
+        regions = self.regions[mask]
+        return Bed(regions, self.chrom)
 
     @property
     def n_regions(self):
@@ -167,6 +169,13 @@ class Bed:
         return np.median(self.lengths)
 
     @property
+    def min_length(self):
+        """
+        Return the size of the smallest region
+        """
+        return np.min(self.lengths)
+
+    @property
     def max_length(self):
         """
         Return the maximum region length
@@ -174,52 +183,62 @@ class Bed:
         return int(np.max(self.lengths))
 
     @property
-    def min_pos(self):
+    def first_position(self):
         return int(self.regions[0, 0])
 
     @property
-    def max_pos(self):
+    def last_position(self):
         """
         Return the maximum position covered, 1-indexed
         """
         return int(self.regions[-1, 1])
 
-    @property
-    def min_length(self):
-        """
-        Return the size of the smallest region
-        """
-        return np.min(self.lengths)
+    def get_window_position_count(self, window):
 
-    def exclude(self, limit):
-        """
-        Create a new instance excluding all regions with size smaller than
-        limit
-        """
-        mask = np.nonzero(self.lengths >= limit)[0]
-        regions = self.regions[mask]
-        return Bed(regions, self.chrom)
+        count = np.searchsorted(self.positions, window[1])\
+              - np.searchsorted(self.positions, window[0])
+        return int(count)
 
-    def plot_coverage(self, min_length, max_pos=None):
-        """
-        Plot the coverage of tracts above a minimum size on the chromosome
-        """
-        fig = plt.figure(figsize=(12, 3))
+    def get_window_coverage(self, window):
+
+        count = self.get_window_position_count(window)
+        span = window[1] - window[0]
+        return count / span
+
+    def get_window_coverage_vec(self, window_arr):
+        # vectorized
+        counts = np.searchsorted(self.positions, window_arr[:, 1])\
+               - np.searchsorted(self.positions, window_arr[:, 0])
+        spans = window_arr[:, 1] - window_arr[:, 0]
+        return counts / spans
+
+    def plot_coverage(self, res=1e6):
+
+        n_windows = int(np.ceil(self.last_position / res))
+        windows = np.linspace(
+            (0, res), ((n_windows - 1) * res, n_windows * res), n_windows,
+            dtype=np.int64
+        )
+        coverages = self.get_window_coverage_vec(windows)
+        scale = res / 1e6
+        fig = plt.figure(figsize=(10, 2))
         sub = fig.add_subplot(111)
-        lengths = self.lengths
-        large = np.where(lengths > min_length)[0]
-        if not max_pos:
-            max_pos = self.max_pos
-        sub.barh(y=0, width=max_pos, color="white", edgecolor="black")
-        sub.barh(y=0, width=lengths[large], left=self.starts[large],
-                 color="blue")
-        sub.set_ylim(-1, 1)
-        sub.set_xlim(-1e6, max_pos + 1e6)
-        sub.set_yticks(ticks=[0], labels=["chr22"])
-        sub.set_xlabel("position")
+        for i, coverage in enumerate(coverages):
+            if coverage == 0:
+                color = "yellow"
+            else:
+                color = cm.binary(coverage)
+            sub.barh(y=0.5, height=1, left=i * scale, width=(i + 1) * scale,
+                     color=color)
+        scaled_end = (i + 1) * scale
+        sub.set_yticks(np.arange(0, scaled_end, 5))
+        sub.set_xlim(0, scaled_end)
+        sub.set_xlabel("Mb")
+        sub.set_ylim(0, 1)
+        fig.tight_layout()
         fig.show()
 
-    def plot_distribution(self, bins=50, y_max=None):
+    def plot_length_distribution(self, bins=50, y_max=None):
         """
         Plot the distribution of region lengths
         """
@@ -264,7 +283,7 @@ class Bed:
         1-indexed
         """
         if not max_pos:
-            max_pos = self.max_pos
+            max_pos = self.last_position
         mask = np.zeros(max_pos, dtype=np.uint8)
         for start, stop in self.regions:
             mask[start:stop] = 1
@@ -300,7 +319,7 @@ def intersect_beds(*beds):
     """
     n_beds = len(beds)
     chrom = beds[0].chrom
-    maximum = max([bed.max_pos for bed in beds])
+    maximum = max([bed.last_position for bed in beds])
     masks = [bed.get_position_mask(max_pos=maximum) for bed in beds]
     tally = np.sum(masks, axis=0)
     overlaps = np.where(tally == n_beds)[0]
