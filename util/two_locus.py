@@ -63,7 +63,6 @@ def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False):
         np.searchsorted(sample_set.positions, window[1]),
         sample_set.n_positions
     )
-    print(first_left_idx, last_left_idx)
     #
     position_map = sample_set.position_map
     if limit_right:
@@ -104,7 +103,6 @@ def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
     het_sites = sample_set.get_sample_het_sites(sample_id)
     first_left_idx = np.searchsorted(het_sites, window[0], side='left')
     last_left_idx = min(np.searchsorted(het_sites, window[1]), len(het_sites))
-    print(first_left_idx, last_left_idx)
     #
     het_map = sample_set.get_sample_het_map(sample_id)
     if limit_right:
@@ -157,7 +155,6 @@ def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
             sample_set.variant_site_map[joint_var_idx], last_left_idx,
             bin_edges
         )
-    print(first_left_idx, last_left_idx, last_right_idx)
     # slice the joint variant index
     windowed_idx = joint_var_idx[first_left_idx:last_right_idx]
     #
@@ -175,17 +172,9 @@ def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
         joint_diff_probs = site_diff_prob * diff_probs[left_idx + 1:]
         #
         d_dists = variant_map[left_idx + 1:] - variant_map[left_idx]
-
-        #bin_idxs = np.searchsorted(d_edges, d_dists) - 1
-
         edges = np.searchsorted(d_dists, d_edges)
         #
         for b in np.arange(n_bins):
             het_pair_counts[b] += np.sum(joint_diff_probs[edges[b]:edges[b+1]])
-
-            #het_pair_counts[b] += np.sum(joint_diff_probs[bin_idxs == b])
         #
     return het_pair_counts
-
-
-ex = sample_sets.UnphasedSampleSet.read_chr(22)

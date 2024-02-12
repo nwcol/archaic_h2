@@ -11,14 +11,15 @@ from util import two_locus
 
 def get_header(statistic, window_id, window_dict, rows):
     header_dict = {
-        "chr": chrom,
+        "chrom": chrom,
+        "window_id": window_id,
         "statistic": statistic,
         "bounds": window_dict["bounds"],
-        "window_id": window_id,
         "span": window_dict["span"],
         "n_sites": window_dict["n_sites"],
         "coverage": window_dict["coverage"],
-        "lines": rows
+        "right_discontinuous": window_dict["right_discontinuous"],
+        "rows": rows
     }
     return str(header_dict)
 
@@ -39,21 +40,22 @@ if __name__ == "__main__":
     window_file.close()
     if chrom not in full_window_dict:
         raise ValueError(f"Wrong windows file; chr {chrom} not represented")
-    windows_dict = full_window_dict[chrom]
+    windows_dict = full_window_dict[chrom]["windows"]
     sample_set = sample_sets.UnphasedSampleSet.read_chr(chrom)
     r_edges = two_locus.r_edges
 
     for window_id in windows_dict:
         window_dict = windows_dict[window_id]
-        window = [int(x) for x in window_dict["limits"]]
+        window = [int(x) for x in window_dict["bounds"]]
+        limit_right = window_dict["right_discontinuous"]
 
         # pair counts
         pair_counts = two_locus.count_site_pairs(
-            sample_set, r_edges, window=window
+            sample_set, r_edges, window=window, limit_right=limit_right
         )
-        print(f"PAIR COUNTS IN WINDOW {window_id} CHR {chrom} COMPUTED")
+        print(f"PAIR COUNTS IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
         header = get_header(
-            "pair_counts", window_id, window_dict, ["pair_counts"]
+            "pair_counts", window_id, window_dict, {0: "pair_counts"}
         )
         save_arr(pair_counts, header, window_id, "pair_counts")
 
@@ -65,13 +67,14 @@ if __name__ == "__main__":
 
         for i, sample_id in enumerate(sample_ids):
             het_counts[i] = two_locus.count_het_pairs(
-                sample_set, sample_id, r_edges, window=window
+                sample_set, sample_id, r_edges, window=window,
+                limit_right=limit_right
             )
-            print(f"H2 {i} IN WINDOW {window_id} CHR {chrom} COMPUTED")
+            print(f"H2_X \t{i} IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
 
         rows = str(dict(zip(np.arange(n_samples), sample_ids)))
-        header = get_header("H2", window_id, window_dict, rows)
-        save_arr(het_counts, header, window_id, "H2_counts")
+        header = get_header("H2_X", window_id, window_dict, rows)
+        save_arr(het_counts, header, window_id, "H2_X_counts")
 
         # two locus heterozygosity; two samples
         sample_pairs = one_locus.enumerate_pairs(sample_ids)
@@ -81,11 +84,11 @@ if __name__ == "__main__":
         for i, sample_pair in enumerate(sample_pairs):
             het_counts[i] = two_locus.count_two_sample_het_pairs(
                 sample_set, sample_pair[0], sample_pair[1], r_edges,
-                window=window
+                window=window, limit_right=limit_right
             )
-            print(f"H2_2 {i} IN WINDOW {window_id} CHR {chrom} COMPUTED")
+            print(f"H2_XY \t{i} IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
 
         rows = str(dict(zip(np.arange(n_sample_pairs), sample_pairs)))
-        header = get_header("H2_2", window_id, window_dict, rows)
-        save_arr(het_counts, header, window_id, "H2_2_counts")
-        print(f"TWO LOCUS ANALYSIS DONE; CHR{chrom} WIN{window_id}")
+        header = get_header("H2_XY", window_id, window_dict, rows)
+        save_arr(het_counts, header, window_id, "H2_XY_counts")
+        print(f"TWO LOCUS ANALYSIS COMPLETE CHR {chrom} WINDOW {window_id}")
