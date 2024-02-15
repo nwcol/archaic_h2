@@ -35,6 +35,8 @@ if __name__ == "__main__":
     chrom = sys.argv[1]
     window_file_path = sys.argv[2]
     out_dir = sys.argv[3]
+    bp_threshold = eval(sys.argv[4])
+    stats = ["H2"]
     window_file = open(window_file_path)
     full_window_dict = json.load(window_file)
     window_file.close()
@@ -42,7 +44,9 @@ if __name__ == "__main__":
         raise ValueError(f"Wrong windows file; chr {chrom} not represented")
     windows_dict = full_window_dict[chrom]["windows"]
     sample_set = sample_sets.UnphasedSampleSet.read_chr(chrom)
+    sample_ids = sample_set.sample_ids
     r_edges = two_locus.r_edges
+    n_bins = len(r_edges) - 1
 
     for window_id in windows_dict:
         window_dict = windows_dict[window_id]
@@ -51,7 +55,8 @@ if __name__ == "__main__":
 
         # pair counts
         pair_counts = two_locus.count_site_pairs(
-            sample_set, r_edges, window=window, limit_right=limit_right
+            sample_set, r_edges, window=window, limit_right=limit_right,
+            bp_threshold=bp_threshold
         )
         print(f"PAIR COUNTS IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
         header = get_header(
@@ -60,35 +65,37 @@ if __name__ == "__main__":
         save_arr(pair_counts, header, window_id, "pair_counts")
 
         # two locus heterozygosity; one sample
-        sample_ids = sample_set.sample_ids
-        n_samples = len(sample_ids)
-        n_bins = len(r_edges) - 1
-        het_counts = np.zeros((n_samples, n_bins), dtype=np.float64)
+        if "H2" in stats:
+            n_samples = len(sample_ids)
+            het_counts = np.zeros((n_samples, n_bins), dtype=np.float64)
 
-        for i, sample_id in enumerate(sample_ids):
-            het_counts[i] = two_locus.count_het_pairs(
-                sample_set, sample_id, r_edges, window=window,
-                limit_right=limit_right
-            )
-            print(f"H2_X \t{i} IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
+            for i, sample_id in enumerate(sample_ids):
+                het_counts[i] = two_locus.count_het_pairs(
+                    sample_set, sample_id, r_edges, window=window,
+                    limit_right=limit_right, bp_threshold=bp_threshold
+                )
+                print(f"H2 \t{i} IN WINDOW \t{window_id} CHR \t{chrom} "
+                      f"COMPUTED")
 
-        rows = str(dict(zip(np.arange(n_samples), sample_ids)))
-        header = get_header("H2_X", window_id, window_dict, rows)
-        save_arr(het_counts, header, window_id, "H2_X_counts")
+            rows = str(dict(zip(np.arange(n_samples), sample_ids)))
+            header = get_header("H2", window_id, window_dict, rows)
+            save_arr(het_counts, header, window_id, "H2_counts")
 
         # two locus heterozygosity; two samples
-        sample_pairs = one_locus.enumerate_pairs(sample_ids)
-        n_sample_pairs = len(sample_pairs)
-        het_counts = np.zeros((n_sample_pairs, n_bins), dtype=np.float64)
+        if "H2_XY" in stats:
+            sample_pairs = one_locus.enumerate_pairs(sample_ids)
+            n_sample_pairs = len(sample_pairs)
+            het_counts = np.zeros((n_sample_pairs, n_bins), dtype=np.float64)
 
-        for i, sample_pair in enumerate(sample_pairs):
-            het_counts[i] = two_locus.count_two_sample_het_pairs(
-                sample_set, sample_pair[0], sample_pair[1], r_edges,
-                window=window, limit_right=limit_right
-            )
-            print(f"H2_XY \t{i} IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
+            for i, sample_pair in enumerate(sample_pairs):
+                het_counts[i] = two_locus.count_two_sample_het_pairs(
+                    sample_set, sample_pair[0], sample_pair[1], r_edges,
+                    window=window, limit_right=limit_right,
+                    bp_threshold=bp_threshold
+                )
+                print(f"H2_XY \t{i} IN WINDOW \t{window_id} CHR \t{chrom} COMPUTED")
 
-        rows = str(dict(zip(np.arange(n_sample_pairs), sample_pairs)))
-        header = get_header("H2_XY", window_id, window_dict, rows)
-        save_arr(het_counts, header, window_id, "H2_XY_counts")
-        print(f"TWO LOCUS ANALYSIS COMPLETE CHR {chrom} WINDOW {window_id}")
+            rows = str(dict(zip(np.arange(n_sample_pairs), sample_pairs)))
+            header = get_header("H2_XY", window_id, window_dict, rows)
+            save_arr(het_counts, header, window_id, "H2_XY_counts")
+            print(f"TWO LOCUS ANALYSIS COMPLETE CHR {chrom} WINDOW {window_id}")

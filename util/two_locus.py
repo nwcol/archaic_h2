@@ -41,7 +41,8 @@ def get_last_right_idx(map_values, last_left_idx, bin_edges):
     return last_right_idx
 
 
-def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False):
+def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False,
+                     bp_threshold=0):
     """
 
 
@@ -50,6 +51,7 @@ def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False):
     :param window:
     :param limit_right: if True, set the highest right locus equal to the
         highest left locus
+    :param bp_threshold:
     """
     # upper window bounds are noninclusive
     if not window:
@@ -72,20 +74,27 @@ def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False):
             position_map, last_left_idx, bin_edges
         )
     abbrev_map = position_map[first_left_idx:last_right_idx]
+    abbrev_pos = sample_set.positions[first_left_idx:last_right_idx]
     #
     n_left_loci = last_left_idx - first_left_idx
     n_bins = len(bin_edges) - 1
     pair_counts = np.zeros(n_bins, dtype=np.int64)
     #
     for left_idx in np.arange(n_left_loci):
+        if bp_threshold > 0:
+            min_right_idx = np.searchsorted(
+                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+            )
+        else:
+            min_right_idx = left_idx + 1
         locus_edges = abbrev_map[left_idx] + d_edges
-        cum_counts = np.searchsorted(abbrev_map[left_idx + 1:], locus_edges)
+        cum_counts = np.searchsorted(abbrev_map[min_right_idx:], locus_edges)
         pair_counts += np.diff(cum_counts)
     return pair_counts
 
 
 def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
-                    limit_right=False):
+                    limit_right=False, bp_threshold=0):
     """
 
 
@@ -110,20 +119,28 @@ def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
     else:
         last_right_idx = get_last_right_idx(het_map, last_left_idx, bin_edges)
     abbrev_map = het_map[first_left_idx:last_right_idx]
+    abbrev_pos = het_sites[first_left_idx:last_right_idx]
     #
     n_left_loci = last_left_idx - first_left_idx
     n_bins = len(bin_edges) - 1
     het_pair_counts = np.zeros(n_bins, dtype=np.int64)
     # the loop
     for left_idx in np.arange(n_left_loci):
+        if bp_threshold > 0:
+            min_right_idx = np.searchsorted(
+                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+            )
+        else:
+            min_right_idx = left_idx + 1
         locus_edges = abbrev_map[left_idx] + d_edges
-        cum_counts = np.searchsorted(abbrev_map[left_idx + 1:], locus_edges)
+        cum_counts = np.searchsorted(abbrev_map[min_right_idx:], locus_edges)
         het_pair_counts += np.diff(cum_counts)
     return het_pair_counts
 
 
 def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
-                               window=None, limit_right=False):
+                               window=None, limit_right=False,
+                               bp_threshold=0):
     """
 
 
@@ -162,16 +179,23 @@ def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
     genotypes_y = sample_set.genotypes[sample_id_y][windowed_idx]
     diff_probs = one_locus.compute_site_diff_probs(genotypes_x, genotypes_y)
     variant_map = sample_set.variant_site_map[windowed_idx]
+    abbrev_pos = sample_set.variant_sites[windowed_idx]
     #
     n_left_loci = last_left_idx - first_left_idx
     n_bins = len(bin_edges) - 1
     het_pair_counts = np.zeros(n_bins, dtype=np.float64)
     # loop over left loci and compute two-locus heterozygosity
     for left_idx in np.arange(n_left_loci):
+        if bp_threshold > 0:
+            min_right_idx = np.searchsorted(
+                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+            )
+        else:
+            min_right_idx = left_idx + 1
         site_diff_prob = diff_probs[left_idx]
-        joint_diff_probs = site_diff_prob * diff_probs[left_idx + 1:]
+        joint_diff_probs = site_diff_prob * diff_probs[min_right_idx:]
         #
-        d_dists = variant_map[left_idx + 1:] - variant_map[left_idx]
+        d_dists = variant_map[min_right_idx:] - variant_map[left_idx]
         edges = np.searchsorted(d_dists, d_edges)
         #
         for b in np.arange(n_bins):

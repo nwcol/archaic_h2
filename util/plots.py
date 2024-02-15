@@ -7,6 +7,7 @@ from matplotlib import cm
 import numpy as np
 import sys
 import os
+from util import one_locus
 from util import two_locus
 from util.two_locus import r
 from util import bed_util
@@ -14,7 +15,19 @@ from util import bed_util
 
 data_path = "/home/nick/Projects/archaic/data"
 stat_path = "/home/nick/Projects/archaic/statistics"
-pair_counts = np.loadtxt(f"{stat_path}/two_locus/all/pair_counts_all.txt")
+sample_ids = ["Altai", "Chagyrskaya", "Denisova", "Vindija", "French-1",
+              "Han-1", "Khomani_San-2", "Papuan-2", "Yoruba-1", "Yoruba-3"]
+colors = dict(zip(sample_ids, cm.gist_rainbow(np.linspace(0, 0.9, 10))))
+colors = {"Altai": "red",
+          "Chagyrskaya": "orange",
+          "Denisova": "gold",
+          "Vindija": "green",
+          "French-1": "skyblue",
+          "Han-1": "turquoise",
+          "Khomani_San-2": "blue",
+          "Papuan-2": "indigo",
+          "Yoruba-1": "blueviolet",
+          "Yoruba-3": "purple"}
 
 
 if __name__ == "__main__":
@@ -60,6 +73,19 @@ def load_statistics(path):
         "rows": {rows[i]: arr[i] for i in rows}
     }
     return out
+
+
+def load_stat_dir(path, statistic):
+    stats = []
+    chr_dirs = [x for x in os.listdir(path) if "chr" in x]
+    for x in chr_dirs:
+        dir_list = os.listdir(f"{path}/{x}")
+        for y in dir_list:
+            if statistic in y:
+                stats.append(load_statistics(f"{path}/{x}/{y}"))
+    stat_arr = get_statistic_arr(stats)
+    return stat_arr
+
 
 
 def get_statistic_arr(stat_dicts):
@@ -174,9 +200,10 @@ def get_coverage_str(bed):
     return out
 
 
-def plot_bootstraps(extra_stats, **bootstrap_dicts):
+def plot_bootstraps(extra_stats, colors=None, **bootstrap_dicts):
     # stats: list
-    colors = cm.hsv(np.linspace(0, 0.9, len(bootstrap_dicts)))
+    if not colors:
+        colors = cm.hsv(np.linspace(0, 0.9, len(bootstrap_dicts)))
     fig = plt.figure(1)
     ax = plt.subplot(111)
     for i, sample_id in enumerate(bootstrap_dicts):
@@ -184,7 +211,7 @@ def plot_bootstraps(extra_stats, **bootstrap_dicts):
         ax.plot(r, bootstrap_dict["mean"], marker='x', color=colors[i],
                 label=sample_id, linewidth=2)
         for stat in extra_stats:
-            ax.plot(r, bootstrap_dict[stat], color=colors[i])
+            ax.plot(r, bootstrap_dict[stat], color=colors[i], linestyle=":")
     ax.set_ylim(0, )
     ax.set_xscale("log")
     ax.set_ylabel("H_2")
@@ -209,3 +236,22 @@ def plot(**kwargs):
     ax.legend()
     fig.tight_layout()
     fig.show()
+
+
+pair_counts = np.loadtxt(f"{stat_path}/two_locus/all/pair_counts_all.txt")
+H2_bootstraps = {
+    sample_id: load_arr_as_dict(f"{stat_path}/two_locus/bootstrap/"
+                                f"bootstrap_H2_X_{sample_id}.txt")
+    for sample_id in sample_ids
+}
+H2_XY_file_names = [x for x in os.listdir(f"{stat_path}/two_locus/bootstrap")
+                    if "XY" in x]
+sample_pairs = one_locus.enumerate_pairs(sample_ids)
+
+#H2_bootstraps = {
+#    f"{sample0}-{sample1}": load_arr_as_dict(
+#        f"{stat_path}/two_locus/bootstrap/bootstrap_H2_XY_{sample0}_{sample1}.txt"
+#    )
+#    for sample0, sample1 in sample_pairs
+#}
+

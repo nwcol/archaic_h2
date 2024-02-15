@@ -1,52 +1,13 @@
-as of Feb 7
+as of Feb 14
 
-objectives:
-- finish adding functionality to Bed, UnphasedSampleSets
-- update
-- figure out windowing!!! how to handle the ends and sparsely covered regions
-- window size
-- window chr22 and do validation on it
-- validation with simulated data
-
-when you are happy with the whole infrastructure:
-- window the chromosomes
-- start the analysis!
-
-
-extras:
-- nucleotide divergence in one_locus
-
-
-
-as of Jan 29
-- keep learning how to use vim
-- look into ipython or something
-- clean up, document, improve modules, especially two_locus and one_locus
-- documentation in general: write down what the scripts do etc
-- clean up the remaining unchanged scripts
-
--> start working on visualizing .vcfs in the terminal and chopping chromosomes into blocks for analysis
-
-- think about the indexing and make it easier to understand. its a very powerful tool
-- finish setting up the UnphasedSampleSet structure and adjust everything to use it
-- make a PhasedSampleSet class
-- add functionality to slice chromosomes in UnphasedSampleSets into 5-10Mb regions for analysis
-
-- figure out how to record all this analysis: think simple!!! make things streamlined
-
-
-Order:
-
-1. vcf_util
-2. map_util, bed_util if they need changes (prob not major ones)
-3. vcf_samples (maybe refactor name to sample_sets or something) 
-4. one_locus and two_locus
-5. the systems of input and output for the above and for coalescent simulations
-
-scripts to write:
-make bed files
-intersect bed files
-make a bed file from a map file
-
-
-
+- break up the approximate map function;
+    add plots to the Map class (rates etc)
+    make sure everything works properly
+- cause of extra-high H2 at low r
+- handling statistics files; file i/o generally
+- one-locus statistics
+- nicer scripts for two-locus statistics
+- nicer scripts for analysis
+- auto window setup
+- small windows?
+- alter .gitignore to exclude some/all stats
