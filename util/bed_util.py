@@ -19,96 +19,151 @@ if __name__ == "__main__":
 
 class Bed:
 
-    def __init__(self, regions, chrom):
+    def __init__(self, regions, chroms):
         """
         Note that regions have 0-indexed starts and 1-indexed ends.
-
-        Instances of this class are associated explicitly with single
-        chromosomes by the chrom attribute
         """
         self.regions = regions
-        self.positions = self.get_1_idx_positions()
-        self.chrom = chrom
+        if type(chroms) == int or type(chroms) == str:
+            chroms = np.full(len(regions), int(chroms))
+        self.chroms = chroms
+        unique_chroms = list(set(chroms))
+        #
+        if len(unique_chroms) == 1:
+            self.chrom = unique_chroms[0]
+            self.unique_chroms = self.chrom
+        else:
+            self.chrom = None
+            self.unique_chroms = unique_chroms
+        #
+        self.n_regions = len(regions)
+        self.lengths = self.regions[:, 1] - self.regions[:, 0]
+        self.n_positions = np.sum(self.lengths)
+        self.first_position = self.regions[0, 0]
+        self.last_position = self.regions[-1, 1]
+
+    # initialize from various structures
 
     @classmethod
-    def from_positions(cls, positions, chrom):
+    def from_positions_1(cls, positions_1, chroms):
         """
-        Initialize from a vector of 0-indexed positions.
+        Initialize from a vector of 1-indexed positions.
         """
-        high = np.max(positions)
-        mask = np.zeros(high + 3, dtype=np.int32)
-        mask[positions + 1] = 1
-        dif = np.diff(mask)
-        starts = np.where(dif == 1)[0]
-        stops = np.where(dif == -1)[0]
+        rightmost_position = np.max(positions_1)
+        # length is incremented by 2 so that the 0th and -1st elements are 0
+        indicator = np.zeros(rightmost_position + 2, dtype=np.int8)
+        indicator[positions_1] = 1
+        jumps = np.diff(indicator)
+        starts = np.where(jumps == 1)[0]
+        stops = np.where(jumps == -1)[0]
         length = len(starts)
         regions = np.zeros((length, 2), dtype=np.int64)
         regions[:, 0] = starts
         regions[:, 1] = stops
-        return cls(regions, chrom)
+        if len(chroms) != length:
+            chroms = np.full(length, chroms[0])
+        return cls(regions, chroms)
 
     @classmethod
-    def read_vcf(cls, path):
+    def from_positions_0(cls, positions_0, chroms):
+        """
+        Initialize from a vector of 0-indexed positions
+        """
+        positions_1 = positions_0 + 1
+        return cls.from_positions_1(positions_1, chroms)
+
+    @classmethod
+    def from_boolean_mask_0(cls, mask, chroms):
+        """
+        Initialize from a 0-indexed boolean mask
+        """
+        positions_0 = np.nonzero(mask)[0]
+        positions_1 = positions_0 + 1
+        return cls.from_positions_1(positions_1, chroms)
+
+    # loading from file
+
+    @classmethod
+    def read_vcf(cls, file_name):
         """
         Create a mask from the positions in a .vcf.gz file
-
-        :param path: path to a .vcf.gz file
         """
-        positions = vcf_util.read_positions(path) - 1
-        chrom = str(vcf_util.read_chrom(path))
-        return cls.from_positions(positions, chrom)
+        positions_1 = vcf_util.read_positions(file_name)
+        chroms = vcf_util.read_chrom_col(file_name)
+        return cls.from_positions_1(positions_1, chroms)
 
     @classmethod
-    def read_bed(cls, path):
+    def read_bed(cls, file_name):
         """
         Read a .bed file
-
-        :param path: path to a .bed file
         """
+        chroms = []
         starts = []
         stops = []
-        with open(path, mode='r') as file:
+        with open(file_name, mode='r') as file:
             for i, line in enumerate(file):
                 if "chromStart" not in line:
-                    fields = line.split()
+                    fields = line.rstrip("\n").split("\t")
+                    chroms.append(int(fields[0]))
                     starts.append(int(fields[1]))
                     stops.append(int(fields[2]))
-        chrom = fields[0]
         length = len(starts)
         regions = np.zeros((length, 2), dtype=np.int64)
         regions[:, 0] = starts
         regions[:, 1] = stops
-        return cls(regions, chrom)
+        chroms = np.array(chroms)
+        return cls(regions, chroms)
 
     @classmethod
-    def read_map(cls, path):
+    def read_map(cls, file_name):
         """
         Get a Bed instance with a single region representing the coverage of
         a genetic map
-
-        :param path: path to a .txt map file
         """
-        genetic_map = map_util.GeneticMap.read_txt(path)
-        pos_0 = genetic_map.positions[0] - 1
-        pos_1 = genetic_map.positions[-1]
-        regions = np.array([[pos_0, pos_1]], dtype=np.int64)
-        return cls(regions, genetic_map.chrom)
+        genetic_map = map_util.GeneticMap.read_txt(file_name)
+        start_1 = genetic_map.positions[0]
+        stop_1 = genetic_map.positions[-1]
+        regions = np.array([[start_1 - 1, stop_1]], dtype=np.int64)
+        return cls(regions, [genetic_map.chrom])
 
     @classmethod
     def read_chr(cls, chrom):
         """
         Just an abbreviated way to load a single .bed
         """
-        path = f"{data_path}/masks/chr{chrom}/chr{chrom}_intersect.bed"
+        path = f"{data_path}/masks/chr{chrom}.bed"
         return cls.read_bed(path)
 
-    def trim(self, lower, upper):
+    @classmethod
+    def read_tsv(cls, file_name):
+        # ad hoc to read the exome file
+        chroms = []
+        starts = []
+        stops = []
+        with open(file_name, 'r') as file:
+            for i, line in enumerate(file):
+                if i > 0:
+                    fields = line.rstrip("\n").split("\t")
+                    chroms.append(int(fields[2]))
+                    starts.append(int(fields[3]))
+                    stops.append(int(fields[4]))
+            length = len(starts)
+            regions = np.zeros((length, 2), dtype=np.int64)
+            regions[:, 0] = starts
+            regions[:, 1] = stops
+            chroms = np.array(chroms)
+        return cls(regions, chroms)
+
+    # getting subsets
+
+    def subset_chrom(self, chrom):
         """
-        Trim all regions below lower or above upper from the regions array
+        Get a new instance containing only regions on a given chromosome
         """
-        lower_index = np.searchsorted(self.regions[:, 0], lower)
-        upper_index = np.searchsorted(self.regions[:, 1], upper)
-        self.regions = self.regions[lower_index:upper_index]
+        mask = self.get_chrom_mask(chrom)
+        regions = self.regions[mask]
+        chroms = self.chroms[mask]
+        return Bed(regions, chroms)
 
     def exclude(self, limit):
         """
@@ -117,21 +172,84 @@ class Bed:
         """
         mask = np.nonzero(self.lengths >= limit)[0]
         regions = self.regions[mask]
-        return Bed(regions, self.chrom)
+        chroms = self.chroms[mask]
+        return Bed(regions, chroms)
+
+    # masks
+
+    def get_chrom_mask(self, chrom):
+        """
+        Return a boolean mask for a specific chromosome
+        """
+        mask = self.chroms == chrom
+        return mask
+
+    def get_sized_indicator(self, length=None):
+        """
+        Return a vector holding 1s where positions exist in the Bed instance.
+        0-indexed
+        """
+        if not length:
+            length = self.last_position
+        indicator = np.zeros(length, dtype=np.int8)
+        for start, stop in self.regions:
+            indicator[start:stop] = 1
+        return indicator
+
+    def get_sized_boolean_mask(self, length=None):
+        """
+        Get a 0-indexed boolean mask of given length
+        """
+        mask = self.get_sized_indicator(length=length) == 1
+        return mask
+
+    # properties
 
     @property
-    def n_regions(self):
+    def positions_0(self):
         """
-        Return the number of regions
+        Return a vector of 0-indexed positions for all regions
+
+        This is a property rather than an attribute so that it doesn't take up
+        memory
         """
-        return len(self.regions)
+        positions = np.nonzero(self.indicator)[0]
+        return positions
 
     @property
-    def n_positions(self):
+    def positions_1(self):
         """
-        Return the total number of positions
+        Return a vector of .vcf-style, 1-indexed positions for all regions
         """
-        return np.sum(self.lengths)
+        positions = np.nonzero(self.indicator)[0]
+        positions += 1
+        return positions
+
+    @property
+    def indicator(self):
+        """
+        Return a vector of length self.last_position holding 1 wherever
+        a position is covered. 0-indexed
+        """
+        indicator = np.zeros(self.last_position, dtype=np.int8)
+        for start, stop in self.regions:
+            indicator[start:stop] = 1
+        return indicator
+
+    @property
+    def boolean_mask(self):
+        """
+        Return a 0-indexed boolean mask of covered positions
+        """
+        mask = self.indicator == 1
+        return mask
+
+    @property
+    def flat_regions(self):
+        """
+        Return a vector of ravelled region start/stop positions
+        """
+        return np.ravel(self.regions)
 
     @property
     def starts(self):
@@ -146,13 +264,6 @@ class Bed:
         Return all stop positions, 1-indexed
         """
         return self.regions[:, 1]
-
-    @property
-    def lengths(self):
-        """
-        Return a vector of region lengths
-        """
-        return self.regions[:, 1] - self.regions[:, 0]
 
     @property
     def mean_length(self):
@@ -182,22 +293,23 @@ class Bed:
         """
         return int(np.max(self.lengths))
 
-    @property
-    def first_position(self):
-        return int(self.regions[0, 0])
+    # windows
 
-    @property
-    def last_position(self):
-        """
-        Return the maximum position covered, 1-indexed
-        """
-        return int(self.regions[-1, 1])
+    def count_positions(self, window):
+
+        return np.diff(np.searchsorted(self.positions_1, window))
 
     def get_window_position_count(self, window):
 
-        count = np.searchsorted(self.positions, window[1])\
-              - np.searchsorted(self.positions, window[0])
+        count = np.searchsorted(self.positions_1, window[1])\
+              - np.searchsorted(self.positions_1, window[0])
         return int(count)
+
+    def get_vec_window_position_count(self, windows):
+
+        counts = np.searchsorted(self.positions_1, windows[:, 1])\
+               - np.searchsorted(self.positions_1, windows[:, 0])
+        return counts
 
     def get_window_coverage(self, window):
 
@@ -205,12 +317,14 @@ class Bed:
         span = window[1] - window[0]
         return count / span
 
-    def get_window_coverage_vec(self, window_arr):
+    def get_window_coverages(self, window_arr):
         # vectorized
-        counts = np.searchsorted(self.positions, window_arr[:, 1])\
-               - np.searchsorted(self.positions, window_arr[:, 0])
+        counts = np.searchsorted(self.positions_1, window_arr[:, 1])\
+               - np.searchsorted(self.positions_1, window_arr[:, 0])
         spans = window_arr[:, 1] - window_arr[:, 0]
         return counts / spans
+
+    # plots
 
     def plot_coverage(self, res=1e6):
 
@@ -219,10 +333,11 @@ class Bed:
             (0, res), ((n_windows - 1) * res, n_windows * res), n_windows,
             dtype=np.int64
         )
-        coverages = self.get_window_coverage_vec(windows)
+        coverages = self.get_window_coverages(windows)
         scale = res / 1e6
         fig = plt.figure(figsize=(10, 2))
         sub = fig.add_subplot(111)
+        i = 0
         for i, coverage in enumerate(coverages):
             if coverage == 0:
                 color = "yellow"
@@ -252,76 +367,93 @@ class Bed:
         sub.set_xlabel("region size, bp")
         fig.show()
 
-    def get_0_idx_positions(self):
-        """
-        Return a vector of 0-indexed positions for all regions
-        """
-        mask = self.get_position_mask()
-        positions = np.nonzero(mask == 1)[0]
-        return positions
+    # writing to file
 
-    def get_1_idx_positions(self):
-        """
-        Return a vector of .vcf-style, 1-indexed positions for all regions
-        """
-        mask = self.get_position_mask()
-        positions = np.nonzero(mask == 1)[0]
-        positions += 1
-        return positions
-
-    def interval_n_positions(self, start, end):
-        """
-        Get the number of positions on an interval
-        """
-        n = np.searchsorted(self.get_0_idx_positions(), end) \
-            - np.searchsorted(self.get_0_idx_positions(), start)
-        return n
-
-    def get_position_mask(self, max_pos=None):
-        """
-        Return a vector holding 1s where positions exist in the Bed instance.
-        1-indexed
-        """
-        if not max_pos:
-            max_pos = self.last_position
-        mask = np.zeros(max_pos, dtype=np.uint8)
-        for start, stop in self.regions:
-            mask[start:stop] = 1
-        return mask
-
-    def write_bed(self, path):
+    def write_bed(self, file_name):
         """
         Save the regions array as a .bed file.
-
-        :param path: path to output file
         """
-        with open(path, 'w') as file:
+        with open(file_name, 'w') as file:
             for i in np.arange(self.n_regions):
                 file.write(
                     "\t".join(
                         [
-                            self.chrom,
+                            str(self.chroms[i]),
                             str(self.regions[i, 0]),
                             str(self.regions[i, 1])
                         ]
                     ) + "\n"
                 )
         print(f".bed file for chr {self.chrom} with {self.n_positions} "
-              f"positions written at {path}")
+              f"positions written at {file_name}")
 
 
 def intersect_beds(*beds):
     """
-    Get a new Bed instance from the intersection of sites represented in an
-    arbitrary number of Bed instances.
-
-    :param beds:
+    Return the intersection of regions in two or more Bed instances
     """
     n_beds = len(beds)
-    chrom = beds[0].chrom
-    maximum = max([bed.last_position for bed in beds])
-    masks = [bed.get_position_mask(max_pos=maximum) for bed in beds]
-    tally = np.sum(masks, axis=0)
-    overlaps = np.where(tally == n_beds)[0]
-    intersect = Bed.from_positions(overlaps, chrom)
+    max_length = max([bed.last_position for bed in beds])
+    indicators = [bed.get_sized_indicator(length=max_length) for bed in beds]
+    n_overlaps = np.sum(indicators, axis=0)
+    overlaps = np.where(n_overlaps == n_beds)[0]
+    chroms = beds[0].chroms
+    intersect = Bed.from_positions_0(overlaps, chroms)
     return intersect
+
+
+def union_beds(*beds):
+    """
+    Return the union of the regions in two or more Bed instances
+    """
+    max_length = max([bed.last_position for bed in beds])
+    indicators = [bed.get_sized_indicator(length=max_length) for bed in beds]
+    n_overlaps = np.sum(indicators, axis=0)
+    non_zeros = np.nonzero(n_overlaps)[0]
+    union = Bed.from_positions_0(non_zeros, beds[0].chroms)
+    return union
+
+
+def subtract_bed(bed, exclude):
+    """
+    Get a Bed instance holding regions that are present in bed and not present
+    in exclude
+    """
+    length = max(bed.last_position, exclude.last_position)
+    indicator = bed.get_sized_indicator(length=length)
+    excl_indicator = exclude.get_sized_indicator(length=length)
+    indicator -= excl_indicator
+    positions = np.where(indicator == 1)[0]
+    subset = Bed.from_positions_0(positions, bed.chroms)
+    return subset
+
+
+def extend_bed(bed, distance):
+    """
+    Return a new bed with added flanking coverage
+    """
+    regions = bed.regions
+    indicator = np.zeros(regions[-1, 1] + distance, dtype=np.int64)
+    for reg in regions:
+        lower = max(reg[0] - distance, 0)
+        upper = reg[1] + distance
+        indicator[lower:upper] += 1
+    mask = indicator > 0
+    new_bed = Bed.from_boolean_mask_0(mask, bed.chroms)
+    return new_bed
+
+
+def exclude_low_coverage(bed, bin_size, min_coverage):
+
+    n_bins = int(bed.last_position // bin_size) + 1
+    bins = np.arange(0, (n_bins + 1) * bin_size, bin_size)
+    positions = bed.positions_0
+    pos_counts, dump = np.histogram(positions, bins=bins)
+    coverage = pos_counts / bin_size
+    indicator = np.zeros(bed.last_position, dtype=np.uint8)
+    for i in np.arange(n_bins):
+        if coverage[i] >= min_coverage:
+            indicator[bins[i]:bins[i + 1]] = 1
+    coverage_mask = Bed.from_boolean_mask_0(indicator > 0, bed.chroms)
+    out = intersect_beds(bed, coverage_mask)
+    return out

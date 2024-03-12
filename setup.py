@@ -8,6 +8,6 @@ setup(
     author_email="nwcollier@wisc.edu",
     packages=["util"],
     scripts=[
-        "util/scripts/simplify_vcf_file.py"
+        "util/scripts/simplify_vcf.py"
     ]
 )

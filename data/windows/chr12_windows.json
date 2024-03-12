@@ -1,77 +1,56 @@
 {
-    "12": {
-        "windows": {
-            "0": {
-                "bounds": [
-                    0,
-                    17000000
-                ],
-                "span": 17000000,
-                "n_sites": 9881730,
-                "coverage": 58.13,
-                "right_discontinuous": false
-            },
-            "1": {
-                "bounds": [
-                    17000000,
-                    35000000
-                ],
-                "span": 18000000,
-                "n_sites": 10409117,
-                "coverage": 57.83,
-                "right_discontinuous": true
-            },
-            "2": {
-                "bounds": [
-                    37000000,
-                    56000000
-                ],
-                "span": 19000000,
-                "n_sites": 10436551,
-                "coverage": 54.93,
-                "right_discontinuous": false
-            },
-            "3": {
-                "bounds": [
-                    56000000,
-                    75000000
-                ],
-                "span": 19000000,
-                "n_sites": 11638687,
-                "coverage": 61.26,
-                "right_discontinuous": false
-            },
-            "4": {
-                "bounds": [
-                    75000000,
-                    94000000
-                ],
-                "span": 19000000,
-                "n_sites": 12400398,
-                "coverage": 65.27,
-                "right_discontinuous": false
-            },
-            "5": {
-                "bounds": [
-                    94000000,
-                    114000000
-                ],
-                "span": 20000000,
-                "n_sites": 12401619,
-                "coverage": 62.01,
-                "right_discontinuous": false
-            },
-            "6": {
-                "bounds": [
-                    114000000,
-                    134000000
-                ],
-                "span": 20000000,
-                "n_sites": 11861498,
-                "coverage": 59.31,
-                "right_discontinuous": true
-            }
+    "chrom": 12,
+    "n_windows": 7,
+    "windows": {
+        "0": {
+            "bounds": [
+                0,
+                17000000
+            ],
+            "limit_right": false
         },
-        "n_missing_sites": 0
-    }
+        "1": {
+            "bounds": [
+                17000000,
+                35000000
+            ],
+            "limit_right": true
+        },
+        "2": {
+            "bounds": [
+                37000000,
+                56000000
+            ],
+            "limit_right": false
+        },
+        "3": {
+            "bounds": [
+                56000000,
+                75000000
+            ],
+            "limit_right": false
+        },
+        "4": {
+            "bounds": [
+                75000000,
+                94000000
+            ],
+            "limit_right": false
+        },
+        "5": {
+            "bounds": [
+                94000000,
+                114000000
+            ],
+            "limit_right": false
+        },
+        "6": {
+            "bounds": [
+                114000000,
+                134000000
+            ],
+            "limit_right": true
+        }
+    },
+    "metadata": {}
 }

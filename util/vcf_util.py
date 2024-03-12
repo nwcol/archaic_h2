@@ -64,12 +64,12 @@ class Header(Columns):
             self.contig_line = self.get_contig_line(self.chrom)
 
     @classmethod
-    def read(cls, path):
+    def read(cls, file_name):
         """
         Read a header from a .vcf.gz file
         """
         lines = []
-        with gzip.open(path, "r") as file:
+        with gzip.open(file_name, "r") as file:
             for line in file:
                 if b'#' in line:
                     lines.append(line)
@@ -349,8 +349,8 @@ class Line(Columns):
         return np.array(alleles, dtype=np.uint8)
 
 
-def simplify(in_path, out_path, format_string, info_string=None, keep_id=False,
-             keep_filter=False, keep_quality=False):
+def simplify(in_file_name, out_file_name, format_string, info_string=None,
+             keep_id=False, keep_filter=False, keep_quality=False):
     """
     Create an uncompressed copy of a .vcf.gz format file, while selectively
     eliminating information as specified to reduce the file size.
@@ -369,7 +369,7 @@ def simplify(in_path, out_path, format_string, info_string=None, keep_id=False,
     :param keep_quality:
     """
     # handle arguments
-    test_line = Line.get_first_line(in_path)
+    test_line = Line.get_first_line(in_file_name)
     format_idx = test_line.get_format_idx(format_string)
     format_bytes = b':'.join([test_line.format_list[i] for i in format_idx])
     if info_string:
@@ -377,15 +377,15 @@ def simplify(in_path, out_path, format_string, info_string=None, keep_id=False,
     else:
         info_idx = None
     # set up the header
-    header = Header.read(in_path)
+    header = Header.read(in_file_name)
     header = header.simplify(format_string, info_string, keep_filter)
-    out_file = open(out_path, 'wb')
+    out_file = open(out_file_name, 'wb')
     for line in header.out():
         # print(line)
         out_file.write(line)
     # loop over every line and write a simplified version to out_path
     i = 0
-    with gzip.open(in_path, 'r') as in_file:
+    with gzip.open(in_file_name, 'r') as in_file:
         for i, line in enumerate(in_file):
             if b'#' not in line:
                 line = Line(line)
@@ -394,11 +394,11 @@ def simplify(in_path, out_path, format_string, info_string=None, keep_id=False,
                 out_file.write(line.out())
                 i += 0
     out_file.close()
-    print(f"{i} lines simplified; written at {out_path}")
+    print(f"{i} lines simplified; written at {out_file_name}")
     return 0
 
 
-def read(path):
+def read(file_name):
     """
     Read the contents of a .vcf file and return them as a vector of called/
     covered sites and a dictionary of genotypes.
@@ -406,14 +406,14 @@ def read(path):
     This function is intended for use on relatively small .vcf files; in the
     ballpark of several hundred thousand lines.
 
-    :param path: path to a .vcf.gz file
+    :param file_name: path to a .vcf.gz file
     """
-    header = Header.read(path)
+    header = Header.read(file_name)
     sample_ids = header.sample_ids_as_str
     n_samples = len(sample_ids)
     sites = []
     genotype_lists = [[] for i in range(n_samples)]
-    with gzip.open(path, 'r') as file:
+    with gzip.open(file_name, 'r') as file:
         for i, line in enumerate(file):
             if b'#' not in line:
                 line = Line(line)
@@ -427,15 +427,15 @@ def read(path):
     return sites, genotypes
 
 
-def read_positions(path):
+def read_positions(file_name):
     """
     Return a vector of positions from a .vcf.gz file. Positions are 1-indexed
     eg the first position is 1.
 
-    :param path: path to a .vcf.gz file
+    :param file_name: path to a .vcf.gz file
     """
     positions = []
-    with gzip.open(path, 'r') as file:
+    with gzip.open(file_name, 'r') as file:
         for line in file:
             if b'#' not in line:
                 line = Line(line)
@@ -444,27 +444,41 @@ def read_positions(path):
     return positions
 
 
-def read_sample_ids(path):
+def read_sample_ids(file_name):
     """
     Return a list of the sample ids in a .vcf file as strings
 
-    :param path: path to a .vcf.gz file
+    :param file_name: path to a .vcf.gz file
     """
-    header = Header.read(path)
+    header = Header.read(file_name)
     return header.sample_ids_as_str
 
 
-def read_chrom(path):
+def read_chrom(file_name):
     """
     Return the chromosome number from the first line in a .vcf file
 
-    :param path: path to a .vcf.gz file
+    :param file_name: path to a .vcf.gz file
     """
-    line = Line.get_first_line(path)
+    line = Line.get_first_line(file_name)
     return int(line.chrom.decode())
 
 
-def read_first_lines(path, n_lines):
+def read_chrom_col(file_name):
+    """
+    Return the whole column of chromosome numbers from a .vcf file
+    """
+    chrom_numbers = []
+    with gzip.open(file_name, 'r') as file:
+        for line in file:
+            if b'#' not in line:
+                line = Line(line)
+                chrom_numbers.append(int(line.chrom.decode()))
+    chrom_col = np.array(chrom_numbers)
+    return chrom_col
+
+
+def read_first_lines(file_name, n_lines):
     """
     Read and return the first k lines of a gzipped file as a list of bytes.
 
@@ -474,7 +488,7 @@ def read_first_lines(path, n_lines):
     :param n_lines: number of lines to read
     """
     lines = []
-    with gzip.open(path, 'r') as file:
+    with gzip.open(file_name, 'r') as file:
         for i, line in enumerate(file):
             lines.append(line)
             if i > n_lines:

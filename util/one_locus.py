@@ -17,24 +17,28 @@ def compute_pi(sample_set, *sample_ids, window=None):
     Compute nucleotide diversity. If no *sample_ids are provided, compute the
     statistic for every sample_id in the sample_set
 
-    :return: a dictionary mapping sample_ids to diversities
+    :return: a dictionary mapping sample_ids to sample diversities
     """
     if len(sample_ids) == 0:
         sample_ids = sample_set.sample_ids
     if not window:
         window = sample_set.big_window
-    L = sample_set.get_window_position_count(window)
+    L = sample_set.position_count(window)
     pi_dict = {sample_id: None for sample_id in sample_ids}
     for sample_id in pi_dict:
-        pi = sample_set.get_n_sample_het_sites(sample_id, window=window) / L
+        pi = sample_set.n_het_sites(sample_id, window=window) / L
         pi_dict[sample_id] = pi
     return pi_dict
 
 
 def compute_site_diff_probs(genotypes_x, genotypes_y):
     """
-    At each site, compute the probability that one allele sampled from x
-    differs from one allele sampled from y
+    At each site, compute the probability that a single allele sampled from x
+    differs from a single allele sampled from y
+
+    :param genotypes_x: (l, 2)-sized 2d array of genotypes
+    :param genotypes_y: (l, 2)-sized 2d array of genotypes
+    :return: (l)-sized 1d array of sampling probabilities
     """
     probs = np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)\
         + np.sum(genotypes_x[:, 1][:, np.newaxis] != genotypes_y, axis=1)
@@ -46,15 +50,15 @@ def compute_pi_xy(sample_set, *sample_ids, window=None):
     """
     Compute nucleotide divergence
 
-    :return: a dictionary mapping sample pairs to divergences
+    :return: a dictionary mapping pairs of sample_ids to their divergences
     """
     if len(sample_ids) == 0:
         sample_ids = sample_set.sample_ids
     if not window:
         window = sample_set.big_window
     sample_pairs = enumerate_pairs(sample_ids)
-    L = sample_set.get_window_position_count(window)
-    win_idx = sample_set.get_window_variant_idx(window)
+    L = sample_set.position_count(window)
+    win_idx = sample_set.window_variant_idx(window)
     pi_xy_dict = {sample_pair: None for sample_pair in sample_pairs}
     for sample_pair in pi_xy_dict:
         sample_id_x, sample_id_y = sample_pair
@@ -104,8 +108,8 @@ def compute_approx_pi_xy(sample_set, *sample_ids):
     pi_xy_dict = {sample_pair: None for sample_pair in sample_pairs}
     for sample_pair in pi_xy_dict:
         sample_id_x, sample_id_y = sample_pair
-        alts_x = sample_set.get_sample_alt_counts(sample_id_x)
-        alts_y = sample_set.get_sample_alt_counts(sample_id_y)
+        alts_x = sample_set.alt_counts(sample_id_x)
+        alts_y = sample_set.alt_counts(sample_id_y)
         pi_xy = np.sum((2 - alts_x) * alts_y + (2 - alts_y) * alts_x) / (L * 4)
         pi_xy_dict[sample_pair] = pi_xy
     return pi_xy_dict
@@ -114,10 +118,15 @@ def compute_approx_pi_xy(sample_set, *sample_ids):
 def enumerate_pairs(items):
     """
     Return a list of 2-tuples containing every pair of objects in items
+
+    :param items: list of objects
+    :return; list of 2-tuples of paired objects
     """
     n = len(items)
     pairs = []
     for i in np.arange(n):
         for j in np.arange(i + 1, n):
-            pairs.append((items[i], items[j]))
+            pair = [items[i], items[j]]
+            pair.sort()
+            pairs.append((pair[0], pair[1]))
     return pairs

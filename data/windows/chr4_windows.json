@@ -1,107 +1,77 @@
 {
-    "4": {
-        "windows": {
-            "0": {
-                "bounds": [
-                    0,
-                    16000000
-                ],
-                "span": 16000000,
-                "n_sites": 9566452,
-                "coverage": 59.79,
-                "right_discontinuous": false
-            },
-            "1": {
-                "bounds": [
-                    16000000,
-                    32000000
-                ],
-                "span": 16000000,
-                "n_sites": 10737520,
-                "coverage": 67.11,
-                "right_discontinuous": false
-            },
-            "2": {
-                "bounds": [
-                    32000000,
-                    50000000
-                ],
-                "span": 18000000,
-                "n_sites": 10533087,
-                "coverage": 58.52,
-                "right_discontinuous": true
-            },
-            "3": {
-                "bounds": [
-                    52000000,
-                    72000000
-                ],
-                "span": 20000000,
-                "n_sites": 11203984,
-                "coverage": 56.02,
-                "right_discontinuous": false
-            },
-            "4": {
-                "bounds": [
-                    72000000,
-                    92000000
-                ],
-                "span": 20000000,
-                "n_sites": 12339785,
-                "coverage": 61.7,
-                "right_discontinuous": false
-            },
-            "5": {
-                "bounds": [
-                    92000000,
-                    112000000
-                ],
-                "span": 20000000,
-                "n_sites": 12379689,
-                "coverage": 61.9,
-                "right_discontinuous": false
-            },
-            "6": {
-                "bounds": [
-                    112000000,
-                    132000000
-                ],
-                "span": 20000000,
-                "n_sites": 12448015,
-                "coverage": 62.24,
-                "right_discontinuous": false
-            },
-            "7": {
-                "bounds": [
-                    132000000,
-                    152000000
-                ],
-                "span": 20000000,
-                "n_sites": 12301440,
-                "coverage": 61.51,
-                "right_discontinuous": false
-            },
-            "8": {
-                "bounds": [
-                    152000000,
-                    172000000
-                ],
-                "span": 20000000,
-                "n_sites": 12651889,
-                "coverage": 63.26,
-                "right_discontinuous": false
-            },
-            "9": {
-                "bounds": [
-                    172000000,
-                    191000000
-                ],
-                "span": 19000000,
-                "n_sites": 12081667,
-                "coverage": 63.59,
-                "right_discontinuous": true
-            }
+    "chrom": 4,
+    "n_windows": 10,
+    "windows": {
+        "0": {
+            "bounds": [
+                0,
+                16000000
+            ],
+            "limit_right": false
         },
-        "n_missing_sites": 0
-    }
+        "1": {
+            "bounds": [
+                16000000,
+                32000000
+            ],
+            "limit_right": false
+        },
+        "2": {
+            "bounds": [
+                32000000,
+                50000000
+            ],
+            "limit_right": true
+        },
+        "3": {
+            "bounds": [
+                52000000,
+                72000000
+            ],
+            "limit_right": false
+        },
+        "4": {
+            "bounds": [
+                72000000,
+                92000000
+            ],
+            "limit_right": false
+        },
+        "5": {
+            "bounds": [
+                92000000,
+                112000000
+            ],
+            "limit_right": false
+        },
+        "6": {
+            "bounds": [
+                112000000,
+                132000000
+            ],
+            "limit_right": false
+        },
+        "7": {
+            "bounds": [
+                132000000,
+                152000000
+            ],
+            "limit_right": false
+        },
+        "8": {
+            "bounds": [
+                152000000,
+                172000000
+            ],
+            "limit_right": false
+        },
+        "9": {
+            "bounds": [
+                172000000,
+                191000000
+            ],
+            "limit_right": true
+        }
+    },
+    "metadata": {}
 }

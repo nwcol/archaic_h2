@@ -1,47 +1,35 @@
 {
-    "14": {
-        "windows": {
-            "0": {
-                "bounds": [
-                    20000000,
-                    42000000
-                ],
-                "span": 22000000,
-                "n_sites": 13019628,
-                "coverage": 59.18,
-                "right_discontinuous": false
-            },
-            "1": {
-                "bounds": [
-                    42000000,
-                    64000000
-                ],
-                "span": 22000000,
-                "n_sites": 13599196,
-                "coverage": 61.81,
-                "right_discontinuous": false
-            },
-            "2": {
-                "bounds": [
-                    64000000,
-                    86000000
-                ],
-                "span": 22000000,
-                "n_sites": 14053737,
-                "coverage": 63.88,
-                "right_discontinuous": false
-            },
-            "3": {
-                "bounds": [
-                    86000000,
-                    108000000
-                ],
-                "span": 22000000,
-                "n_sites": 13412743,
-                "coverage": 60.97,
-                "right_discontinuous": true
-            }
+    "chrom": 14,
+    "n_windows": 4,
+    "windows": {
+        "0": {
+            "bounds": [
+                20000000,
+                42000000
+            ],
+            "limit_right": false
         },
-        "n_missing_sites": 0
-    }
+        "1": {
+            "bounds": [
+                42000000,
+                64000000
+            ],
+            "limit_right": false
+        },
+        "2": {
+            "bounds": [
+                64000000,
+                86000000
+            ],
+            "limit_right": false
+        },
+        "3": {
+            "bounds": [
+                86000000,
+                108000000
+            ],
+            "limit_right": true
+        }
+    },
+    "metadata": {}
 }

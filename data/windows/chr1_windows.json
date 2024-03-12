@@ -1,117 +1,84 @@
 {
-    "1": {
-        "windows": {
-            "0": {
-                "bounds": [
-                    0,
-                    20000000
-                ],
-                "span": 20000000,
-                "n_sites": 10949543,
-                "coverage": 54.75,
-                "right_discontinuous": false
-            },
-            "1": {
-                "bounds": [
-                    20000000,
-                    40000000
-                ],
-                "span": 20000000,
-                "n_sites": 11718352,
-                "coverage": 58.59,
-                "right_discontinuous": false
-            },
-            "2": {
-                "bounds": [
-                    40000000,
-                    60000000
-                ],
-                "span": 20000000,
-                "n_sites": 12557069,
-                "coverage": 62.79,
-                "right_discontinuous": false
-            },
-            "3": {
-                "bounds": [
-                    60000000,
-                    80000000
-                ],
-                "span": 20000000,
-                "n_sites": 12975946,
-                "coverage": 64.88,
-                "right_discontinuous": false
-            },
-            "4": {
-                "bounds": [
-                    80000000,
-                    100000000
-                ],
-                "span": 20000000,
-                "n_sites": 12749594,
-                "coverage": 63.75,
-                "right_discontinuous": false
-            },
-            "5": {
-                "bounds": [
-                    100000000,
-                    122000000
-                ],
-                "span": 22000000,
-                "n_sites": 12538510,
-                "coverage": 56.99,
-                "right_discontinuous": true
-            },
-            "6": {
-                "bounds": [
-                    144000000,
-                    165000000
-                ],
-                "span": 21000000,
-                "n_sites": 9493276,
-                "coverage": 45.21,
-                "right_discontinuous": false
-            },
-            "7": {
-                "bounds": [
-                    165000000,
-                    186000000
-                ],
-                "span": 21000000,
-                "n_sites": 13402275,
-                "coverage": 63.82,
-                "right_discontinuous": false
-            },
-            "8": {
-                "bounds": [
-                    186000000,
-                    207000000
-                ],
-                "span": 21000000,
-                "n_sites": 13114274,
-                "coverage": 62.45,
-                "right_discontinuous": false
-            },
-            "9": {
-                "bounds": [
-                    207000000,
-                    228000000
-                ],
-                "span": 21000000,
-                "n_sites": 13390397,
-                "coverage": 63.76,
-                "right_discontinuous": false
-            },
-            "10": {
-                "bounds": [
-                    228000000,
-                    250000000
-                ],
-                "span": 22000000,
-                "n_sites": 12519740,
-                "coverage": 56.91,
-                "right_discontinuous": true
-            }
+    "chrom": 1,
+    "n_windows": 11,
+    "windows": {
+        "0": {
+            "bounds": [
+                0,
+                20000000
+            ],
+            "limit_right": false
         },
-        "n_missing_sites": 0
-    }
+        "1": {
+            "bounds": [
+                20000000,
+                40000000
+            ],
+            "limit_right": false
+        },
+        "2": {
+            "bounds": [
+                40000000,
+                60000000
+            ],
+            "limit_right": false
+        },
+        "3": {
+            "bounds": [
+                60000000,
+                80000000
+            ],
+            "limit_right": false
+        },
+        "4": {
+            "bounds": [
+                80000000,
+                100000000
+            ],
+            "limit_right": false
+        },
+        "5": {
+            "bounds": [
+                100000000,
+                122000000
+            ],
+            "limit_right": true
+        },
+        "6": {
+            "bounds": [
+                144000000,
+                165000000
+            ],
+            "limit_right": false
+        },
+        "7": {
+            "bounds": [
+                165000000,
+                186000000
+            ],
+            "limit_right": false
+        },
+        "8": {
+            "bounds": [
+                186000000,
+                207000000
+            ],
+            "limit_right": false
+        },
+        "9": {
+            "bounds": [
+                207000000,
+                228000000
+            ],
+            "limit_right": false
+        },
+        "10": {
+            "bounds": [
+                228000000,
+                250000000
+            ],
+            "limit_right": true
+        }
+    },
+    "metadata": {}
 }

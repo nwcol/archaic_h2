@@ -1,13 +1,37 @@
-as of Feb 14
 
-- break up the approximate map function;
-    add plots to the Map class (rates etc)
-    make sure everything works properly
-- cause of extra-high H2 at low r
-- handling statistics files; file i/o generally
-- one-locus statistics
-- nicer scripts for two-locus statistics
-- nicer scripts for analysis
-- auto window setup
-- small windows?
-- alter .gitignore to exclude some/all stats
+improvements to make:
+-github fix
+-better handling of r bins
+-columns dictionary in files holding column names (eg r bins)
+-record more information about pair count statistics etc~ windows, window coverage, etc
+-change the way pair count statistics are stored? less loose files?
+-more rational statistic organization
+-fix up some of the stats scripts
+-fix chromosome number tracking in the Bed class
+
+=> overall: try to make do with fewer, larger files with richer information;
+
+
+
+what should the two locus scripts emit?
+
+
+
+
+theory topics:
+-coalescent. what the correlation of ancestries means
+-LD in and between populations
+-pi_x and pi_xy implications for branch lengths, neutral model
+-tracts. gravel 2012
+
+
+
+reminders about file structure:
+-stat files should always have the following in the header:
+    chromosome number
+    statistic name
+    vcf, mask, map file names
+    window descriptions
+    windows
+    column designations
+    row designations
