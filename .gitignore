@@ -16,6 +16,6 @@ __pycache__
 archaic_project.egg-info/
 build/
 data/
-statistics/
-simulations/
+statistics
+simulations
 validation/
