@@ -149,6 +149,27 @@ for i in range(1, 23):
                          "40kb exon flank mask": flank40})
     plt.savefig(f"{stat_path}/no_exons/figures/coverage/chr{i}_coverage.png", dpi=200)
     plt.close()
+    
+    
+PLOTTING CORRELATION STATISTIC
+for i in range(1,23):
+    fig=plt.figure(figsize=(7, 6))
+    ax=fig.add_subplot(111)
+    for x in ids:
+        ax.plot(r, corrs[x][f"chr{i}"], color=sample_colors[x], 
+                label=x)
+    ax.set_xscale("log")
+    ax.set_ylim(-0.2, 2)
+    ax.set_xlim(1e-7, 0.1)
+    ax.legend()
+    ax.set_title(f"pseudo-correlation"
+                 f" on chr{i}")
+    ax.grid(alpha=0.4)
+    ax.set_xlabel("r")
+    ax.set_ylabel("corr")
+    fig.tight_layout()
+    plt.savefig(f"/home/nick/Projects/archaic/statistics/small_window/figures/psuedo_corr/corr_chr{i}", dpi=200)
+    plt.close()
 """
 
 

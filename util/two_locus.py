@@ -1,5 +1,7 @@
 
-# Functions for computing two-locus genetic statistics
+"""
+Functions for computing two-locus genetic statistics
+"""
 
 import matplotlib
 import matplotlib.pyplot as plt

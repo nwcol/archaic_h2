@@ -1,5 +1,7 @@
 
-# Classes and functions for handling .vcf.gz files.
+"""
+Classes and functions for handling .vcf.gz files.
+"""
 
 import numpy as np
 import gzip

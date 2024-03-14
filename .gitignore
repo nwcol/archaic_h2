@@ -10,12 +10,13 @@ __pycache__
 *.csi
 *.xlsx
 *.bz2
+*.json
 .git/
 .idea/
 .venv/
 archaic_project.egg-info/
 build/
 data/
-statistics
-simulations
+statistics/
+simulations/
 validation/
