@@ -19,18 +19,17 @@ if __name__ == "__main__":
 
 class Bed:
 
-    def __init__(self, regions, chroms):
+    def __init__(self, regions, chroms, scores=None):
         """
         Note that regions have 0-indexed starts and 1-indexed ends.
         """
         self.regions = regions
-        if type(chroms) == int or type(chroms) == str:
-            chroms = np.full(len(regions), int(chroms))
+        self.scores = scores
         self.chroms = chroms
         unique_chroms = list(set(chroms))
         #
         if len(unique_chroms) == 1:
-            self.chrom = unique_chroms[0]
+            self.chrom = int(unique_chroms[0].strip("chrom"))
             self.unique_chroms = self.chrom
         else:
             self.chrom = None
@@ -39,8 +38,8 @@ class Bed:
         self.n_regions = len(regions)
         self.lengths = self.regions[:, 1] - self.regions[:, 0]
         self.n_positions = np.sum(self.lengths)
-        self.first_position = self.regions[0, 0]
-        self.last_position = self.regions[-1, 1]
+        self.first_position = regions.min()
+        self.last_position = regions.max()
 
     # initialize from various structures
 
@@ -100,19 +99,22 @@ class Bed:
         chroms = []
         starts = []
         stops = []
+        scores = []
         with open(file_name, mode='r') as file:
             for i, line in enumerate(file):
                 if "chromStart" not in line:
                     fields = line.rstrip("\n").split("\t")
-                    chroms.append(int(fields[0]))
+                    chroms.append(fields[0])
                     starts.append(int(fields[1]))
                     stops.append(int(fields[2]))
+                    if len(fields) >= 4:
+                        scores.append(int(fields[4]))
         length = len(starts)
         regions = np.zeros((length, 2), dtype=np.int64)
         regions[:, 0] = starts
         regions[:, 1] = stops
-        chroms = np.array(chroms)
-        return cls(regions, chroms)
+        scores = np.array(scores)
+        return cls(regions, chroms, scores=scores)
 
     @classmethod
     def read_map(cls, file_name):
@@ -175,7 +177,9 @@ class Bed:
         chroms = self.chroms[mask]
         return Bed(regions, chroms)
 
-    # masks
+    """
+    Mask vectors
+    """
 
     def get_chrom_mask(self, chrom):
         """
@@ -203,7 +207,9 @@ class Bed:
         mask = self.get_sized_indicator(length=length) == 1
         return mask
 
-    # properties
+    """
+    Properties
+    """
 
     @property
     def positions_0(self):
@@ -293,7 +299,34 @@ class Bed:
         """
         return int(np.max(self.lengths))
 
-    # windows
+    @property
+    def score_density(self):
+
+        densities = np.zeros(self.last_position, dtype=np.int32)
+        for i, [start, stop] in enumerate(self.regions):
+            densities[start:stop] = self.scores[i]
+        return densities
+
+    """
+    Windows
+    """
+
+    def subset_regions(self, window):
+        """
+        Return a subset of the regions array within a window. If a region
+        crosses the upper
+
+        :param window:
+        """
+        start, stop = window
+        low = np.searchsorted(self.stops, start)
+        high = np.searchsorted(self.starts, stop)
+        n_regions = len(self.regions[low:high])
+        window_regions = np.zeros((n_regions, 2), dtype=np.int64)
+        window_regions[:, :] = self.regions[low:high]
+        window_regions[window_regions < start] = start
+        window_regions[window_regions >= stop] = stop - 1
+        return window_regions
 
     def count_positions(self, window):
 
@@ -324,7 +357,9 @@ class Bed:
         spans = window_arr[:, 1] - window_arr[:, 0]
         return counts / spans
 
-    # plots
+    """
+    Plots
+    """
 
     def plot_coverage(self, res=1e6):
 
@@ -367,7 +402,9 @@ class Bed:
         sub.set_xlabel("region size, bp")
         fig.show()
 
-    # writing to file
+    """
+    Writing to file
+    """
 
     def write_bed(self, file_name):
         """

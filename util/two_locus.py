@@ -3,40 +3,28 @@
 Functions for computing two-locus genetic statistics
 """
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-from util import sample_sets
 from util import map_util
-from util import one_locus
-
-
-if __name__ == "__main__":
-    plt.rcParams['figure.dpi'] = 100
-    matplotlib.use('Qt5Agg')
 
 
 def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False,
                      bp_threshold=0):
     """
-    Count the number of pairs of sites in a series of bins, given in units of
-    r (recombination frequency).
+
     """
-    # upper window bounds are noninclusive
     if not window:
         window = sample_set.big_window
-    d_edges = map_util.r_to_d(bin_edges)
     first_left_idx, last_left_idx = get_window_idxs(
         sample_set.positions, window
     )
-    position_map = sample_set.position_map
     if limit_right:
         last_right_idx = last_left_idx
     else:
         last_right_idx = get_last_right_idx(
-            position_map, last_left_idx, bin_edges
+            sample_set.position_map, last_left_idx, bin_edges
         )
-    abbrev_map = position_map[first_left_idx:last_right_idx]
+    d_edges = map_util.r_to_d(bin_edges)
+    abbrev_map = sample_set.position_map[first_left_idx:last_right_idx]
     abbrev_pos = sample_set.positions[first_left_idx:last_right_idx]
     n_left_loci = last_left_idx - first_left_idx
     cum_counts = np.zeros(len(bin_edges), dtype=np.int64)
@@ -92,6 +80,72 @@ def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
     return het_pair_counts
 
 
+def count_per_site_het_pairs(sample_set, sample_id, bin_edges, window=None,
+                             limit_right=False, bp_threshold=0):
+    if not window:
+        window = sample_set.big_window
+    d_edges = map_util.r_to_d(bin_edges)
+    het_sites = sample_set.het_sites(sample_id)
+    first_left_idx, last_left_idx = get_window_idxs(het_sites, window)
+    het_map = sample_set.het_map(sample_id)
+    if limit_right:
+        last_right_idx = last_left_idx
+    else:
+        last_right_idx = get_last_right_idx(
+            het_map, last_left_idx, bin_edges
+        )
+    abbrev_map = het_map[first_left_idx:last_right_idx]
+    abbrev_pos = het_sites[first_left_idx:last_right_idx]
+    n_left_loci = last_left_idx - first_left_idx
+    out = []
+    #
+    for left_idx in np.arange(n_left_loci):
+        if bp_threshold > 0:
+            min_right_idx = np.searchsorted(
+                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+            )
+        else:
+            min_right_idx = left_idx + 1
+        site_d_edges = d_edges + abbrev_map[left_idx]
+        x = np.searchsorted(abbrev_map[min_right_idx:], site_d_edges)
+        out.append(np.diff(x))
+    #
+    return np.array(out)
+
+
+def count_per_site_site_pairs(sample_set, bin_edges, window=None,
+                              limit_right=False, bp_threshold=0):
+    if not window:
+        window = sample_set.big_window
+    first_left_idx, last_left_idx = get_window_idxs(
+        sample_set.positions, window
+    )
+    if limit_right:
+        last_right_idx = last_left_idx
+    else:
+        last_right_idx = get_last_right_idx(
+            sample_set.position_map, last_left_idx, bin_edges
+        )
+    d_edges = map_util.r_to_d(bin_edges)
+    abbrev_map = sample_set.position_map[first_left_idx:last_right_idx]
+    abbrev_pos = sample_set.positions[first_left_idx:last_right_idx]
+    n_left_loci = last_left_idx - first_left_idx
+    out = []
+    #
+    for left_idx in np.arange(n_left_loci):
+        if bp_threshold > 0:
+            min_right_idx = np.searchsorted(
+                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+            )
+        else:
+            min_right_idx = left_idx + 1
+        locus_edges = d_edges + abbrev_map[left_idx]
+        out.append(np.searchsorted(abbrev_map[min_right_idx:], locus_edges))
+    #
+    out = np.array(out)
+    return np.diff(out, axis=1)
+
+
 def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
                                window=None, limit_right=False):
     """
@@ -137,78 +191,25 @@ def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
     return het_pair_counts
 
 
-def old_two_sample(sample_set, sample_id_x, sample_id_y, bin_edges,
-                   window=None, limit_right=False, bp_threshold=0):
+def get_window_idxs(pos, window):
     """
-
-    """
-    if not window:
-        window = sample_set.big_window
-    d_edges = map_util.r_to_d(bin_edges)
-    joint_var_idx = sample_set.multi_sample_variant_idx(
-        sample_id_x, sample_id_y
-    )
-    first_left_idx, last_left_idx = get_window_idxs(
-        sample_set.variant_sites[joint_var_idx], window
-    )
-    if limit_right:
-        last_right_idx = last_left_idx
-    else:
-        last_right_idx = get_last_right_idx(
-            sample_set.variant_site_map[joint_var_idx], last_left_idx,
-            bin_edges
-        )
-    windowed_idx = joint_var_idx[first_left_idx:last_right_idx]
-    #
-    genotypes_x = sample_set.genotypes[sample_id_x][windowed_idx]
-    genotypes_y = sample_set.genotypes[sample_id_y][windowed_idx]
-    diff_probs = one_locus.compute_site_diff_probs(genotypes_x, genotypes_y)
-    variant_map = sample_set.variant_site_map[windowed_idx]
-    abbrev_pos = sample_set.variant_sites[windowed_idx]
-    #
-    precomputed = {x: x * diff_probs for x in [0., 0.25, 0.5, 0.75, 1.]}
-    #
-    n_bins = len(bin_edges) - 1
-    n_left_loci = last_left_idx - first_left_idx
-    het_pair_counts = np.zeros(n_bins, dtype=np.float64)
-    for left_idx in np.arange(n_left_loci - 1):
-        if bp_threshold > 0:
-            first_right_idx = np.searchsorted(
-                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
-            )
-        else:
-            first_right_idx = left_idx + 1
-        site_map_val = variant_map[left_idx]
-        lim = np.searchsorted(variant_map, site_map_val + d_edges[-1])
-        site_diff_prob = diff_probs[left_idx]
-        # joint_diff_probs = site_diff_prob * diff_probs[first_right_idx:lim]
-        joint_diff_probs = precomputed[site_diff_prob][first_right_idx:lim]
-        d_dists = variant_map[first_right_idx:lim] - variant_map[left_idx]
-        edges = np.searchsorted(d_dists, d_edges)
-        for b in np.arange(n_bins):
-            het_pair_counts[b] += np.sum(joint_diff_probs[edges[b]:edges[b+1]])
-    return het_pair_counts
-
-
-def get_window_idxs(positions, window):
-    """
-    Return the indices that access the start and stop of a window. The upper
-    index is noninclusive.
+    Return the indices that access the first and last positions in a
+    given window. Upper position is noninclusive.
     """
     lower, upper = window
-    first_idx = np.searchsorted(positions, lower)
-    last_idx = np.searchsorted(positions, upper)
+    first_idx = np.searchsorted(pos, lower)
+    last_idx = np.searchsorted(pos, upper)
     return first_idx, last_idx
 
 
-def get_last_right_idx(map_values, last_left_idx, bin_edges):
+def get_last_right_idx(map_vec, last_left_idx, bin_edges):
     """
     Find the index of the rightmost right locus ~ noninclusive.
     """
     map_distance = map_util.r_to_d(bin_edges)[-1]
-    left_map_val = map_values[last_left_idx - 1]  # left index noninclusive
+    left_map_val = map_vec[last_left_idx - 1]
     right_map_val = left_map_val + map_distance
-    last_right_idx = np.searchsorted(map_values, right_map_val)
+    last_right_idx = np.searchsorted(map_vec, right_map_val)
     return last_right_idx
 
 

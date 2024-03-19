@@ -1,21 +1,24 @@
 
-improvements to make:
--github fix
--better handling of r bins
--columns dictionary in files holding column names (eg r bins)
--record more information about pair count statistics etc~ windows, window coverage, etc
--change the way pair count statistics are stored? less loose files?
--more rational statistic organization
+ideas:
+-add support for additional columns to the bed class
+-add a function for computing score densities and figure out what scores mean in this context.
+    cross-check with the genome browser to make sure this works properly
+-are reg regions actually high in H_2? look at very fine windows (1 or 5 kb), see if H_2 peaks coincide with regulatory region density.
+-learn about balancing selection/polymorphism in reg regions- is it well-known?
+
+-are there actually some regions with low/0 r that have lots of het. sites? is this throwing off the first r bin?
+method:
+- set up a way to compute H_2 in very small bins (1kb?) and look at the recombination distances between bin edges.
+
+-merge small r bins and look at curves~ are they prettier? lol
+
+
+
+minor improvements to make:
+-improve statistic headers (just use lists; dicts are annoying)
+    maybe improve window recording too
 -fix up some of the stats scripts
 -fix chromosome number tracking in the Bed class
-
-=> overall: try to make do with fewer, larger files with richer information;
-
-
-
-what should the two locus scripts emit?
-
-
 
 
 theory topics:
@@ -23,7 +26,6 @@ theory topics:
 -LD in and between populations
 -pi_x and pi_xy implications for branch lengths, neutral model
 -tracts. gravel 2012
-
 
 
 reminders about file structure:

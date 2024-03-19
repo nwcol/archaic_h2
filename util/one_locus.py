@@ -58,7 +58,7 @@ def compute_pi_xy(sample_set, *sample_ids, window=None):
         window = sample_set.big_window
     sample_pairs = enumerate_pairs(sample_ids)
     L = sample_set.position_count(window)
-    win_idx = sample_set.window_variant_idx(window)
+    win_idx = sample_set.idx_variant_window(window)
     pi_xy_dict = {sample_pair: None for sample_pair in sample_pairs}
     for sample_pair in pi_xy_dict:
         sample_id_x, sample_id_y = sample_pair

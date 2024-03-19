@@ -112,6 +112,24 @@ def load_as_dict(file_name):
 # old
 
 
+def sort_window_ids(window_ids):
+
+    sorted_win_ids = []
+    for chr in np.arange(1, 23):
+        this_chr = [x for x in window_ids if f"chr{chr}_" in x]
+        win_ids = [int(x.split("_")[1].lstrip("win")) for x in this_chr]
+        idx = searchsort_list(win_ids)
+        sorted_win_ids += [this_chr[i] for i in idx]
+    return sorted_win_ids
+
+
+def searchsort_list(lis):
+
+    srt = sorted(lis)
+    idx = [lis.index(x) for x in srt]
+    return idx
+
+
 def get_header_str(rows, *args, **kwargs):
 
     header_dict = {key: kwargs[key] for key in kwargs}

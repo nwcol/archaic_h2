@@ -7,11 +7,78 @@ from matplotlib import cm
 import numpy as np
 from util.two_locus import r
 from util import file_util
+from util import sample_sets
 
 
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
     matplotlib.use('Qt5Agg')
+
+
+def plot_afs(sfs, ax=None, color=None, label=None):
+
+    if not ax:
+        fig = plt.figure(figsize=(6.5, 6))
+        ax = fig.add_subplot()
+    if not color:
+        color = "black"
+    x = np.arange(1, len(sfs) + 1)
+    ax.plot(x, sfs, color=color)
+    ax.set_ylim(0, )
+    ax.set_ylabel("frequency")
+    ax.set_xlim()
+    ax.set_xlabel("allele frequency")
+    ax.set_xticks(x)
+    ax.grid(alpha=0.4)
+    if label:
+        ax.legend([label])
+    return ax
+
+
+def plot_dist(bins, data, ax=None, color=None, label=None,
+              x_label=None, title=None):
+
+    if not ax:
+        fig = plt.figure(figsize=(6.5, 6))
+        ax = fig.add_subplot()
+    if not color:
+        color = "black"
+    distribution = np.histogram(data, bins=bins)[0]
+    distribution = distribution / distribution.sum()
+    x = bins[1:]
+    ax.plot(x, distribution, color=color, label=label)
+    ax.set_ylim(0, )
+    ax.set_ylabel("frequency")
+    ax.set_xlim(0, )
+    if not x_label:
+        x_label = ""
+    ax.set_xlabel(f"{x_label} bin; right edge")
+    ax.grid(alpha=0.4)
+    ax.legend()
+    if title:
+        ax.set_title(title)
+    return ax
+
+
+def plot_2loc_stat(r, statistic, ax=None, color=None, label=None):
+
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def plot_curves(line_styles=None, colors=None, y_lim=2.4e-6, y_tick=2e-7,
