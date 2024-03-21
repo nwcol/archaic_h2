@@ -1,5 +1,7 @@
 
-# A class for loading and manipulating .bed files.
+"""
+A class for loading and manipulating .bed files
+"""
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -29,7 +31,7 @@ class Bed:
         unique_chroms = list(set(chroms))
         #
         if len(unique_chroms) == 1:
-            self.chrom = int(unique_chroms[0].strip("chrom"))
+            self.chrom = unique_chroms[0]
             self.unique_chroms = self.chrom
         else:
             self.chrom = None
@@ -96,25 +98,33 @@ class Bed:
         """
         Read a .bed file
         """
-        chroms = []
-        starts = []
-        stops = []
-        scores = []
+        with open(file_name, mode='r') as file:
+            for line in file:
+                line_0 = line.strip('\t').split('\t')
+                break
+        if line_0[1].isnumeric():
+            col_names = ["chrom", "chromStart", "chromStop"]
+            has_header = False
+        else:
+            col_names = line_0
+            has_header = True
+        fields = {name: [] for name in col_names}
+        #
         with open(file_name, mode='r') as file:
             for i, line in enumerate(file):
-                if "chromStart" not in line:
-                    fields = line.rstrip("\n").split("\t")
-                    chroms.append(fields[0])
-                    starts.append(int(fields[1]))
-                    stops.append(int(fields[2]))
-                    if len(fields) >= 4:
-                        scores.append(int(fields[4]))
-        length = len(starts)
-        regions = np.zeros((length, 2), dtype=np.int64)
-        regions[:, 0] = starts
-        regions[:, 1] = stops
-        scores = np.array(scores)
-        return cls(regions, chroms, scores=scores)
+                if i >= has_header:
+                    line_fields = line.rstrip("\n").split("\t")
+                    for j, field in enumerate(line_fields):
+                        if field.isnumeric():
+                            field = int(field)
+                        elif "chr" in field:
+                            field = int(field.lstrip("chrom"))
+                        fields[col_names[j]].append(field)
+        #
+        chroms = np.array(fields[col_names[0]])
+        start, stop = col_names[1], col_names[2]
+        regions = np.array([fields[start], fields[stop]], dtype=np.int64).T
+        return cls(regions, chroms)
 
     @classmethod
     def read_map(cls, file_name):

@@ -19,6 +19,7 @@ if __name__ == "__main__":
     norm_sum = np.sum(norm_arr, axis=0)
     file_header, arr = file_util.load_arr(args.in_file_name)
     normalized_arr = arr / norm_arr
+    normalized_arr[np.isnan(normalized_arr)] = 0
     if args.statistic:
         file_header["statistic"] = args.statistic
     else:

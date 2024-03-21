@@ -246,7 +246,9 @@ class USampleSet:
         probs = probs / 4
         return probs
 
-    # Accessing variants for multiple samples
+    """
+    Accessing variants for multiple samples
+    """
 
     def multi_sample_variant_idx(self, *sample_ids):
         """

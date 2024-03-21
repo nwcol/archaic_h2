@@ -1,17 +1,19 @@
 
-# A class for representing and manipulating recombination maps
+"""
+A class for representing and manipulating recombination maps
+"""
 
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
 
-data_path = "/home/nick/Projects/archaic/data"
-
-
 if __name__ == "__main__":
     plt.rcParams['figure.dpi'] = 100
     matplotlib.use('Qt5Agg')
+
+
+data_path = "/home/nick/Projects/archaic/data"
 
 
 class GeneticMap:
@@ -21,7 +23,7 @@ class GeneticMap:
         Positions are assumed to be 1-indexed.
 
         :param positions:
-        :param rates:
+        :param map_rates:
         :param map_vals:
         :param chrom:
         """
@@ -90,6 +92,7 @@ class GeneticMap:
         :return:
         """
         floor_idx = np.searchsorted(self.positions, positions, "right") - 1
+        floor_idx[floor_idx < 0] = 0
         floor = self.map_vals[floor_idx]
         floor_positions = self.positions[floor_idx]
         bp_to_floor = positions - floor_positions
@@ -118,10 +121,10 @@ class GeneticMap:
 
         fig = plt.figure(1)
         ax = fig.add_subplot(111)
-        scaled_positions = self.positions / 1e6
+        scaled_positions = self.positions
         ax.plot(scaled_positions, self.map_vals, color="black")
-        ax.set_xlim(self.first_position / 1e6, self.last_position / 1e6)
-        ax.set_xlabel("position, Mb")
+        ax.set_xlim(self.first_position, self.last_position)
+        ax.set_xlabel("position")
         ax.set_ylabel("cM")
         ax.set_title(f"Genetic map on chr{self.chrom}")
         ax.grid()
@@ -142,7 +145,6 @@ class GeneticMap:
                     )
                 out[i, k] = np.mean(self.map_vals[idx])
         out = d_to_r(out)
-
         return out
 
 
@@ -180,6 +182,3 @@ def r_to_d(r_distance):
     """
     d_distance = -50 * np.log(1 - 2 * r_distance)
     return d_distance
-
-
-ex = GeneticMap.read_chr(22)

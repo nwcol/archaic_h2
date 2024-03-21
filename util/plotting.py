@@ -3,11 +3,13 @@
 
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from matplotlib import cm
 import numpy as np
-from util.two_locus import r
+from util.two_locus import r, r_edges
 from util import file_util
 from util import sample_sets
+from util import map_util
 
 
 if __name__ == "__main__":
@@ -26,7 +28,6 @@ def plot_afs(sfs, ax=None, color=None, label=None):
     ax.plot(x, sfs, color=color)
     ax.set_ylim(0, )
     ax.set_ylabel("frequency")
-    ax.set_xlim()
     ax.set_xlabel("allele frequency")
     ax.set_xticks(x)
     ax.grid(alpha=0.4)
@@ -60,15 +61,154 @@ def plot_dist(bins, data, ax=None, color=None, label=None,
     return ax
 
 
-def plot_2loc_stat(r, statistic, ax=None, color=None, label=None):
+def plot_r_stat(x, statistic, ax=None, color="black", label=None,
+                line_style="solid"):
 
-    pass
+    if not ax:
+        fig, ax = plt.subplots(figsize=(7.5, 6), layout="constrained")
+    ax.plot(x, statistic, color=color, linestyle=line_style, label=label)
+    ax.set_ylim(0, )
+    ax.set_xlim(r.min(), r.max())
+    ax.set_xscale("log")
+    ax.set_ylabel("H_2")
+    ax.set_xlabel("r bin")
+    ax.grid(alpha=0.4)
+    ax.legend()
+    return ax
 
 
+def plot_het_pairs(sample_set, sample_id, window, r_bin, style="dots",
+                   ax=None, label=None, color="red", x_ax="pos", s=4):
+    """
+
+    :param sample_set:
+    :param sample_id:
+    :param window:
+    :param r_bin:
+    """
+    lower, upper = window
+    window_idx = np.nonzero(
+        (sample_set.het_sites(sample_id) >= lower)
+        & (sample_set.het_sites(sample_id) < upper)
+    )[0]
+    het_sites = sample_set.het_sites(sample_id)[window_idx]
+    het_map = sample_set.het_map(sample_id)[window_idx]
+    n_sites = len(window_idx)
+    d_bin = map_util.r_to_d(r_bin)
+    pairs = []
+    for idx in np.arange(n_sites):
+        min_d, max_d = d_bin + het_map[idx]
+        idxs = np.nonzero(
+            (het_map[idx + 1:] >= min_d) & (het_map[idx + 1:] < max_d)
+        )[0]
+        idxs += idx
+        pairs.append(idxs)
+    if x_ax == "pos":
+        x_vec = het_sites
+    elif x_ax == "map":
+        x_vec = het_map
+    else:
+        x_vec = het_sites
+    x = []
+    y = []
+    if style == 'verts':
+        for left_idx, site_pairs in enumerate(pairs):
+            left_site = x_vec[left_idx]
+            for j, right_idx in enumerate(site_pairs):
+                right_site = x_vec[right_idx]
+                midpoint = np.mean([left_site, right_site])
+                distance = right_site - left_site
+                x.append([left_site, midpoint, right_site])
+                y.append([0, distance / 2, 0])
+    elif style == 'dots':
+        for left_idx, site_pairs in enumerate(pairs):
+            left_site = x_vec[left_idx]
+            for j, right_idx in enumerate(site_pairs):
+                right_site = x_vec[right_idx]
+                midpoint = np.mean([left_site, right_site])
+                distance = right_site - left_site
+                x.append(midpoint)
+                y.append(distance / 2)
+    if x_ax == "pos":
+        low, high = window
+    else:
+        low, high = np.min(x), np.max(x)
+    if not ax:
+        #fig = plt.figure(figsize=(15, 8))
+        #ax = fig.add_subplot(111)
+        fig, (ax, h_ax) = plt.subplots(
+            2, 1, gridspec_kw={'height_ratios': [30, 1]}, figsize=(15, 9),
+            sharex=True
+        )
+        fig.tight_layout(pad=1.1)
+        fig.subplots_adjust(hspace=0)
+        # plot the outer boundary
+        ax.plot(
+            [low, (high + low) / 2, high],
+            [0, (high - low) / 2, 0],
+            color="black"
+        )
+        # plot het
+        if x_ax == "pos":
+            het_locs = het_sites
+        else:
+            het_locs = het_map
+        for loc in het_locs:
+            h_ax.plot([loc, loc], [0, 1], color="red", linewidth=0.3)
+        h_ax.set_ylim(0, 1)
+        if x_ax == "pos":
+            h_ax.set_xlabel("position")
+        else:
+            h_ax.set_xlabel("cM")
+    if style == 'verts':
+        for i in range(len(x)):
+            ax.plot(x[i], y[i], color=color, label=label)
+    elif style == 'dots':
+        ax.scatter(
+            x, y, color=color, marker=',', s=s, linewidths=0, label=label
+        )
+    ax.set_xlim(low, high)
+    ax.set_ylim(0, (high - low) / 2)
+    ax.set_aspect('equal')
+    ax.grid(alpha=0.4)
+    ax.legend()
+    return ax
 
 
+def plot_het_pair_spectrum(sample_set, sample_id, window, r_edges, s=4,
+                           x_ax="pos"):
+
+    n_bins = len(r_edges) - 1
+    colors = cm.nipy_spectral(np.linspace(0, 0.9, n_bins))
+    ax = plot_het_pairs(
+        sample_set, sample_id, window, r_edges[0:2], color=colors[0],
+        label=f"r_({r_edges[0]}, {r_edges[1]})", s=s, x_ax=x_ax
+    )
+    for i in range(1, n_bins):
+        plot_het_pairs(
+            sample_set, sample_id, window, r_edges[i:i + 2], color=colors[i],
+            ax=ax, label=f"r_({r_edges[i]}, {r_edges[i + 1]})", s=s, x_ax=x_ax
+        )
+    ax.set_title(f"{sample_id} {sample_set.chrom}:{window}")
+    return ax
 
 
+def plot_along_chr(statistic, windows, ax=None, color="black", label=None,):
+
+    if not ax:
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot()
+
+    x = np.array([window[1][1] for window in windows])
+    plt.plot(x, statistic, color=color, label=label)
+
+    ax.set_ylim(0, )
+    ax.set_ylabel("H_2")
+    ax.set_xlim(0, x.max())
+    ax.set_xlabel("position")
+    ax.grid(alpha=0.4)
+    ax.legend()
+    return ax
 
 
 

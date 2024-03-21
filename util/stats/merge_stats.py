@@ -1,8 +1,11 @@
 
-# merge files holding arrays of statistics from different chromosomes
+"""
+merge files holding arrays of statistics from different chromosomes
+"""
 
 
 import argparse
+import numpy as np
 from util import file_util
 
 
@@ -22,24 +25,24 @@ if __name__ == "__main__":
         headers[chrom] = header
         arrs[chrom] = arr
     chroms.sort()
-    out_dict = {}
+    out_arr = np.vstack([arrs[chrom] for chrom in chroms])
+    rows = []
+    windows = []
     for chrom in chroms:
-        rows = headers[chrom]["rows"]
-        arr = arrs[chrom]
-        for row_idx in rows:
-            row_name = rows[row_idx]
-            out_dict[row_name] = arr[row_idx]
+        rows += headers[chrom]["rows"]
+        windows += headers[chrom]["windows"]
     ex_header = headers[chroms[0]]
     out_header = file_util.get_header(
         chroms=chroms,
         statistic=ex_header["statistic"],
-        windows={chrom: headers[chrom]["windows"] for chrom in chroms},
-        vcf_files={chrom: headers[chrom]["vcf_file"] for chrom in chroms},
-        bed_files={chrom: headers[chrom]["bed_file"] for chrom in chroms},
-        map_files={chrom: headers[chrom]["map_file"] for chrom in chroms},
-        cols=ex_header["cols"]
+        windows=windows,
+        vcf_files=[headers[chrom]["vcf_file"] for chrom in chroms],
+        bed_files=[headers[chrom]["bed_file"] for chrom in chroms],
+        map_files=[headers[chrom]["map_file"] for chrom in chroms],
+        cols=ex_header["cols"],
+        rows=rows
     )
     for x in ["sample_id", "sample_ids"]:
         if x in ex_header:
             out_header[x] = ex_header[x]
-    file_util.save_dict_as_arr(args.out_file_name, out_dict, out_header)
+    file_util.save_arr(args.out_file_name, out_arr, out_header)

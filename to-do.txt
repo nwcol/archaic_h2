@@ -15,6 +15,7 @@ method:
 
 
 minor improvements to make:
+-rename the directory and util package
 -improve statistic headers (just use lists; dicts are annoying)
     maybe improve window recording too
 -fix up some of the stats scripts

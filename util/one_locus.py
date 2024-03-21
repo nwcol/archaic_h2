@@ -1,15 +1,9 @@
 
-# Some functions for computing one-locus genetic statistics.
+"""
+Some functions for computing one-locus genetic statistics.
+"""
 
-import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
-from util import sample_sets
-
-
-if __name__ == "__main__":
-    plt.rcParams['figure.dpi'] = 100
-    matplotlib.use('Qt5Agg')
 
 
 def compute_pi(sample_set, *sample_ids, window=None):

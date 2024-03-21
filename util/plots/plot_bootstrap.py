@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from util import file_util
-from util import plot_fxns
+from util import plotting
 
 
 if __name__ == "__main__":

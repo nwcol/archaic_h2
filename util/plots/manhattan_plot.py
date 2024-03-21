@@ -4,7 +4,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from util import file_util
-from util import plot_fxns
+from util import plotting
 
 
 def get_x_vec(window_dicts):
