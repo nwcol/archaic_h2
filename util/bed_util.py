@@ -21,29 +21,38 @@ if __name__ == "__main__":
 
 class Bed:
 
-    def __init__(self, regions, chroms, scores=None):
-        """
-        Note that regions have 0-indexed starts and 1-indexed ends.
-        """
+    columns = [
+        "chrom",
+        "chromStart",
+        "chromEnd",
+        "name",
+        "score",
+        "strand",
+        "thickStart",
+        "thickEnd",
+        "itemRgb",
+        "blockCount",
+        "blockSizes",
+        "blockStarts"
+    ]
+
+    def __init__(self, regions, chroms, names=None, scores=None):
+
         self.regions = regions
-        self.scores = scores
         self.chroms = chroms
-        unique_chroms = list(set(chroms))
+        self.unique_chroms = list(set(chroms))
         #
-        if len(unique_chroms) == 1:
-            self.chrom = unique_chroms[0]
-            self.unique_chroms = self.chrom
+        if len(self.unique_chroms) == 1:
+            self.chrom = self.unique_chroms[0]
         else:
             self.chrom = None
-            self.unique_chroms = unique_chroms
         #
-        self.n_regions = len(regions)
-        self.lengths = self.regions[:, 1] - self.regions[:, 0]
-        self.n_positions = np.sum(self.lengths)
-        self.first_position = regions.min()
-        self.last_position = regions.max()
+        self.names = names or None
+        self.scores = scores or None
 
-    # initialize from various structures
+    """
+    Instantiation from existing structures
+    """
 
     @classmethod
     def from_positions_1(cls, positions_1, chroms):
@@ -82,7 +91,9 @@ class Bed:
         positions_1 = positions_0 + 1
         return cls.from_positions_1(positions_1, chroms)
 
-    # loading from file
+    """
+    Loading from file
+    """
 
     @classmethod
     def read_vcf(cls, file_name):
@@ -102,12 +113,23 @@ class Bed:
             for line in file:
                 line_0 = line.strip('\t').split('\t')
                 break
+        start, end = None, None
         if line_0[1].isnumeric():
-            col_names = ["chrom", "chromStart", "chromStop"]
+            n_cols = len(line_0)
+            col_names = cls.columns[:n_cols]
             has_header = False
+            start = "chromStart"
+            end = "chromEnd"
         else:
             col_names = line_0
             has_header = True
+            for name in col_names:
+                if "start" in name or "Start" in name:
+                    if not start:
+                        start = name
+                elif "end" in name or "End" in name:
+                    if not end:
+                        end = name
         fields = {name: [] for name in col_names}
         #
         with open(file_name, mode='r') as file:
@@ -122,8 +144,7 @@ class Bed:
                         fields[col_names[j]].append(field)
         #
         chroms = np.array(fields[col_names[0]])
-        start, stop = col_names[1], col_names[2]
-        regions = np.array([fields[start], fields[stop]], dtype=np.int64).T
+        regions = np.array([fields[start], fields[end]], dtype=np.int64).T
         return cls(regions, chroms)
 
     @classmethod
@@ -133,8 +154,9 @@ class Bed:
         a genetic map
         """
         genetic_map = map_util.GeneticMap.read_txt(file_name)
-        start_1 = genetic_map.positions[0]
-        stop_1 = genetic_map.positions[-1]
+        pos = genetic_map.positions
+        start_1 = pos[0]
+        stop_1 = pos[-1]
         regions = np.array([[start_1 - 1, stop_1]], dtype=np.int64)
         return cls(regions, [genetic_map.chrom])
 
@@ -146,27 +168,23 @@ class Bed:
         path = f"{data_path}/masks/chr{chrom}.bed"
         return cls.read_bed(path)
 
-    @classmethod
-    def read_tsv(cls, file_name):
-        # ad hoc to read the exome file
-        chroms = []
-        starts = []
-        stops = []
-        with open(file_name, 'r') as file:
-            for i, line in enumerate(file):
-                if i > 0:
-                    fields = line.rstrip("\n").split("\t")
-                    chroms.append(int(fields[2]))
-                    starts.append(int(fields[3]))
-                    stops.append(int(fields[4]))
-            length = len(starts)
-            regions = np.zeros((length, 2), dtype=np.int64)
-            regions[:, 0] = starts
-            regions[:, 1] = stops
-            chroms = np.array(chroms)
-        return cls(regions, chroms)
+    """
+    Subset new masks from existing mask
+    """
 
-    # getting subsets
+    def flank(self, distance):
+        """
+        Return a new bed with added flanking coverage
+        """
+        regions = self.regions
+        indicator = np.zeros(regions[-1, 1] + distance, dtype=np.int64)
+        for reg in regions:
+            lower = max(reg[0] - distance, 0)
+            upper = reg[1] + distance
+            indicator[lower:upper] += 1
+        mask = indicator > 0
+        new_bed = Bed.from_boolean_mask_0(mask, self.chroms)
+        return new_bed
 
     def subset_chrom(self, chrom):
         """
@@ -180,12 +198,24 @@ class Bed:
     def exclude(self, limit):
         """
         Create a new instance excluding all regions with size smaller than
-        limit
+        'limit'
         """
         mask = np.nonzero(self.lengths >= limit)[0]
         regions = self.regions[mask]
         chroms = self.chroms[mask]
         return Bed(regions, chroms)
+
+    def parse(self):
+        """
+        merge overlapping regions
+        """
+        regions = self.regions
+        indicator = np.zeros(self.last_position, dtype=np.int64)
+        for start, stop in regions:
+            indicator[start:stop] = 1
+        mask = indicator > 0
+        chroms = [self.chrom]
+        return Bed.from_boolean_mask_0(mask, chroms)
 
     """
     Mask vectors
@@ -220,6 +250,40 @@ class Bed:
     """
     Properties
     """
+
+    @property
+    def n_positions(self):
+        return np.sum(self.lengths)
+
+    @property
+    def lengths(self):
+        return self.regions[:, 1] - self.regions[:, 0]
+
+    @property
+    def n_regions(self):
+        return len(self.regions)
+
+    @property
+    def first_position(self):
+        return self.regions.min()
+
+    @property
+    def last_position(self):
+        return self.regions.max()
+
+    @property
+    def starts(self):
+        """
+        Return all start positions, 0-indexed
+        """
+        return self.regions[:, 0]
+
+    @property
+    def stops(self):
+        """
+        Return all stop positions, 1-indexed
+        """
+        return self.regions[:, 1]
 
     @property
     def positions_0(self):
@@ -266,20 +330,6 @@ class Bed:
         Return a vector of ravelled region start/stop positions
         """
         return np.ravel(self.regions)
-
-    @property
-    def starts(self):
-        """
-        Return all start positions, 0-indexed
-        """
-        return self.regions[:, 0]
-
-    @property
-    def stops(self):
-        """
-        Return all stop positions, 1-indexed
-        """
-        return self.regions[:, 1]
 
     @property
     def mean_length(self):
@@ -473,21 +523,6 @@ def subtract_bed(bed, exclude):
     positions = np.where(indicator == 1)[0]
     subset = Bed.from_positions_0(positions, bed.chroms)
     return subset
-
-
-def extend_bed(bed, distance):
-    """
-    Return a new bed with added flanking coverage
-    """
-    regions = bed.regions
-    indicator = np.zeros(regions[-1, 1] + distance, dtype=np.int64)
-    for reg in regions:
-        lower = max(reg[0] - distance, 0)
-        upper = reg[1] + distance
-        indicator[lower:upper] += 1
-    mask = indicator > 0
-    new_bed = Bed.from_boolean_mask_0(mask, bed.chroms)
-    return new_bed
 
 
 def exclude_low_coverage(bed, bin_size, min_coverage):

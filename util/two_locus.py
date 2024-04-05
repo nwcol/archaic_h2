@@ -213,6 +213,12 @@ def get_last_right_idx(map_vec, last_left_idx, bin_edges):
     return last_right_idx
 
 
+def compute_pseudo_corr(H, H_2):
+
+    corr = H_2 / H ** 2 - 1
+    return corr
+
+
 r_edges = np.array([0,
                     1e-7, 2e-7, 5e-7,
                     1e-6, 2e-6, 5e-6,

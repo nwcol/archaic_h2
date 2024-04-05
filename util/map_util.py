@@ -83,6 +83,9 @@ class GeneticMap:
         approx_rates = np.append(approx_rates, 0)
         return approx_rates
 
+    def approximate_map_value(self, position):
+        return self.approximate_map_values(np.array([position]))[0]
+
     def approximate_map_values(self, positions):
         """
         Approximate the map values of a vector of positions between
@@ -101,6 +104,20 @@ class GeneticMap:
         approx_map = np.zeros(len(positions), dtype=np.float64)
         approx_map[:] = floor + bp_to_floor * position_rates
         return approx_map
+
+    def find_interval_end(self, focal_pos, r):
+        # 1 indexed positions I think. returns the first position ABOVE r
+        # (noninclusive)
+        focal_map_val = self.approximate_map_value(focal_pos)
+        approx_val = focal_map_val + r_to_d(r)
+        idx = np.searchsorted(self.map_vals, approx_val)
+        positions = np.arange(self.positions[idx - 1], self.positions[idx])
+        map_vals = self.approximate_map_values(positions)
+        map_distances = np.abs(map_vals - focal_map_val)
+        r_distances = d_to_r(map_distances)
+        out_idx = np.searchsorted(r_distances, r)
+        position = positions[out_idx]
+        return position
 
     def plot_rates(self, log_scale=False):
 
@@ -131,6 +148,24 @@ class GeneticMap:
         ax.set_ylim(0, )
         fig.tight_layout()
         fig.show()
+
+    def plot_r_map(self, focal_pos):
+
+        fig = plt.figure(1)
+        ax = fig.add_subplot(111)
+        focal_map_val = self.approximate_map_values(np.array([focal_pos]))[0]
+        map_distance = np.abs(self.map_vals - focal_map_val)
+        r_distance = d_to_r(map_distance)
+        ax.plot(self.positions, r_distance, color="black")
+        ax.set_xlim(self.first_position, self.last_position)
+        ax.set_xlabel("position")
+        ax.set_ylabel("r")
+        ax.set_title(f"Genetic map on chr{self.chrom}")
+        ax.grid()
+        ax.set_ylim(0, )
+        fig.tight_layout()
+        fig.show()
+
 
     def compare(self):
 

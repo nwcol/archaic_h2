@@ -32,13 +32,10 @@ if __name__ == "__main__":
         rows += headers[chrom]["rows"]
         windows += headers[chrom]["windows"]
     ex_header = headers[chroms[0]]
-    out_header = file_util.get_header(
+    out_header = dict(
         chroms=chroms,
         statistic=ex_header["statistic"],
         windows=windows,
-        vcf_files=[headers[chrom]["vcf_file"] for chrom in chroms],
-        bed_files=[headers[chrom]["bed_file"] for chrom in chroms],
-        map_files=[headers[chrom]["map_file"] for chrom in chroms],
         cols=ex_header["cols"],
         rows=rows
     )

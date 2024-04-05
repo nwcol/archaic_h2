@@ -1,4 +1,8 @@
 
+"""
+Count the number of sites represented in a series of windows on one chromosome
+"""
+
 import argparse
 import json
 import numpy as np
@@ -9,30 +13,39 @@ from util import file_util
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("bed_file_name")
-    parser.add_argument("window_file")
+    parser.add_argument("window_file_name")
     parser.add_argument("out_file_name")
     args = parser.parse_args()
     #
-    with open(args.window_file, 'r') as window_file:
-        window_dicts = json.load(window_file)["windows"]
+    with open(args.window_file_name, 'r') as window_file:
+        win_dicts = json.load(window_file)["windows"]
     bed = bed_util.Bed.read_bed(args.bed_file_name)
     chrom = bed.chrom
-    positions_1 = bed.positions_1
-    site_counts = {}
+    positions = bed.positions_1
+    rows = []
+    windows = []
+    site_counts = []
     #
-    for window_id in window_dicts:
-        window_dict = window_dicts[window_id]
-        bounds = window_dict["bounds"]
-        row_name = f"chr{chrom}_win{window_id}"
-        site_counts[row_name] = np.diff(np.searchsorted(positions_1, bounds))
-        print(f"SITES COUNTED IN\tWIN{window_id}\tCHR{chrom}")
+    for win_id in win_dicts:
+        win_dict = win_dicts[win_id]
+        bounds = win_dict["bounds"]
+        lim_right = win_dict["limit_right"]
+        rows.append(f"chr{chrom}_win{win_id}")
+        windows.append((chrom, bounds))
+        site_counts.append(
+            np.diff(np.searchsorted(positions, bounds))
+        )
+        print(f"site counts parsed\twin{win_id}\tchr{chrom}")
     #
-    header = file_util.get_header(
+    cols = ["site_counts"]
+    header = dict(
         chrom=chrom,
         statistic="site_counts",
-        windows=window_dicts,
+        windows=windows,
         bed_file=args.bed_file_name,
-        cols={0: "site_counts"}
+        window_file=args.window_file_name,
+        cols=cols,
+        rows=rows
     )
-    file_util.save_dict_as_arr(args.out_file_name, site_counts, header)
-    print(f"SITES COUNTED ON\tCHR{chrom}")
+    file_util.save_arr(args.out_file_name, site_counts, header)
+    print(f"site counts parsed\tchr{chrom}")

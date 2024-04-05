@@ -1,4 +1,32 @@
 
+MAIN GOALS:
+-figure out the best window size (10, 20Mb?) if 20Mb, keep using same windows. otherwise update auto window to add finer stop/start points on the ~1Mb scale and breaks at centromeres
+use window stats script to see how well this works and how uniform the windows are. (maybe rewrite a little to handle metadata)
+
+-triangle window plots
+
+-understand mask coverage better and make sure everything worked properly (i think it has but be sure!). quantify the main mask coverage across windows, chromosomes, genome, compare to other masks and full coverage
+
+-parse site/pair counts using windows and main masks. Adjust r bins?
+
+-make primary plots of H_2, etc.
+-plot histograms of H_2 density - for each bin
+-look at covariation in H, H_2, etc.
+
+-bootstrap! make boostrap plots and compare to primary plots. make sure scripts work properly
+
+-write up and test the likelihood function (do research on max lik as well) using the bootstrap-derived parameters
+
+-improve and document Bed class
+
+-keep trying to understand the H_2 kick!
+
+-keep improving the plot functions and trying to make them readable, pretty- reusable fxns
+
+
+
+
+
 ideas:
 -add support for additional columns to the bed class
 -add a function for computing score densities and figure out what scores mean in this context.

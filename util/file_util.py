@@ -1,6 +1,6 @@
 
 """
-Functions for reading and writing my own statistics files (.json, .txt)
+Functions for reading and writing my own statistics files (.json, .txt, etc)
 """
 
 import json
@@ -38,9 +38,8 @@ Saving and loading data
 
 def save_arr(file_name, arr, header):
 
-    file = open(file_name, "w")
-    np.savetxt(file, arr, header=str(header))
-    file.close()
+    with open(file_name, "w") as file:
+        np.savetxt(file, arr, header=str(header))
 
 
 def load_arr(file_name):
@@ -56,7 +55,7 @@ def load_arr(file_name):
         arr = np.array([arr])
     # if there's a single column in the file...
     if arr.ndim < 2:
-        # if the rows dictionary specifies one row; we have a single row
+        # if the rows dictionary specifies one row; we have a single element
         if len(header["rows"]) == 1:
             arr = arr[np.newaxis, :]
         # if the rows dictionary specifies many rows; then we have a column

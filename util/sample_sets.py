@@ -60,9 +60,12 @@ class USampleSet:
         """
         variant_sites, genotypes = vcf_util.read(vcf_file_name)
         bed = bed_util.Bed.read_bed(bed_file_name)
-        genetic_map = map_util.GeneticMap.read_txt(map_file_name)
         positions = bed.positions_1
-        position_map = genetic_map.approximate_map_values(positions)
+        if map_file_name:
+            genetic_map = map_util.GeneticMap.read_txt(map_file_name)
+            position_map = genetic_map.approximate_map_values(positions)
+        else:
+            position_map = None
         variant_mask = cls.get_variant_idx(bed, variant_sites)
         variant_sites = variant_sites[variant_mask]
         for sample_id in genotypes:
