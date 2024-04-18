@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("window_file_name")
     parser.add_argument("out_file_name")
     parser.add_argument("-t", "--bp_threshold", type=int, default=0)
-    parser.add_argument("-r", "--r_bin_file", nargs='*', type=float)
+    parser.add_argument("-r", "--r_bin_file")
     args = parser.parse_args()
     #
     if args.r_bin_file:
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         r_edges = two_locus.r_edges
     with open(args.window_file_name, 'r') as window_file:
         win_dicts = json.load(window_file)["windows"]
-    sample_set = sample_sets.USampleSet.read(
+    sample_set = sample_sets.SampleSet.read(
         args.vcf_file_name, args.bed_file_name, args.map_file_name
     )
     chrom = sample_set.chrom

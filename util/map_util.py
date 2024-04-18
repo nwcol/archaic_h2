@@ -111,12 +111,17 @@ class GeneticMap:
         focal_map_val = self.approximate_map_value(focal_pos)
         approx_val = focal_map_val + r_to_d(r)
         idx = np.searchsorted(self.map_vals, approx_val)
+        if idx == len(self.positions):
+            idx -= 1
         positions = np.arange(self.positions[idx - 1], self.positions[idx])
         map_vals = self.approximate_map_values(positions)
         map_distances = np.abs(map_vals - focal_map_val)
         r_distances = d_to_r(map_distances)
         out_idx = np.searchsorted(r_distances, r)
-        position = positions[out_idx]
+        if out_idx < len(positions):
+            position = positions[out_idx]
+        else:
+            position = positions[-1]
         return position
 
     def plot_rates(self, log_scale=False):
@@ -161,7 +166,7 @@ class GeneticMap:
         ax.set_xlabel("position")
         ax.set_ylabel("r")
         ax.set_title(f"Genetic map on chr{self.chrom}")
-        ax.grid()
+        ax.grid(alpha=0.2)
         ax.set_ylim(0, )
         fig.tight_layout()
         fig.show()

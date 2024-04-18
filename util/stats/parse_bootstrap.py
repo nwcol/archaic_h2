@@ -29,12 +29,11 @@ if __name__ == "__main__":
         cov_header, cov_matrix = file_util.load_arr(file_name)
         col_idx = cov_header["col_idx"]
         cov_matrices[col_idx] = cov_matrix
-    n = len(cov_matrices[0])
-    b = len(cov_matrices)
-    var_arr = np.zeros((n, b))
-    col_idxs = list(cov_matrices.keys())
-    for i in col_idxs:
-        cov_matrix = cov_matrices[i]
-        var_arr[:, i] = cov_matrix[np.arange(n), np.arange(n)]
-    std_arr = np.sqrt(var_arr)
+    n_rows = len(cov_matrix)
+    n_cols = len(cov_matrices)
+    variances = np.zeros((n_rows, n_cols))
+    for i, idx in enumerate(col_idxs):
+        cov_matrix = cov_matrices[idx]
+        variances[:, i] = cov_matrix[np.arange(n_rows), np.arange(n_rows)]
+    std_arr = np.sqrt(variances)
     file_util.save_arr("stds.txt", std_arr, header)

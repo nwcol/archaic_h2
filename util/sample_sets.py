@@ -12,7 +12,7 @@ from util import bed_util
 data_path = "/home/nick/Projects/archaic/data"
 
 
-class USampleSet:
+class SampleSet:
 
     """
     Class for loading arrays of unphased genotypes from .vcf files containing
@@ -102,7 +102,7 @@ class USampleSet:
         Load from pre-specified directories
         """
         vcf_path = f"{data_path}/chrs/chr{chrom}.vcf.gz"
-        bed_path = f"{data_path}/masks//chr{chrom}.bed"
+        bed_path = f"{data_path}/masks_main/chr{chrom}_main.bed"
         map_path = f"{data_path}/maps/chr{chrom}_map.txt"
         return cls.read(vcf_path, bed_path, map_path)
 
@@ -141,15 +141,33 @@ class USampleSet:
 
         return self.first_position, self.last_position + 1
 
+    @property
+    def sample_pairs(self):
+        """
+        Return a list of 2-tuples containing each pair of samples
+        """
+        n = self.n_samples
+        pairs = []
+        for i in np.arange(n):
+            for j in np.arange(i + 1, n):
+                pair = [self.sample_ids[i], self.sample_ids[j]]
+                pair.sort()
+                pairs.append(tuple(pair))
+        return pairs
+
     """
     Accessing variants for a single sample
     """
 
-    def genotype(self, sample_id):
+    def genotype(self, sample_id, window=None):
         """
         Return the genotype array belonging to sample
         """
-        return self.genotypes[sample_id]
+        genotypes = self.genotypes[sample_id]
+        if window:
+            slice = self.get_variant_slice(window)
+            genotypes = genotypes[slice]
+        return genotypes
 
     def alt_counts(self, sample_id):
         """
@@ -186,17 +204,31 @@ class USampleSet:
             pass
         return genotypes[:, 0] != genotypes[:, 1]
 
-    def count_het_sites(self, sample_id, bounds=None):
+    def count_het_sites(self, sample_id, window=None):
         """
         Return the number of heterozygous sites for a given sample_id
         """
         het_indicator = self.het_indicator(sample_id)
-        if bounds:
-            bound_slice = self.get_variant_slice(bounds)
+        if window:
+            bound_slice = self.get_variant_slice(window)
             het_indicator = het_indicator[bound_slice]
         else:
             pass
         return het_indicator.sum()
+
+    """
+    Computing statistics for single samples
+    """
+
+    def H(self, sample_id, window=None):
+
+        n_het_sites = self.count_het_sites(sample_id, window=window)
+        if window:
+            l = self.window_site_count(window)
+        else:
+            l = self.n_positions
+        H = n_het_sites / l
+        return H
 
     """
     Computing statistics for multiple samples 
@@ -239,15 +271,55 @@ class USampleSet:
         folded_afs[:-1] += afs[:n - 1:-1]
         return folded_afs
 
-    def site_diff_probs(self, sample_id_x, sample_id_y):
+    def site_diff_probs(self, sample_id_x, sample_id_y, window=None):
+        """
+        Compute the probabilities that 1 allele sampled from each individual
+        will differ, for each site in 'window'.
+
+        The computation is vectorized and proceeds by adding up indicators
+        for allele difference in the 4 possible sampling configurations and
+        dividing by 4
+
+        :param sample_id_x:
+        :param sample_id_y:
+        :param window:
+        :return:
+        """
         genotypes_x = self.genotype(sample_id_x)
         genotypes_y = self.genotype(sample_id_y)
+        if window:
+            slice = self.get_variant_slice(window)
+            genotypes_x = genotypes_x[slice]
+            genotypes_y = genotypes_y[slice]
         probs = (
                 (genotypes_x[:, 0][:, np.newaxis] != genotypes_y).sum(1)
                 + (genotypes_x[:, 1][:, np.newaxis] != genotypes_y).sum(1)
         )
         probs = probs / 4
         return probs
+
+    def het_xy(self, sample_id_x, sample_id_y, window=None):
+        """
+        Return the sum of site difference probabilities
+
+        :param sample_id_x:
+        :param sample_id_y:
+        :param window:
+        :return:
+        """
+        probs = self.site_diff_probs(sample_id_x, sample_id_y, window=window)
+        het_xy_count = probs.sum()
+        return het_xy_count
+
+    def sequence_divergence(self, sample_id_x, sample_id_y, window=None):
+
+        genotypes_x = self.genotype(sample_id_x)
+        genotypes_y = self.genotype(sample_id_y)
+        probs = (
+                (genotypes_x[:, 0][:, np.newaxis] != genotypes_y).sum(1)
+                + (genotypes_x[:, 1][:, np.newaxis] != genotypes_y).sum(1)
+        )
+
 
     """
     Accessing variants for multiple samples
@@ -303,7 +375,7 @@ class USampleSet:
     Accessing positions
     """
 
-    def position_count(self, window):
+    def window_site_count(self, window):
         """
         Return the number of positions that fall in a genomic window, treating
         the upper window bound as noninclusive

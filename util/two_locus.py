@@ -230,7 +230,3 @@ r_edges = np.array([0,
 
 r = r_edges[1:]
 
-short_r_edges = np.array([0,
-                          1e-7, 2e-7, 5e-7,
-                          1e-6, 2e-6, 5e-6,
-                          1e-5], dtype=np.float64)

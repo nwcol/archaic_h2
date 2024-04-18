@@ -1,68 +1,22 @@
 
-MAIN GOALS:
--figure out the best window size (10, 20Mb?) if 20Mb, keep using same windows. otherwise update auto window to add finer stop/start points on the ~1Mb scale and breaks at centromeres
-use window stats script to see how well this works and how uniform the windows are. (maybe rewrite a little to handle metadata)
+MAIN GOALS
 
--triangle window plots
+- clean up the likelihood function and develop good methods for estimation
+    eg save bootstraps as 3d arrays or something
 
--understand mask coverage better and make sure everything worked properly (i think it has but be sure!). quantify the main mask coverage across windows, chromosomes, genome, compare to other masks and full coverage
+- write the wrapper for inference!
 
--parse site/pair counts using windows and main masks. Adjust r bins?
+- make a class holding mutliple sample sets such that genome wide statistics can be computed from memory (if this works---- maybe too big to hold in memory)
+    if this is possible, clean up the methods for computing and writing statistics to disk to avoid screwing around with so many .txts
 
--make primary plots of H_2, etc.
--plot histograms of H_2 density - for each bin
--look at covariation in H, H_2, etc.
+- the fine r bin mesa
 
--bootstrap! make boostrap plots and compare to primary plots. make sure scripts work properly
+- look at divergence, etc to estimate split times
 
--write up and test the likelihood function (do research on max lik as well) using the bootstrap-derived parameters
+- keep improving the plot functions and trying to make them readable, pretty- reusable fxns
+
+- really work out plot functions and make some nice recipes for pretty, readable plots (essentially publication quality)
 
 -improve and document Bed class
 
 -keep trying to understand the H_2 kick!
-
--keep improving the plot functions and trying to make them readable, pretty- reusable fxns
-
-
-
-
-
-ideas:
--add support for additional columns to the bed class
--add a function for computing score densities and figure out what scores mean in this context.
-    cross-check with the genome browser to make sure this works properly
--are reg regions actually high in H_2? look at very fine windows (1 or 5 kb), see if H_2 peaks coincide with regulatory region density.
--learn about balancing selection/polymorphism in reg regions- is it well-known?
-
--are there actually some regions with low/0 r that have lots of het. sites? is this throwing off the first r bin?
-method:
-- set up a way to compute H_2 in very small bins (1kb?) and look at the recombination distances between bin edges.
-
--merge small r bins and look at curves~ are they prettier? lol
-
-
-
-minor improvements to make:
--rename the directory and util package
--improve statistic headers (just use lists; dicts are annoying)
-    maybe improve window recording too
--fix up some of the stats scripts
--fix chromosome number tracking in the Bed class
-
-
-theory topics:
--coalescent. what the correlation of ancestries means
--LD in and between populations
--pi_x and pi_xy implications for branch lengths, neutral model
--tracts. gravel 2012
-
-
-reminders about file structure:
--stat files should always have the following in the header:
-    chromosome number
-    statistic name
-    vcf, mask, map file names
-    window descriptions
-    windows
-    column designations
-    row designations

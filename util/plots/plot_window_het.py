@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("-y", "--ylim", default=None, type=float)
     args = parser.parse_args()
     #
-    sample_set = sample_sets.USampleSet.read(
+    sample_set = sample_sets.SampleSet.read(
         args.vcf_file_name, args.bed_file_name, args.map_file_name
     )
     if args.sample_ids:

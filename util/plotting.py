@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
 
 def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
-                marker=None):
+                marker=None, scatter=False):
     """
     Plot a vector of statistics as a function of recombination frequency r
     on a log-x axis
@@ -54,12 +54,16 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
     :param marker: optional. add a marker style to the plotted curve
     """
     if not ax:
-        fig, ax = plt.subplots(figsize=(7.5, 6), layout="constrained")
-    ax.plot(
-        x, y, color=color, linestyle=line_style, label=label, marker=marker
-    )
+        fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
+    if scatter:
+        ax.scatter(
+            x, y, color=color, label=label, marker=marker
+        )
+    else:
+        ax.plot(
+            x, y, color=color, linestyle=line_style, label=label, marker=marker
+        )
     ax.set_ylim(0, )
-    ax.set_xlim(x.min(), x.max())
     ax.set_xscale("log")
     ax.set_ylabel("H_2")
     ax.set_xlabel("r bin")
@@ -68,17 +72,75 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
     return ax
 
 
-def plot_r_stats(x, dict):
+def plot_r_stats(x, dict, colors=None, line_styles=None):
 
     n_curves = len(dict)
     labels = list(dict.keys())
-    colors = cm.nipy_spectral(np.linspace(0, 0.9, n_curves))
+    if not colors:
+        colors = cm.nipy_spectral(np.linspace(0, 0.9, n_curves))
+    if not line_styles:
+        line_styles = ["solid"] * n_curves
     ax = plot_r_stat(x, dict[labels[0]], color=colors[0], label=labels[0])
     for i, label in enumerate(labels[1:]):
         i += 1
         plot_r_stat(
             x, dict[labels[i]], ax=ax, color=colors[i], label=labels[i]
         )
+    return ax
+
+
+def plot_all_r_stats(r_bins, site_pairs, het_pairs, two_sample_het_pairs,
+                     out_dir_name, sample_colors, dpi=200, y_lim=2e-6,
+                     sample_ids=None):
+    """
+    Make a plot for each individual, with common features!
+
+    :return:
+    """
+    if not sample_ids:
+        sample_ids = list(het_pairs.keys())
+    n_samples = len(sample_ids)
+    sample_pairs = list(two_sample_het_pairs.keys())
+    H2s = {x: het_pairs[x].sum(0) / site_pairs.sum(0) for x in het_pairs}
+    H2_2s = {
+        x: two_sample_het_pairs[x].sum(0) / site_pairs.sum(0)
+        for x in two_sample_het_pairs
+    }
+    x = r_bins[1:]
+    for i, sample_id in enumerate(sample_ids):
+        H2_curves = {sample_id: H2s[sample_id]}
+        colors = [sample_colors[sample_id]]
+        for sample_pair in sample_pairs:
+            if sample_id in sample_pair:
+                H2_curves[sample_pair] = H2_2s[sample_pair]
+                for _id in sample_pair:
+                    if _id != sample_id:
+                        other_id = _id
+                colors.append(sample_colors[other_id])
+        line_styles = ["solid"] + ["dotted"] * (n_samples - 1)
+        ax = plot_r_stats(x, H2_curves, colors=colors, line_styles=line_styles)
+        ax.set_ylim(0, y_lim)
+        ax.set_title(f"H2, {sample_id}")
+        plt.savefig(f"{out_dir_name}/H2_{sample_id}.png", dpi=dpi)
+        plt.close()
+    return 0
+
+
+def plot_conf(x, y, confs, ax=None, color="black", fill_color="blue",
+              alpha=0.2, ylim=2.5e-6, label=None):
+
+    if not ax:
+        fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
+        ax.set_xscale("log")
+        ax.set_ylim(0, ylim)
+        ax.grid(alpha=0.3)
+        ax.set_ylabel("H_2")
+        ax.set_xlabel("r bin")
+    ax.plot(x, y, color=color, label=label)
+    ax.fill_between(
+        x, y - confs, y + confs, color=fill_color, alpha=alpha, linewidth=0.0
+    )
+    ax.legend(fontsize=6)
     return ax
 
 
@@ -113,7 +175,7 @@ def plot_afs(afs, ax=None, color="black", label=None, line_style="solid",
     return ax
 
 
-def plot_distribution(bins, data, ax=None, color=None, label=None,
+def plot_distribution(bins, data, ax=None, color="black", label=None,
                       x_label="", title=None):
     """
 
@@ -121,7 +183,7 @@ def plot_distribution(bins, data, ax=None, color=None, label=None,
     :param bins:
     :param data:
     :param ax:
-    :param color:
+    :param color:t
     :param label:
     :param x_label:
     :param title:
@@ -129,8 +191,6 @@ def plot_distribution(bins, data, ax=None, color=None, label=None,
     """
     if not ax:
         fig, ax = plt.subplots(figsize=(6.5, 6), layout="constrained")
-    if not color:
-        color = "black"
     distribution = np.histogram(data, bins=bins)[0]
     distribution = distribution / distribution.sum()
     x = bins[1:]
@@ -142,7 +202,7 @@ def plot_distribution(bins, data, ax=None, color=None, label=None,
         x_label = ""
     ax.set_xlabel(f"{x_label} bin; right edge")
     ax.grid(alpha=0.4)
-    ax.legend()
+    ax.legend(fontsize=8)
     if title:
         ax.set_title(title)
     return ax
@@ -194,9 +254,11 @@ def plot_along_chr(y, ax=None, x=None, windows=None, color="black", label=None,
     return ax
 
 
-def manhattan_plot(x, y, chroms, ax=None, y_lim=None, marker='x', colors=None):
+def manhattan_plot(windows, y, ax=None, marker='x', colors=None):
     """
     Create a manhattan scatter plot of a statistic y across the genome
+
+    Expected window structure: list of (chrom, [lower, upper])
 
     :param x:
     :param y:
@@ -209,32 +271,23 @@ def manhattan_plot(x, y, chroms, ax=None, y_lim=None, marker='x', colors=None):
     """
     if not colors:
         colors = ["r", "b"]
+    chroms = np.array([window[0] for window in windows])
+    bounds = np.array([window[1] for window in windows])
+    x = np.cumsum(np.diff(bounds))
     n_colors = len(colors)
     chrom_numbers = np.arange(min(chroms), max(chroms) + 1)
     cmap = {i: colors[i % n_colors] for i in chrom_numbers}
-    colors = [cmap[x] for x in chroms]
     if not ax:
-        fig, ax = plt.subplots(figsize=(15, 6), layout="constrained")
-    ax.scatter(x, y, marker=marker, color=colors)
-    ax.grid(alpha=0.4, axis='y')
+        fig, ax = plt.subplots(figsize=(18, 8), layout="constrained")
+    for chrom in range(1, 23):
+        mask = chroms == chrom
+        ax.plot(x[mask], y[mask], color=cmap[chrom], marker=marker)
+    ax.grid(alpha=0.2, axis='y')
     chrom_centers = [x[chroms == i].mean() for i in chrom_numbers]
     ax.set_xticks(chrom_centers, labels=chrom_numbers)
-    ax.set_xlim(0, max(x))
+    ax.set_xlim(0, max(x) + x[-1] - x[-2])
     ax.set_xlabel("chromosome")
-    if y_lim:
-        ax.set_ylim(0, y_lim)
-        outlier_mask = y > y_lim
-        outlier_colors = [colors[i] for i in np.nonzero(outlier_mask)[0]]
-        ax.scatter(
-            x[outlier_mask], [y_lim] * np.sum(outlier_mask), marker='^',
-            color=outlier_colors
-        )
-        for i in np.nonzero(outlier_mask)[0]:
-            ax.annotate(
-                f"{y[i]:.2e}", (x[i], y_lim-8e-6), rotation=-90
-            )
-    else:
-        ax.set_ylim(0, )
+    ax.set_ylim(0, )
     return ax
 
 
@@ -371,49 +424,60 @@ def triangle_window_plot(window_dict, genetic_map, max_r):
     :return:
     """
     fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
+    colors = cm.nipy_spectral(np.linspace(0.1, 0.9, len(window_dict["windows"])))
     low = 0
     high = genetic_map.last_position
     x = [low, (high - low) / 2, high]
     y = [0, (high - low) / 2, 0]
     ax.plot(x, y, color="black")
 
-    for window_id in window_dict["windows"]:
+    for k, window_id in enumerate(window_dict["windows"]):
         start, stop = window_dict["windows"][window_id]["bounds"]
         limit_right = window_dict["windows"][window_id]["limit_right"]
-
+        stop = min(high, stop)
         middle = (start + stop) / 2
         top = (stop - start) / 2
         x = [start, middle, stop]
         y = [0, top, 0]
-        ax.plot(x, y, color='black')
-
-        if not limit_right:
-
-            overhang_stop= genetic_map.find_interval_end(stop, max_r)
-            overhang_middle = (start + overhang_stop) / 2
-            overhang_top = (overhang_stop - start) / 2
-            x = [middle, overhang_middle, overhang_stop]
-            y = [top, overhang_top, 0]
-            ax.plot(x, y, color="black", linestyle="dotted")
-
+        ax.plot(x, y, color=colors[k])
+        step = 100_000
+        starts = np.arange(start, stop + step, step)
+        if limit_right:
+            stops = np.array(
+                [min(genetic_map.find_interval_end(i, max_r), stop)
+                 for i in starts]
+            )
+        else:
+            stops = np.array(
+                [genetic_map.find_interval_end(i, max_r) for i in starts]
+            )
+        x = np.array([starts, stops]).mean(0)
+        y = x - starts
+        ax.plot(x, y, color=colors[k], linestyle="dotted")
     ax.set_xlim(low, high)
+    ax.set_xlabel("position")
     ax.set_ylim(0, (high - low) / 2)
+    ax.set_ylabel("position range")
     ax.set_aspect('equal')
-
+    ax.grid(alpha=0.4)
     return ax
-
 
 
 """
 Utilities
 """
 
-def setup_Mb_label():
 
-    return 0
+def setup_ticks(ax, interval=5, minor_interval=None, max_x=None):
 
-
-
+    if not max_x:
+        max_x = np.ceil(ax.lines[0].get_xydata()[:, 0].max() / 1e6)
+    labels = np.arange(0, max_x, interval, dtype=np.int64)
+    ticks = labels * 1e6
+    ax.set_xticks(ticks, labels=labels, rotation=270)
+    if minor_interval:
+        minor_ticks = np.arange(0, max_x, minor_interval) * 1e6
+        ax.set_xticks(minor_ticks)
 
 
 """
@@ -429,11 +493,9 @@ def plot_bed_coverage(res=1e6, title=None, styles=None, colors=None, **beds):
     fig = plt.figure(figsize=(12, 5))
     ax = fig.add_subplot(111)
     if not colors:
-        styles = ["black"] * len(beds)
-
+        colors = ["black"] * len(beds)
     if not styles:
         styles = ["solid"] * len(beds)
-
     for i, key in enumerate(beds):
         positions = beds[key].positions_0
         pos_counts, dump = np.histogram(positions, bins=bins)
@@ -445,13 +507,36 @@ def plot_bed_coverage(res=1e6, title=None, styles=None, colors=None, **beds):
     ax.set_xlabel("position, Mb")
     ax.set_ylabel("bin coverage")
     ax.legend()
-    ticks = np.arange(0, bins_Mb[-1], 10, dtype=np.int64)
-    ax.set_xticks(ticks)
-    ax.set_xticks(np.arange(0, bins_Mb[-1] + 1, 1), minor=True)
+    #ticks = np.arange(0, bins_Mb[-1], 10, dtype=np.int64)
+    #ax.set_xticks(ticks)
+    #ax.set_xticks(np.arange(0, bins_Mb[-1] + 1, 1), minor=True)
     ax.grid()
     ax.grid(which="minor", alpha=0.5)
     if title:
         ax.set_title(title)
+    fig.tight_layout()
+    fig.show()
+
+
+def plot_exact_mask(colors=None, **beds):
+
+    fig = plt.figure(figsize=(12, 5))
+    ax = fig.add_subplot(111)
+    if not colors:
+        colors = ["black"] * len(beds)
+    for i, key in enumerate(beds):
+        region_edges = beds[key].parse().flat_regions
+        n_regions = len(region_edges)
+        x = np.repeat(region_edges, 2)
+        y = np.array([0, 1, 1, 0] * (n_regions // 2))
+        ax.plot(x, y, color=colors[i], label=key)
+    ax.set_ylim(-0.05, 1.05)
+    ax.set_xlabel("position, Mb")
+    ax.set_ylabel("mask coverage")
+    ax.legend()
+    setup_ticks(ax)
+    ax.grid()
+    ax.grid(which="minor", alpha=0.4)
     fig.tight_layout()
     fig.show()
 

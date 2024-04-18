@@ -56,6 +56,8 @@ def load_arr(file_name):
     # if there's a single column in the file...
     if arr.ndim < 2:
         # if the rows dictionary specifies one row; we have a single element
+        if "rows" not in header:
+            pass
         if len(header["rows"]) == 1:
             arr = arr[np.newaxis, :]
         # if the rows dictionary specifies many rows; then we have a column

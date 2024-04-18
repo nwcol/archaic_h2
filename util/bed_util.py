@@ -485,21 +485,24 @@ class Bed:
               f"positions written at {file_name}")
 
 
-def intersect_beds(*beds):
+def intersect_masks(*beds):
     """
     Return the intersection of regions in two or more Bed instances
+
+    :param beds: list of Beds instances
     """
     n_beds = len(beds)
     max_length = max([bed.last_position for bed in beds])
-    indicators = [bed.get_sized_indicator(length=max_length) for bed in beds]
-    n_overlaps = np.sum(indicators, axis=0)
-    overlaps = np.where(n_overlaps == n_beds)[0]
+    n_overlaps = np.sum(
+        [bed.get_sized_indicator(length=max_length) for bed in beds], axis=0
+    )
+    shared_sites = np.where(n_overlaps == n_beds)[0]
     chroms = beds[0].chroms
-    intersect = Bed.from_positions_0(overlaps, chroms)
+    intersect = Bed.from_positions_0(shared_sites, chroms)
     return intersect
 
 
-def union_beds(*beds):
+def union_masks(*beds):
     """
     Return the union of the regions in two or more Bed instances
     """
@@ -511,7 +514,7 @@ def union_beds(*beds):
     return union
 
 
-def subtract_bed(bed, exclude):
+def subtract_mask(bed, exclude):
     """
     Get a Bed instance holding regions that are present in bed and not present
     in exclude
@@ -526,7 +529,7 @@ def subtract_bed(bed, exclude):
 
 
 def exclude_low_coverage(bed, bin_size, min_coverage):
-
+    # needed?
     n_bins = int(bed.last_position // bin_size) + 1
     bins = np.arange(0, (n_bins + 1) * bin_size, bin_size)
     positions = bed.positions_0
@@ -537,5 +540,5 @@ def exclude_low_coverage(bed, bin_size, min_coverage):
         if coverage[i] >= min_coverage:
             indicator[bins[i]:bins[i + 1]] = 1
     coverage_mask = Bed.from_boolean_mask_0(indicator > 0, bed.chroms)
-    out = intersect_beds(bed, coverage_mask)
+    out = intersect_masks(bed, coverage_mask)
     return out

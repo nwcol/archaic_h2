@@ -17,7 +17,7 @@ def compute_pi(sample_set, *sample_ids, window=None):
         sample_ids = sample_set.sample_ids
     if not window:
         window = sample_set.big_window
-    L = sample_set.position_count(window)
+    L = sample_set.window_site_count(window)
     pi_dict = {sample_id: None for sample_id in sample_ids}
     for sample_id in pi_dict:
         pi = sample_set.n_het_sites(sample_id, window=window) / L
@@ -51,7 +51,7 @@ def compute_pi_xy(sample_set, *sample_ids, window=None):
     if not window:
         window = sample_set.big_window
     sample_pairs = enumerate_pairs(sample_ids)
-    L = sample_set.position_count(window)
+    L = sample_set.window_site_count(window)
     win_idx = sample_set.idx_variant_window(window)
     pi_xy_dict = {sample_pair: None for sample_pair in sample_pairs}
     for sample_pair in pi_xy_dict:

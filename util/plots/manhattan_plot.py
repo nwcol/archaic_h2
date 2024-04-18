@@ -43,7 +43,7 @@ if __name__ == "__main__":
     col_name = header["cols"][col_idx]
     sample_id = header["sample_id"]
     title = f"bin {col_idx}, r_{col_name}, {sample_id}"
-    plot_fxns.manhattan_plot(
+    plotting.manhattan_plot(
         arr[:, col_idx], x_vec, chr_vec, args.y_lim, title
     )
     plt.savefig(args.out_file_name, dpi=200)

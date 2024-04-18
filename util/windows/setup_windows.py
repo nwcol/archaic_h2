@@ -79,7 +79,7 @@ if __name__ == "__main__":
             continue
 
         # enter into dict
-        n_sites = bed.position_count((window_start, window_end))
+        n_sites = bed.window_site_count((window_start, window_end))
         n_windowed_sites += n_sites
         span = window_end - window_start
         coverage = np.round(n_sites / span * 100, 2)

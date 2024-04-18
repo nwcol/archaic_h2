@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--threshold", type=int, default=50)
     args = parser.parse_args()
     #
-    sample_set = sample_sets.USampleSet.read_chr(args.chrom)
+    sample_set = sample_sets.SampleSet.read_chr(args.chrom)
     sample_ids = sample_set.sample_ids
     n_bins = sample_set.last_position // args.resolution + 1
     bins = np.arange(
