@@ -11,6 +11,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import moments
+import moments.Demes.Inference as moments_inference
+import ruamel
 from two_locus import r, r_edges
 from util import file_util
 from util import plotting
@@ -36,35 +38,145 @@ Required input for inference involving n samples in b r-bins:
 """
 
 
-def eval_lik(graph, emp_means, emp_covs, r_bins, u=1.3e-8):
+out_of_bounds_val = -1e10
+
+
+def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
+             opt_method="fmin", approx_method="simpsons", u=1.35e-8):
+    """
+
+
+    :param graph_file_name:
+    :param params_file_name:
+    :param r_bins:
+    :param data: tuple of (sample_ids, empirical means, empirical covariances)
+    :param max_iter:
+    :param opt_method:
+    :param approx_method:
+    :param u:
+    :return:
+    """
+
+    # get demes graph dictionary and parameter dictionary
+    builder = moments_inference._get_demes_dict(graph_file_name)
+    options = moments_inference._get_params_dict(params_file_name)
+
+    # use existing moments functionality to get parameter bounds etc
+    param_names, params_0, lower_bound, upper_bound = \
+        moments_inference._set_up_params_and_bounds(options, builder)
+    constraints = moments_inference._set_up_constraints(options, param_names)
+
+    # tuple of arguments to objective_fxn
+    opt_args = (
+        builder,
+        data,
+        options,
+        r_bins,
+        u,
+        lower_bound,
+        upper_bound,
+        constraints,
+        approx_method
+    )
+
+    # check to make sure opt_method is a valid choice
+    opt_methods = ["fmin"]
+    if opt_method not in opt_methods:
+        raise ValueError(f"method: {opt_method} is not in {opt_methods}")
+
+    # conduct the optimization according to selected method
+    if opt_method == "fmin":
+        out = scipy.optimize.fmin(
+            objective_fxn,
+            params_0,
+            args=opt_args,
+            disp=True,
+            maxiter=max_iter,
+            maxfun=max_iter,
+            full_output=True
+        )
+        params_opt, fopt, iter, fun_calls, warn_flag = out
+
+    # build output graph using optimized parameters
+    builder = moments_inference._update_builder(builder, options, params_opt)
+    graph = demes.Graph.fromdict(builder)
+
+    return graph, param_names, params_opt, fopt
+
+
+def objective_fxn(
+        params,
+        builder,
+        data,
+        options,
+        r_bins,
+        u,
+        lower_bound=None,
+        upper_bound=None,
+        constraints=None,
+        approx_method="simpsons"
+):
+
+    # bounds check
+    if lower_bound is not None and np.any(params < lower_bound):
+        return -out_of_bounds_val
+    if upper_bound is not None and np.any(params > upper_bound):
+        return -out_of_bounds_val
+
+    # constraints check
+    if constraints is not None and np.any(constraints(params) <= 0):
+        return -out_of_bounds_val
+
+    # update builder and build graph
+    builder = moments_inference._update_builder(builder, options, params)
+    graph = demes.Graph.fromdict(builder)
+
+    # evaluate likelihood!
+    log_lik = eval_log_lik(
+        graph, data, r_bins, u=u, approx_method=approx_method
+    )
+
+    return -log_lik
+
+
+
+def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
     """
     Compute the composite likelihood of a demes graph defining a demography,
     given empirical means and covariances obtained from sequence data and a
     mutation rate u.
 
     :param graph:
-    :param emp_means:
-    :param emp_covs:
     :param r_bins:
     :param u:
     :return:
     """
-    expected = get_2_locus_stats(graph, sample_ids, r_bins, u=u)
+    # unpack data
+    sample_ids, emp_means, emp_covs = data
+    sample_pairs = enumerate_pairs(sample_ids)
 
+    # compute expected H2 and H values given the demes graph
+    H2, H = get_two_locus_stats(
+        graph, 0, sample_ids, sample_pairs, r_bins, u=u
+    )
+    expected_stats = [row for row in H2] + [H]
+
+    # compute log likelihood with multivariate gaussian function
     n_components = len(emp_means)
     composite_lik = 0
     for i in range(n_components):
-        lik = normal_log_lik(expected[i], emp_covs[i], emp_means[i])
+        lik = normal_log_lik(expected_stats[i], emp_covs[i], emp_means[i])
         composite_lik += lik
-        print(i, lik)
+
     return composite_lik
 
 
-def get_2_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u):
+def get_two_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u,
+                        approx_method="simpsons"):
     """
-    Get a list of vectors of expected statistics. Each vector corresponds to
+    Get an array of expected statistics. Each array column corresponds to
     one r bin defined by r_bins except the last, which holds expected
-    heterozygosities. In each vector, the order of entry is
+    heterozygosities. The order of entry along rows is thus;
 
     sample_id_0, ... sample_id_n-1, sample_pair_0, ... sample_pair_n*(n-1)/2-1
 
@@ -74,28 +186,95 @@ def get_2_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u):
     :param sample_pairs:
     :param r_bins:
     :param u:
+    :param method: method for approximating H values along the curve
     :return:
     """
-    # map demes
-    r = r_bins[1:]
-    n_bins = len(r)
+    # map sample_ids to deme names
+
+    # get points of r to compute H2 at, as required by approximation method
+    r = find_r_points(r_bins, method=approx_method)
+
     n_samples = len(sample_ids)
-    n_stats = n_samples + len(sample_pairs)
     ld_stats = moments.LD.LDstats.from_demes(
         graph, sampled_demes=sample_ids, theta=None, r=r, u=u
     )
-    expected_H2 = np.array(
+
+    # get H2 and approximate its value in the r bins
+    H2 = np.array(
         [ld_stats.H2(sample_id, phased=True) for sample_id in sample_ids] +
         [ld_stats.H2(id_x, id_y, phased=False) for id_x, id_y in sample_pairs]
-    )
-    idx_pairs = enumerate_pairs(np.arange(n_stats))
-    expected_H = np.array(
-        [ld_stats.H(pops=[i])[0] for i in range(n_stats)] +
+    ).T
+    H2 = approximate_midpoints(H2, method=approx_method)
+    idx_pairs = enumerate_pairs(np.arange(n_samples))
+
+    H = np.array(
+        [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
         [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
     )
-    expected_stats = [expected_H2[]]
-    # figure out this shape better
-    return expected_stats
+
+    return H2, H
+
+
+def find_r_points(r_bins, method="simpsons"):
+    """
+    Given a method for numerically approximating H2 values, return a vector
+    of r values to compute H2 over.
+
+    :param r_bins:
+    :param method:
+    :return:
+    """
+    methods = [None, "right", "midpoint", "simpsons"]
+    if method not in methods:
+        raise ValueError(
+            f"{method} is not in methods: {methods}"
+        )
+
+    if method == "right":
+        r = r_bins[1:]
+
+    elif method == "midpoint":
+        r = r_bins[:-1] + np.diff(r_bins) / 2
+
+    elif method == "simpsons":
+        midpoints = r_bins[:-1] + np.diff(r_bins) / 2
+        r = np.sort(np.concatenate([r_bins, midpoints]))
+    return r
+
+
+def approximate_midpoints(arr, method="simpsons"):
+    """
+    Numerically approximate bin values across an array.
+
+    Note: different array sizes will interact differently with different
+    methods-
+
+    :param arr:
+    :param method:
+    :return:
+    """
+    methods = ["simpsons"]
+    if method not in methods:
+        raise ValueError(
+            f"{method} is not in methods: {methods}"
+        )
+    if method == "right":
+        out_arr = arr
+
+    elif method == "midpoint":
+        out_arr = (arr[1:] + arr[:-1]) / 2
+
+    elif method == "simpsons":
+        n_rows = len(arr)
+        n_bins = (n_rows - 1) // 2
+        out_arr = np.zeros((n_bins, arr.shape[1]))
+        for i in range(n_bins):
+            out_arr[i] = 1 / 6 * (
+                arr[i * 2]
+                + 4 * arr[i * 2 + 1]
+                + arr[i * 2 + 2]
+            )
+    return out_arr
 
 
 def normal_log_lik(mu, cov, x):
@@ -128,9 +307,19 @@ def enumerate_pairs(items):
     return pairs
 
 
+def subset_cov_matrix(cov_matrix, all_ids, subset_ids):
+    """
 
 
-
+    :param cov_matrix:
+    :param all_ids:
+    :param subset_ids:
+    :return:
+    """
+    idx = np.array([all_ids.index(x) for x in subset_ids])
+    mesh_idx = np.ix_(idx, idx)
+    subset_matrix = cov_matrix[mesh_idx]
+    return subset_matrix
 
 
 
@@ -161,9 +350,6 @@ def load_(boot_path, sample_ids, idx_offset, n_bins):
     return means, covs
 
 
-
-
-
 def read_boot_mean(file_name, sample_ids):
 
     arr = np.loadtxt(file_name)
@@ -187,9 +373,6 @@ def read_boot_cov(file_name, sample_ids):
     )
     mesh_idx = np.ix_(idx, idx)
     return arr[mesh_idx]
-
-
-
 
 
 def plot(graph, sample_ids, r, idx_start=4, title=None, single=True,
@@ -261,233 +444,6 @@ def load_means(boot_path, sample_ids):
     return means
 
 
-def moments_H(graph, sampled_demes, r_bins, u=1.5e-8):
-
-    y = moments.LD.LDstats.from_demes(
-        graph, sampled_demes=sampled_demes, r=r_bins, u=u, theta=None
-    )
-    n_demes = len(sampled_demes)
-    H = [y.H(pops=[i])[0] for i in range(n_demes)]
-    idx_pairs = enumerate_pairs(np.arange(n_demes))
-
-    H += [y.H(pops=pair)[1] for pair in idx_pairs]
-    H2 = [y.H2(sample_id, phased=True) for sample_id in sampled_demes]
-    sample_pairs = enumerate_pairs(sampled_demes)
-    H2_xy = [y.H2(id_x, id_y, phased=False) for id_x, id_y in sample_pairs]
-    return H, H2, H2_xy
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def dep_main(graph, sampled_demes, sample_times, sample_ids, r):
-
-    path = "/home/nick/Projects/archaic/statistics/main/bootstrap"
-
-    boot_header = file_util.read_header(
-        f"{path}/bin4_mean.txt"
-    )
-    all_sample_ids = boot_header["cols"]
-    raw_means = [
-        np.loadtxt(f"{path}/bin{i}_mean.txt") for i in range(4, 19)
-    ]
-    raw_means.append(
-        np.loadtxt(f"{path}/H_mean.txt")
-    )
-    raw_covs = [
-        np.loadtxt(f"{path}/bin{i}_cov.txt") for i in range(4, 19)
-    ]
-    raw_covs.append(
-        np.loadtxt(f"{path}/H_cov.txt")
-    )
-    idx = np.array(
-        [all_sample_ids.index(x) for x in sample_ids] +
-        [all_sample_ids.index(x) for x in enumerate_pairs(sample_ids)]
-    )
-    mesh_idx = np.ix_(idx, idx)
-    means = [mean[idx] for mean in raw_means]
-    covs = [cov[mesh_idx] for cov in raw_covs]
-
-    # compute expected stats under demography graph
-    est_H, est_H2, est_H2_xy = moments_H(
-        graph, sampled_demes, sample_times, r_bins=r
-    )
-    est_H2 = est_H2 + est_H2_xy
-
-    # transform expected stats into usable shape
-    # for now, assume that sampled_demes and sample_ids are in the same order!
-    n_bins = len(means) - 1
-    n_samples = len(est_H2)
-    est_means = [
-        np.array(
-            [est_H2[i][bin_idx] for i in range(n_samples)]
-        ) for bin_idx in range(n_bins)
-    ]
-    est_means += np.array(est_H)
-
-    log_lik = composite_likelihood(est_means, covs, means)
-
-    return log_lik
-
-
-def composite_likelihood(mus, covs, xs):
-    """
-
-
-    :param mus:
-    :param covs:
-    :param xs:
-    :return:
-    """
-    n = len(mus)
-    log_liks = []
-    for i in range(n):
-        log_liks.append(normal_log_lik(mus[i], covs[i], xs[i]))
-    log_lik = sum(log_liks)
-    return log_lik
-
-
-
-
-
-
-def get_sample_times(graph, sample_demes):
-    # probably not needed
-    n_demes = len(graph.demes)
-    deme_names = [graph.demes[i].name for i in range(n_demes)]
-    deme_times = []
-    deme_idx = [deme_names.index(sample_deme) for sample_deme in sample_demes]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def multivariate_normal(mu, Sigma, x):
-    """
-    Evaluate a multivariate normal PDF with locations mu, covariances Sigma
-    at x.
-
-    :param mu:
-    :param Sigma:
-    :param x:
-    :return:
-    """
-    k = len(mu)
-    d = (
-        ((2 * np.pi) ** k * np.linalg.det(Sigma)) ** -0.5
-        * np.exp(-0.5 * (x - mu) @ np.linalg.inv(Sigma) @ (x - mu))
-    )
-    return d
-
-
-def unscaled_multivariate_normal(mu, Sigma, x):
-    """
-    Evaluate a multivariate normal probability measure but do not scale it to
-    be a pdf
-    
-    :param mu: 
-    :param Sigma: 
-    :param x: 
-    :return: 
-    """
-    d = np.exp(-0.5 * (x - mu) @ np.linalg.inv(Sigma) @ (x - mu))
-    return d
-
-
-def log_f(mu, Sigma, x):
-    f_theta = -0.5 * (x - mu) @ np.linalg.inv(Sigma) @ (x - mu)
-    return f_theta
-
-
-def lik(mu_dict, Sigma_dict, x_dict):
-
-    # check to make sure dicts all have the same keys?
-    liks = np.zeros(len(x_dict))
-    for i, key in enumerate(x_dict):
-        d = unscaled_multivariate_normal(
-            mu_dict[key], Sigma_dict[key], x_dict[key]
-        )
-        liks[i] = - np.log(d)
-    lik = liks.sum()
-    return lik
-
-
-
-
-
-
-
-
-
-
-
-
-
-def moments_test(graph):
-
-    X = "X"
-    sampled_demes = [X]
-    sample_times = [0]
-
-    r = [0, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
-    u = 1.5e-8
-
-    y = moments.LD.LDstats.from_demes(
-        graph, sampled_demes=sampled_demes, sample_times=sample_times, r=r,
-        u=u, theta=None
-    )
-
-    H2_X = y.H2(X, phased=True)
-
-    fig = plt.figure(1)
-    ax = plt.subplot(1, 1, 1)
-    ax.plot(r, H2_X, label="X")
-    ax.set_xscale("log")
-    ax.legend()
-    ax.set_xlabel("r")
-    ax.set_ylabel("H2")
-    fig.tight_layout()
-    plt.show()
-    return 0
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def permutation_test(A, B, n_resamplings):
@@ -503,9 +459,6 @@ def permutation_test(A, B, n_resamplings):
         differences[i] = mean_B - samples.mean()
     p = np.count_nonzero(differences >= difference) / n_resamplings
     return p
-
-
-
 
 
 """

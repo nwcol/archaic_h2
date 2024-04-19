@@ -1,0 +1,125 @@
+
+parameters:
+
+  # divergence times.
+  # sample end times are unspecified and remain fixed.
+  - name: T_A
+    description: divergence time of Neandersovan from Ancestral
+    values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: end_time
+    lower_bound: 200e3
+    upper_bound: 1000e3
+
+  - name: T_ND
+    description: divergence time of Denisova and Neandertal
+    values:
+    - demes:
+        Neandersovan:
+          epochs:
+            0: end_time
+    lower_bound: 200e3
+    upper_bound: 1000e3
+
+  - name: T_N1
+    description: divergence time of WesternNeandertal and Altai
+    values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: end_time
+    lower_bound: 110e3
+    upper_bound: 1000e3
+
+  - name: T_N2
+    description: divergence time of Vindija and Chagyrskaya
+    values:
+    - demes:
+        WesternNeandertal:
+          epochs:
+            0: end_time
+    lower_bound: 80e3
+    upper_bound: 1000e3
+
+  # effective population sizes.
+  - name: N_A
+    description: population size of Ancestral
+    values:
+      - demes:
+          Ancestral:
+            epochs:
+              0: start_size
+    lower_bound: 100
+    upper_bound: 100000
+
+  - name: N_ND
+    description: population size of Neandersovan
+    values:
+      - demes:
+          Neandersovan:
+            epochs:
+              0: start_size
+    lower_bound: 100
+    upper_bound: 100000
+
+  - name: N_D
+    description: population size of Denisova
+    values:
+      - demes:
+          Denisova:
+            epochs:
+              0: start_size
+    lower_bound: 100
+    upper_bound: 100000
+
+  - name: N_N
+    description: population size of all Neandertal demes
+    values:
+      - demes:
+          Neandertal:
+            epochs:
+              0: start_size
+          Altai:
+            epochs:
+              0: start_size
+          WesternNeandertal:
+            epochs:
+              0: start_size
+          Chagyrskaya:
+            epochs:
+              0: start_size
+          Vindija:
+            epochs:
+              0: start_size
+    lower_bound: 100
+    upper_bound: 100000
+
+
+constraints:
+
+  # necessarily, T_A > T_ND > T_N1 > T_N2
+  - params: [T_A, T_ND]
+    constraint: greater_than
+
+  - params: [T_ND, T_N1]
+    constraint: greater_than
+
+  - params: [T_N1, T_N2]
+    constraint: greater_than
+
+  - params: [N_A, N_ND]
+    constraint: greater_than
+
+
+
+
+
+
+
+
+
+
+
+
