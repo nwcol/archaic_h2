@@ -46,7 +46,7 @@ def count_site_pairs(sample_set, bin_edges, window=None, limit_right=False,
 def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
                     limit_right=False, bp_threshold=0):
     """
-    Count the number of jointly heterozygous site pairs w for a single sample
+    Count the number of jointly heterozygous site pairs for a single sample
     in a series of bins given in units of r.
     """
     if not window:

@@ -175,8 +175,8 @@ def plot_afs(afs, ax=None, color="black", label=None, line_style="solid",
     return ax
 
 
-def plot_distribution(bins, data, ax=None, color="black", label=None,
-                      x_label="", title=None):
+def plot_dist(bins, data, ax=None, color="black", label=None, x_label="",
+              title=None):
     """
 
 
@@ -197,11 +197,11 @@ def plot_distribution(bins, data, ax=None, color="black", label=None,
     ax.plot(x, distribution, color=color, label=label)
     ax.set_ylim(0, )
     ax.set_ylabel("frequency")
-    ax.set_xlim(0, )
+    ax.set_xlim(bins[0], bins[-1])
     if not x_label:
         x_label = ""
     ax.set_xlabel(f"{x_label} bin; right edge")
-    ax.grid(alpha=0.4)
+    ax.grid(alpha=0.2)
     ax.legend(fontsize=8)
     if title:
         ax.set_title(title)

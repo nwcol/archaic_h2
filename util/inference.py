@@ -1,6 +1,6 @@
 
 """
-Functions for computing approx. composite likelihood and inferring demographies
+Functions for computing approx composite likelihoods and inferring demographies
 """
 
 import demes
@@ -15,27 +15,7 @@ import moments.Demes.Inference as moments_inference
 import ruamel
 from two_locus import r, r_edges
 from util import file_util
-from util import plotting
-
-
-"""
-Max-likelihood function and Moments inference
-
-Required input for inference involving n samples in b r-bins:
-    Obtained from bootstrap:
-    1. properly-ordered list of:
-        b identically-ordered empirical mean-H2 vectors of length (n + 1) 
-            choose 2  
-        1 mean-H vector of same length
-    2. properly-ordered list of:
-        b identically-ordered H2 covariance matrices of size (n + 1) choose 2 
-        1 H covariance vector of same size
-        
-    Obtained from model:
-    3. a .yaml demes file defining a demographic model, loaded as a demes graph
-    4. a .yaml specification file parameterizing the demes file
-    5. a mapping of sampled deme names to coordinates in the empirical arrays
-"""
+from util import plots
 
 
 out_of_bounds_val = -1e10
@@ -44,16 +24,16 @@ out_of_bounds_val = -1e10
 def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
              opt_method="fmin", approx_method="simpsons", u=1.35e-8):
     """
+    Optimize a demographic model.
 
-
-    :param graph_file_name:
-    :param params_file_name:
-    :param r_bins:
+    :param graph_file_name: path to .yaml file specifying initial demes model
+    :param params_file_name: path to .yaml options file defining parameters
+    :param r_bins: ndarray specifying r bin edges
     :param data: tuple of (sample_ids, empirical means, empirical covariances)
     :param max_iter:
     :param opt_method:
-    :param approx_method:
-    :param u:
+    :param approx_method: method to approximate H2 within each r bin
+    :param u: generational mutation rate
     :return:
     """
 
@@ -101,7 +81,7 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
     builder = moments_inference._update_builder(builder, options, params_opt)
     graph = demes.Graph.fromdict(builder)
 
-    return graph, param_names, params_opt, fopt
+    return graph, param_names, params_opt, fopt, iter, fun_calls, warn_flag
 
 
 def objective_fxn(
@@ -116,6 +96,23 @@ def objective_fxn(
         constraints=None,
         approx_method="simpsons"
 ):
+    """
+    Check validity of parameters within bounds and constraints, then evaluate
+    likelihood given a builder for a demes graph, a set of data (H, H2) in the
+    form of empirical means and covariances, and a mutation rate.
+
+    :param params:
+    :param builder:
+    :param data:
+    :param options:
+    :param r_bins:
+    :param u: generational mutation rate
+    :param lower_bound:
+    :param upper_bound:
+    :param constraints: function to check that parameter constraints are met
+    :param approx_method:
+    :return:
+    """
 
     # bounds check
     if lower_bound is not None and np.any(params < lower_bound):
@@ -147,17 +144,18 @@ def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
     mutation rate u.
 
     :param graph:
+    :param data:
     :param r_bins:
     :param u:
+    :param approx_method:
     :return:
     """
     # unpack data
     sample_ids, emp_means, emp_covs = data
-    sample_pairs = enumerate_pairs(sample_ids)
 
     # compute expected H2 and H values given the demes graph
     H2, H = get_two_locus_stats(
-        graph, 0, sample_ids, sample_pairs, r_bins, u=u
+        graph, sample_ids, r_bins, u=u, approx_method=approx_method
     )
     expected_stats = [row for row in H2] + [H]
 
@@ -171,7 +169,7 @@ def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
     return composite_lik
 
 
-def get_two_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u,
+def get_two_locus_stats(graph, sample_ids, r_bins, u,
                         approx_method="simpsons"):
     """
     Get an array of expected statistics. Each array column corresponds to
@@ -181,15 +179,14 @@ def get_two_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u,
     sample_id_0, ... sample_id_n-1, sample_pair_0, ... sample_pair_n*(n-1)/2-1
 
     :param graph:
-    :param name_map:
     :param sample_ids:
-    :param sample_pairs:
     :param r_bins:
     :param u:
-    :param method: method for approximating H values along the curve
+    :param approx_method: method for approximating H values along the curve
     :return:
     """
     # map sample_ids to deme names
+    sample_pairs = enumerate_pairs(sample_ids)
 
     # get points of r to compute H2 at, as required by approximation method
     r = find_r_points(r_bins, method=approx_method)
@@ -207,6 +204,7 @@ def get_two_locus_stats(graph, name_map, sample_ids, sample_pairs, r_bins, u,
     H2 = approximate_midpoints(H2, method=approx_method)
     idx_pairs = enumerate_pairs(np.arange(n_samples))
 
+    # get H
     H = np.array(
         [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
         [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
@@ -280,9 +278,9 @@ def approximate_midpoints(arr, method="simpsons"):
 def normal_log_lik(mu, cov, x):
     """
 
-    :param mu:
-    :param cov:
-    :param x:
+    :param mu: vector of means
+    :param cov: covariance matrix
+    :param x: vector of points
     :return:
     """
     log_lik = - (x - mu) @ np.linalg.inv(cov) @ (x - mu)
@@ -322,18 +320,73 @@ def subset_cov_matrix(cov_matrix, all_ids, subset_ids):
     return subset_matrix
 
 
+"""
+Visualizing results of optimization
+"""
 
 
+def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
+         plot_H=False, plot_one_sample=True, plot_two_sample=False):
+
+    one_sample_cm = cm.gnuplot
+    two_sample_cm = cm.terrain
+
+    sample_ids, means, covs = data
+    emp_H2 = np.array(means[:-1])
+    emp_H = means[-1]
+    sample_pairs = enumerate_pairs(sample_ids)
+    n_samples = len(sample_ids)
+    n_pairs = len(sample_pairs)
+
+    # compute statistics and log likelihood
+    exp_H2, exp_H = get_two_locus_stats(
+        graph, sample_ids, r_bins, u=u, approx_method=approx_method
+    )
+    log_lik = eval_log_lik(
+        graph, data, r_bins, u=u, approx_method=approx_method
+    )
+    x = find_r_points(r_bins, method="midpoint")
+
+    fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
+
+    if plot_one_sample:
+        colors = one_sample_cm(np.linspace(0, 0.9, n_samples))
+
+        for i, sample_id in enumerate(sample_ids):
+            ax.plot(x, emp_H2[:, i], color=colors[i], label=sample_id)
+            ax.scatter(x, exp_H2[:, i], color=colors[i], marker='x')
+
+            if plot_H:
+                ax.scatter(0.5, emp_H[i] ** 2, color=colors[i], marker='+')
+                ax.scatter(0.5, exp_H[i] ** 2, color=colors[i], marker='x')
+
+    if plot_two_sample:
+        colors = two_sample_cm(np.linspace(0, 0.9, n_pairs))
+
+        for i, pair in enumerate(sample_pairs):
+            j = i + n_samples
+            ax.plot(
+                x, emp_H2[:, j], color=colors[i], label=pair, linestyle="dotted"
+            )
+            ax.scatter(x, exp_H2[:, j], color=colors[i], marker='1')
+
+            if plot_H:
+                ax.scatter(0.5, emp_H[j] ** 2, color=colors[i], marker='+')
+                ax.scatter(0.5, exp_H[j] ** 2, color=colors[i], marker='1')
+
+    ax.set_ylim(0, )
+    ax.set_xscale("log")
+    ax.set_ylabel("H_2")
+    ax.set_xlabel("r bin")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=0.2)
+    ax.set_title(f"log likelihood: {log_lik:.2e}")
+    return ax
 
 
-
-
-
-
-
-
-
-
+"""
+Loading and setting up bootstrap statistics
+"""
 
 
 def load_(boot_path, sample_ids, idx_offset, n_bins):
@@ -375,54 +428,6 @@ def read_boot_cov(file_name, sample_ids):
     return arr[mesh_idx]
 
 
-def plot(graph, sample_ids, r, idx_start=4, title=None, single=True,
-         double=False):
-
-    boot_path = "/home/nick/Projects/archaic/statistics/main/bootstrap"
-
-
-    n_samples = len(sample_ids)
-    n_pairs = int(n_samples * (n_samples - 1) / 2)
-    colors = cm.gnuplot(np.linspace(0, 0.9, n_samples))
-    pair_colors = cm.terrain(np.linspace(0, 0.9, n_pairs))
-
-    est_H, est_H2, est_H2_xy = moments_H(graph, sample_ids, r_bins=r)
-    lik = eval_lik(graph, sample_ids, r, boot_path, idx_start=idx_start)
-    means = load_means(boot_path, sample_ids)
-    emp_H2 = [mean[:-1] for mean in means]
-    H = [mean[-1] for mean in means]
-
-    fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
-    if single:
-        for i, label in enumerate(sample_ids):
-            ax.plot(r, emp_H2[i], color=colors[i], label=label)
-            ax.scatter(r, est_H2[i], color=colors[i], marker='x')
-
-            ax.scatter(0.5, H[i] ** 2, color=colors[i], marker='+')
-            ax.scatter(0.5, est_H[i] ** 2, color=colors[i], marker='x')
-
-    if double:
-        for i, pair in enumerate(enumerate_pairs(sample_ids)):
-            ax.plot(r, emp_H2[i + n_samples], color=pair_colors[i], label=pair,
-                    linestyle="dotted")
-            ax.scatter(r, est_H2_xy[i], color=pair_colors[i], marker='1')
-
-            ax.scatter(0.5, H[i + n_samples] ** 2, color=pair_colors[i], marker='+')
-            ax.scatter(0.5, est_H[i + n_samples] ** 2, color=pair_colors[i], marker='1')
-
-    ax.set_ylim(0, )
-    ax.set_xscale("log")
-    ax.set_ylabel("H_2")
-    ax.set_xlabel("r bin")
-    ax.legend(fontsize=8)
-    ax.grid(alpha=0.2)
-    if title:
-        ax.set_title(title + f"; log lik: {lik:.2e}")
-    else:
-        ax.set_title(f"log lik: {lik:.2e}")
-    return ax
-
-
 def load_means(boot_path, sample_ids):
 
     boot_header = file_util.read_header(
@@ -444,6 +449,9 @@ def load_means(boot_path, sample_ids):
     return means
 
 
+"""
+Other inferential/statistics functions
+"""
 
 
 def permutation_test(A, B, n_resamplings):
@@ -459,65 +467,3 @@ def permutation_test(A, B, n_resamplings):
         differences[i] = mean_B - samples.mean()
     p = np.count_nonzero(differences >= difference) / n_resamplings
     return p
-
-
-"""
-
-Usage: python {yaml name} {first sampled population} {second sampled population}
-
-For example: python one_pop.yaml X X
-
-
-install with
-pip install git+https://github.com/MomentsLD/moments.git@devel
-
-import sys
-import moments
-import demes
-import matplotlib.pylab as plt
-
-
-graph = sys.argv[1]
-X = sys.argv[2]
-Y = sys.argv[3]
-
-g = demes.load(graph)
-
-if X == Y:
-    sampled_demes = [X]
-    sample_times = [0]
-
-else:
-    sample_demes = [X, Y]
-    sample_times = [0, 0]
-
-r = [0, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]  # you'll set these as your bin edges
-u = 1.5e-8
-Ne = 10000
-
-y = moments.LD.LDstats.from_demes(
-    g, sampled_demes=sampled_demes, sample_times=sample_times, u=u, r=r, Ne=Ne
-)
-
-H2_X = y.H2(X, phased=True)
-H2_Y = y.H2(Y, phased=True)
-H2_XY = y.H2(X, Y, phased=False)
-
-# these values are for the bin edges, not bin midpoint - but we can average...
-H2_X = (H2_X[:-1] + H2_X[1:]) / 2
-H2_Y = (H2_Y[:-1] + H2_Y[1:]) / 2
-H2_XY = (H2_XY[:-1] + H2_XY[1:]) / 2
-r_mids = [(r[i] + r[i + 1]) / 2 for i in range(len(r) - 1)]
-
-fig = plt.figure(1)
-ax = plt.subplot(1, 1, 1)
-ax.plot(r_mids, H2_X, label="X")
-ax.plot(r_mids, H2_Y, label="Y")
-ax.plot(r_mids, H2_XY, label="XY")
-ax.set_xscale("log")
-ax.legend()
-ax.set_xlabel("r")
-ax.set_ylabel("H2")
-fig.tight_layout()
-plt.show()
-"""

@@ -29,6 +29,7 @@ class SampleSet:
         self.genotypes = genotypes
         self.variant_sites = variant_sites
         self.n_variant_sites = len(self.variant_sites)
+
         # optional elements
         self.positions = positions
         if type(positions) == np.ndarray:
