@@ -2,7 +2,7 @@
 import argparse
 import json
 import numpy as np
-from util import bed_util
+from util import masks
 
 
 if __name__ == "__main__":

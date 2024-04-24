@@ -21,12 +21,13 @@ from util import two_locus
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("vcf_dir")
-    parser.add_argument("mask_dir")
-    parser.add_argument("map_dir")
-    parser.add_argument("window_dir")
-    parser.add_argument("out_fname")
-    parser.add_argument("-r", "--r_file")
+    parser.add_argument("vcf_file_name")
+    parser.add_argument("bed_file_name")
+    parser.add_argument("map_file_name")
+    parser.add_argument("window_file_name")
+    parser.add_argument("out_file_name")
+    parser.add_argument("-r", "--r_bin_file")
+    parser.add_argument("-t", "--bp_threshold", type=int, default=0)
     args = parser.parse_args()
     #
     if args.r_bin_file:

@@ -3,7 +3,7 @@
 
 import numpy as np
 import sys
-from util import bed_util
+from util import masks
 from util import plots
 
 

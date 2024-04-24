@@ -2,7 +2,7 @@
 # Create a .bed file recording the region covered by a .txt genetic map file
 
 import sys
-from util import bed_util
+from util import masks
 
 
 if __name__ == "__main__":

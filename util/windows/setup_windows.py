@@ -5,7 +5,7 @@ import json
 import numpy as np
 import sys
 import matplotlib
-from util import bed_util
+from util import masks
 from util import sample_sets
 from util import plots
 

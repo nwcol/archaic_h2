@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sample_ids", nargs='*', default=None)
     parser.add_argument("-t", "--bp_threshold", type=int, default=0)
     parser.add_argument("-r", "--r_bin_file")
+    parser.add_argument("-c", "--cross_sample", type=bool, default=True)
     args = parser.parse_args()
     #
     if args.r_bin_file:
@@ -38,8 +39,11 @@ if __name__ == "__main__":
     rows = []
     windows = []
     het_counts = {sample_id: [] for sample_id in sample_ids}
-    sample_pairs = one_locus.enumerate_pairs(sample_ids)
-    two_sample_het_counts = {sample_pair: [] for sample_pair in sample_pairs}
+    if args.cross_sample:
+        sample_pairs = one_locus.enumerate_pairs(sample_ids)
+        two_sample_het_counts = {
+            sample_pair: [] for sample_pair in sample_pairs
+        }
     #
     for win_id in win_dicts:
         win_dict = win_dicts[win_id]
@@ -60,19 +64,20 @@ if __name__ == "__main__":
                 )
             )
         # two-sample
-        for (sample_id_0, sample_id_1) in sample_pairs:
-            label = (sample_id_0, sample_id_1)
-            two_sample_het_counts[label].append(
-                two_locus.count_two_sample_het_pairs(
-                    sample_set,
-                    sample_id_0,
-                    sample_id_1,
-                    r_edges,
-                    window=bounds,
-                    limit_right=lim_right,
+        if args.cross_sample:
+            for (sample_id_0, sample_id_1) in sample_pairs:
+                label = (sample_id_0, sample_id_1)
+                two_sample_het_counts[label].append(
+                    two_locus.count_two_sample_het_pairs(
+                        sample_set,
+                        sample_id_0,
+                        sample_id_1,
+                        r_edges,
+                        window=bounds,
+                        limit_right=lim_right,
+                    )
                 )
-            )
-        #
+            #
         print(f"het. site pair counts parsed\twin{win_id}\tchr{chrom}")
     #
     n_r_bins = len(r_edges) - 1
@@ -95,25 +100,26 @@ if __name__ == "__main__":
         file_util.save_arr(
             out_file_name, np.array(het_counts[sample_id]), header=header
         )
-    #
-    for sample_pair in sample_pairs:
-        label = f"{sample_pair[0]},{sample_pair[1]}"
-        out_file_name = f"{args.two_sample_file_prefix}_{label}.txt"
-        header = dict(
-            chrom=chrom,
-            statistic="two_sample_het_pair_counts",
-            sample_id=sample_pair,
-            windows=windows,
-            vcf_file=args.vcf_file_name,
-            bed_file=args.bed_file_name,
-            map_file=args.map_file_name,
-            bp_threshold=args.bp_threshold,
-            cols=cols,
-            rows=rows
-        )
-        file_util.save_arr(
-            out_file_name, np.array(two_sample_het_counts[sample_pair]),
-            header=header
-        )
+    # two-sample
+    if args.cross_sample:
+        for sample_pair in sample_pairs:
+            label = f"{sample_pair[0]},{sample_pair[1]}"
+            out_file_name = f"{args.two_sample_file_prefix}_{label}.txt"
+            header = dict(
+                chrom=chrom,
+                statistic="two_sample_het_pair_counts",
+                sample_id=sample_pair,
+                windows=windows,
+                vcf_file=args.vcf_file_name,
+                bed_file=args.bed_file_name,
+                map_file=args.map_file_name,
+                bp_threshold=args.bp_threshold,
+                cols=cols,
+                rows=rows
+            )
+            file_util.save_arr(
+                out_file_name, np.array(two_sample_het_counts[sample_pair]),
+                header=header
+            )
     #
     print(f"het. site pair counts parsed on\tchr{chrom}")

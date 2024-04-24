@@ -8,7 +8,7 @@ import matplotlib.cm as cm
 import matplotlib
 import numpy as np
 from util import vcf_util
-from util import map_util
+from util import maps
 
 
 data_path = "/home/nick/Projects/archaic/data"
@@ -153,7 +153,7 @@ class Bed:
         Get a Bed instance with a single region representing the coverage of
         a genetic map
         """
-        genetic_map = map_util.GeneticMap.read_txt(file_name)
+        genetic_map = maps.GeneticMap.read_txt(file_name)
         pos = genetic_map.positions
         start_1 = pos[0]
         stop_1 = pos[-1]

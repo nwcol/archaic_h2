@@ -58,7 +58,7 @@ class GeneticMap:
     @classmethod
     def read_chr(cls, chrom):
 
-        path = f"{data_path}/maps/chr{chrom}_map.txt"
+        path = f"{data_path}/maps/hapmapII/chr{chrom}_map.txt"
         return cls.read_txt(path)
 
     @property

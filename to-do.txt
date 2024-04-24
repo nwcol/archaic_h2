@@ -1,4 +1,12 @@
 
+This weeks primary goal:::
+
+- simulations to resolve H2 spike
+
+-
+
+
+
 MAIN GOALS
 
 - clean up the likelihood function and develop good methods for estimation

@@ -10,7 +10,7 @@ import numpy as np
 from util.two_locus import r, r_edges
 from util import file_util
 from util import sample_sets
-from util import map_util
+from util import maps
 
 
 if __name__ == "__main__":
@@ -55,6 +55,7 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
     """
     if not ax:
         fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
+        ax.grid(alpha=0.2)
     if scatter:
         ax.scatter(
             x, y, color=color, label=label, marker=marker
@@ -67,8 +68,6 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
     ax.set_xscale("log")
     ax.set_ylabel("H_2")
     ax.set_xlabel("r bin")
-    ax.grid(alpha=0.4)
-    ax.legend(fontsize=7)
     return ax
 
 
@@ -86,6 +85,7 @@ def plot_r_stats(x, dict, colors=None, line_styles=None):
         plot_r_stat(
             x, dict[labels[i]], ax=ax, color=colors[i], label=labels[i]
         )
+    ax.legend(fontsize=7)
     return ax
 
 

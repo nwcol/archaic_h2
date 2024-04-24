@@ -2,7 +2,7 @@
 #
 
 import argparse
-from util import bed_util
+from util import masks
 
 
 if __name__ == "__main__":

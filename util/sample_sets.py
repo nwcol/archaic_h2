@@ -5,8 +5,8 @@ A class for representing .vcf files
 
 import numpy as np
 from util import vcf_util
-from util import map_util
-from util import bed_util
+from util import maps
+from util import masks
 
 
 data_path = "/home/nick/Projects/archaic/data"
@@ -60,10 +60,10 @@ class SampleSet:
         be careful!
         """
         variant_sites, genotypes = vcf_util.read(vcf_file_name)
-        bed = bed_util.Bed.read_bed(bed_file_name)
+        bed = masks.Bed.read_bed(bed_file_name)
         positions = bed.positions_1
         if map_file_name:
-            genetic_map = map_util.GeneticMap.read_txt(map_file_name)
+            genetic_map = maps.GeneticMap.read_txt(map_file_name)
             position_map = genetic_map.approximate_map_values(positions)
         else:
             position_map = None
@@ -84,6 +84,7 @@ class SampleSet:
         :param bed:
         :param sites: 1-indexed vector of site positions
         """
+        bed = bed.parse()
         edges = bed.flat_regions
         # sites in bed regions have odd region indices, sites outside have even
         edge_idx = np.searchsorted(edges, sites)
@@ -102,9 +103,9 @@ class SampleSet:
         """
         Load from pre-specified directories
         """
-        vcf_path = f"{data_path}/chrs/chr{chrom}.vcf.gz"
-        bed_path = f"{data_path}/masks_main/chr{chrom}_main.bed"
-        map_path = f"{data_path}/maps/chr{chrom}_map.txt"
+        vcf_path = f"{data_path}/chroms/main/chr{chrom}.vcf.gz"
+        bed_path = f"{data_path}/masks/GRCh37_strict/chr{chrom}_GRCh37_strict.bed"
+        map_path = f"{data_path}/maps/hapmapII/chr{chrom}_map.txt"
         return cls.read(vcf_path, bed_path, map_path)
 
     @classmethod

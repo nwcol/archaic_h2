@@ -6,7 +6,7 @@ Count the number of sites represented in a series of windows on one chromosome
 import argparse
 import json
 import numpy as np
-from util import bed_util
+from util import masks
 from util import file_util
 
 

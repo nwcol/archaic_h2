@@ -2,7 +2,7 @@
 # remove bins with low coverage from a mask file
 
 import argparse
-from util import bed_util
+from util import masks
 
 
 if __name__ == "__main__":
