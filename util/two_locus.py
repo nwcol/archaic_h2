@@ -6,18 +6,20 @@ Functions for computing two-locus genetic statistics
 import numpy as np
 import os
 from util import maps
+from util import masks
 
 
 os.environ["OMP_NUM_THREADS"] = "16"
 
 
-def count_site_pairs(sample_set, r_bins, window=None, limit_right=False,
-                     bp_threshold=0, vectorized=False):
+def count_site_pairs(positions, genetic_map, r_bins, window=None,
+                     limit_right=False, bp_threshold=0, vectorized=False):
     """
     Count the number of site pairs in a window, subdivided into bins by
     between-site recombination distance.
 
-    :param sample_set: a SampleSet instance
+    :param positions:
+    :param genetic_map:
     :param r_bins: vector specifying bin edges in recombination frequency r
     :param window: 2-tuple or 2-list specifying the interval of left loci
         to parse; default None selects all positions
@@ -26,29 +28,29 @@ def count_site_pairs(sample_set, r_bins, window=None, limit_right=False,
         are in the window)
     :param bp_threshold: defines a minimum distance in bp between the left
         and right loci; default 0
+    :param vectorized:
     :return:
     """
     # if no window, select the entire interval of positions
     if not window:
-        window = sample_set.big_window
+        window = [positions[0], positions[-1] + 1]
 
     # find min, max indices accessing left loci in the window
-    first_left_idx, last_left_idx = get_window_idxs(
-        sample_set.positions, window
-    )
+    first_left_idx, last_left_idx = get_window_idxs(positions, window)
     # find the max right index
     if limit_right:
         last_right_idx = last_left_idx
     else:
-        last_right_idx = get_last_right_idx(
-            sample_set.position_map, last_left_idx, r_bins
-        )
+        last_right_idx = get_last_right_idx(positions, last_left_idx, r_bins)
+
     # convert r bin edges into cM
     d_edges = maps.r_to_d(r_bins)
 
     # subset map, position vectors
-    abbrev_map = sample_set.position_map[first_left_idx:last_right_idx]
-    abbrev_pos = sample_set.positions[first_left_idx:last_right_idx]
+    window_map = genetic_map.approximate_map_values(
+        positions[first_left_idx:last_right_idx]
+    )
+    window_pos = positions[first_left_idx:last_right_idx]
 
     n_left_loci = last_left_idx - first_left_idx
     cum_counts = np.zeros(len(r_bins), dtype=np.int64)
@@ -58,18 +60,18 @@ def count_site_pairs(sample_set, r_bins, window=None, limit_right=False,
         for left_idx in np.arange(n_left_loci):
             if bp_threshold > 0:
                 min_right_idx = np.searchsorted(
-                        abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
+                        window_pos, window_pos[left_idx] + bp_threshold + 1
                 )
             else:
                 min_right_idx = left_idx + 1
-            locus_edges = d_edges + abbrev_map[left_idx]
+            locus_edges = d_edges + window_map[left_idx]
             cum_counts += np.searchsorted(
-                abbrev_map[min_right_idx:], locus_edges
+                window_map[min_right_idx:], locus_edges
             )
 
     elif vectorized:
-        edges = abbrev_map[:n_left_loci, np.newaxis] + d_edges[np.newaxis, :]
-        counts = np.searchsorted(abbrev_map, edges)
+        edges = window_map[:n_left_loci, np.newaxis] + d_edges[np.newaxis, :]
+        counts = np.searchsorted(window_map, edges)
         cum_counts = counts.sum(0)
 
     pair_counts = np.diff(cum_counts)

@@ -15,13 +15,13 @@ import argparse
 import json
 import numpy as np
 from util import file_util
-from util import sample_sets
+from util import masks
+from util import maps
 from util import two_locus
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("vcf_file_name")
     parser.add_argument("bed_file_name")
     parser.add_argument("map_file_name")
     parser.add_argument("window_file_name")
@@ -36,10 +36,10 @@ if __name__ == "__main__":
         r_edges = two_locus.r_edges
     with open(args.window_file_name, 'r') as window_file:
         win_dicts = json.load(window_file)["windows"]
-    sample_set = sample_sets.SampleSet.read(
-        args.vcf_file_name, args.bed_file_name, args.map_file_name
-    )
-    chrom = sample_set.chrom
+    mask = masks.Bed.read_bed(args.bed_file_name)
+    positions = mask.positions_1
+    genetic_map = maps.GeneticMap.read_txt(args.map_file_name)
+    chrom = mask.chrom
     rows = []
     windows = []
     pair_counts = []
@@ -52,7 +52,8 @@ if __name__ == "__main__":
         windows.append((chrom, bounds))
         pair_counts.append(
             two_locus.count_site_pairs(
-                sample_set,
+                positions,
+                genetic_map,
                 r_edges,
                 window=bounds,
                 limit_right=lim_right,
