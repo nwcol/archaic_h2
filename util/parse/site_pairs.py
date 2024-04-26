@@ -68,7 +68,6 @@ if __name__ == "__main__":
         chrom=chrom,
         statistic="site_pair_counts",
         windows=windows,
-        vcf_file=args.vcf_file_name,
         bed_file=args.bed_file_name,
         map_file=args.map_file_name,
         window_file=args.window_file_name,

@@ -28,7 +28,7 @@ def count_site_pairs(positions, genetic_map, r_bins, window=None,
         are in the window)
     :param bp_threshold: defines a minimum distance in bp between the left
         and right loci; default 0
-    :param vectorized:
+    :param vectorized: 
     :return:
     """
     # if no window, select the entire interval of positions
@@ -38,18 +38,17 @@ def count_site_pairs(positions, genetic_map, r_bins, window=None,
     # find min, max indices accessing left loci in the window
     first_left_idx, last_left_idx = get_window_idxs(positions, window)
     # find the max right index
+    site_map = genetic_map.approximate_map_values(positions)
     if limit_right:
         last_right_idx = last_left_idx
     else:
-        last_right_idx = get_last_right_idx(positions, last_left_idx, r_bins)
+        last_right_idx = get_last_right_idx(site_map, last_left_idx, r_bins)
 
     # convert r bin edges into cM
     d_edges = maps.r_to_d(r_bins)
 
     # subset map, position vectors
-    window_map = genetic_map.approximate_map_values(
-        positions[first_left_idx:last_right_idx]
-    )
+    window_map = site_map[first_left_idx:last_right_idx]
     window_pos = positions[first_left_idx:last_right_idx]
 
     n_left_loci = last_left_idx - first_left_idx
