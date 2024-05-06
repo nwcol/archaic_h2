@@ -19,7 +19,7 @@ if __name__ == "__main__":
     #
     with open(args.window_file_name, 'r') as window_file:
         win_dicts = json.load(window_file)["windows"]
-    bed = bed_util.Bed.read_bed(args.bed_file_name)
+    bed = masks.Bed.read_bed(args.bed_file_name)
     chrom = bed.chrom
     positions = bed.positions_1
     rows = []

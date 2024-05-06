@@ -28,7 +28,9 @@ def count_site_pairs(positions, genetic_map, r_bins, window=None,
         are in the window)
     :param bp_threshold: defines a minimum distance in bp between the left
         and right loci; default 0
-    :param vectorized: 
+    :param vectorized: if True, use a faster vectorized method to find site
+        pair counts. This method is inaccurate when the lowest r bin extends
+        to or near 0. [not sure how inaccurate yet]
     :return:
     """
     # if no window, select the entire interval of positions

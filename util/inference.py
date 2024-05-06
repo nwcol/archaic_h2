@@ -19,10 +19,12 @@ from util import plots
 
 
 out_of_bounds_val = -1e10
+counter = 0
 
 
 def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
-             opt_method="fmin", approx_method="simpsons", u=1.35e-8):
+             opt_method="fmin", approx_method="simpsons", u=1.35e-8,
+             verbose=True):
     """
     Optimize a demographic model.
 
@@ -36,6 +38,10 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
     :param u: generational mutation rate
     :return:
     """
+    # invert the covariance matrix
+    sample_ids, means, covs = data
+    inv_covs = [np.linalg.inv(cov) for cov in covs]
+    data = (sample_ids, means, inv_covs)
 
     # get demes graph dictionary and parameter dictionary
     builder = moments_inference._get_demes_dict(graph_file_name)
@@ -56,7 +62,8 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
         lower_bound,
         upper_bound,
         constraints,
-        approx_method
+        approx_method,
+        verbose
     )
 
     # check to make sure opt_method is a valid choice
@@ -73,13 +80,16 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
             disp=True,
             maxiter=max_iter,
             maxfun=max_iter,
-            full_output=True
+            full_output=True,
         )
         params_opt, fopt, iter, fun_calls, warn_flag = out
 
     # build output graph using optimized parameters
     builder = moments_inference._update_builder(builder, options, params_opt)
     graph = demes.Graph.fromdict(builder)
+
+    global counter
+    counter = 0
 
     return graph, param_names, params_opt, fopt, iter, fun_calls, warn_flag
 
@@ -94,7 +104,8 @@ def objective_fxn(
         lower_bound=None,
         upper_bound=None,
         constraints=None,
-        approx_method="simpsons"
+        approx_method="simpsons",
+        verbose=True
 ):
     """
     Check validity of parameters within bounds and constraints, then evaluate
@@ -114,27 +125,37 @@ def objective_fxn(
     :return:
     """
 
+    log_lik = None
+
+    global counter
+    counter += 1
+
     # bounds check
     if lower_bound is not None and np.any(params < lower_bound):
-        return -out_of_bounds_val
-    if upper_bound is not None and np.any(params > upper_bound):
-        return -out_of_bounds_val
+        log_lik = -out_of_bounds_val
+    elif upper_bound is not None and np.any(params > upper_bound):
+        log_lik = -out_of_bounds_val
 
     # constraints check
-    if constraints is not None and np.any(constraints(params) <= 0):
-        return -out_of_bounds_val
+    elif constraints is not None and np.any(constraints(params) <= 0):
+        log_lik = -out_of_bounds_val
 
-    # update builder and build graph
-    builder = moments_inference._update_builder(builder, options, params)
-    graph = demes.Graph.fromdict(builder)
+    else:
+        # update builder and build graph
+        builder = moments_inference._update_builder(builder, options, params)
+        graph = demes.Graph.fromdict(builder)
 
-    # evaluate likelihood!
-    log_lik = eval_log_lik(
-        graph, data, r_bins, u=u, approx_method=approx_method
-    )
+        # evaluate likelihood!
+        log_lik = eval_log_lik(
+            graph, data, r_bins, u=u, approx_method=approx_method
+        )
+
+    # print summary
+    if verbose > 0 and counter % verbose == 0:
+        param_str = "array([%s])" % (", ".join(["%- 12g" % v for v in params]))
+        print("%-8i, %-12g, %s" % (counter, log_lik, param_str))
 
     return -log_lik
-
 
 
 def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
@@ -275,7 +296,7 @@ def approximate_midpoints(arr, method="simpsons"):
     return out_arr
 
 
-def normal_log_lik(mu, cov, x):
+def normal_log_lik(mu, inv_cov, x):
     """
 
     :param mu: vector of means
@@ -283,7 +304,7 @@ def normal_log_lik(mu, cov, x):
     :param x: vector of points
     :return:
     """
-    log_lik = - (x - mu) @ np.linalg.inv(cov) @ (x - mu)
+    log_lik = - (x - mu) @ inv_cov @ (x - mu)
     return log_lik
 
 
@@ -332,6 +353,7 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
     two_sample_cm = cm.terrain
 
     sample_ids, means, covs = data
+    data = (sample_ids, means, np.linalg.inv(covs))
     emp_H2 = np.array(means[:-1])
     emp_H = means[-1]
     sample_pairs = enumerate_pairs(sample_ids)
@@ -389,7 +411,7 @@ Loading and setting up bootstrap statistics
 """
 
 
-def load_(boot_path, sample_ids, idx_offset, n_bins):
+def load_data(boot_path, sample_ids, idx_offset, n_bins):
 
     means = []
     covs = []
@@ -400,7 +422,7 @@ def load_(boot_path, sample_ids, idx_offset, n_bins):
         covs.append(read_boot_cov(f"{boot_path}/bin{i}_cov.txt", sample_ids))
     means.append(read_boot_mean(f"{boot_path}/H_mean.txt", sample_ids))
     covs.append(read_boot_cov(f"{boot_path}/H_cov.txt", sample_ids))
-    return means, covs
+    return sample_ids, means, covs
 
 
 def read_boot_mean(file_name, sample_ids):

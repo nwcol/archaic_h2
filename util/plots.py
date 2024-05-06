@@ -66,7 +66,7 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
         )
     ax.set_ylim(0, )
     ax.set_xscale("log")
-    ax.set_ylabel("H_2")
+    ax.set_ylabel("H2")
     ax.set_xlabel("r bin")
     return ax
 
@@ -79,11 +79,12 @@ def plot_r_stats(x, dict, colors=None, line_styles=None):
         colors = cm.nipy_spectral(np.linspace(0, 0.9, n_curves))
     if not line_styles:
         line_styles = ["solid"] * n_curves
-    ax = plot_r_stat(x, dict[labels[0]], color=colors[0], label=labels[0])
-    for i, label in enumerate(labels[1:]):
-        i += 1
+    fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
+    ax.grid(alpha=0.2)
+    for i, label in enumerate(labels):
         plot_r_stat(
-            x, dict[labels[i]], ax=ax, color=colors[i], label=labels[i]
+            x, dict[labels[i]], ax=ax, color=colors[i], label=labels[i],
+            line_style=line_styles[i]
         )
     ax.legend(fontsize=7)
     return ax

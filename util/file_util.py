@@ -42,6 +42,17 @@ def save_arr(file_name, arr, header):
         np.savetxt(file, arr, header=str(header))
 
 
+def load_vec(file_name):
+    """
+    Load an array and its header. Single rows are returned as 2d arrays
+    """
+    with open(file_name, 'r') as file:
+        header_line = file.readline().strip("\n").strip("#")
+    header = eval(header_line)
+    arr = np.loadtxt(file_name)
+    return header, arr
+
+
 def load_arr(file_name):
     """
     Load an array and its header. Single rows are returned as 2d arrays
@@ -110,7 +121,26 @@ def load_as_dict(file_name):
     return header, arr_dict
 
 
-# old
+"""
+Conveniently loading statistics from directories
+"""
+
+def load_H2(dir, sample_ids):
+
+    site_pairs = np.loadtxt(f"{dir}/site_pairs.txt").sum(0)
+    h2_dict = {x: np.loadtxt(f"{dir}/het_pairs_{x}.txt").sum(0) / site_pairs
+               for x in sample_ids}
+    return h2_dict
+
+
+
+
+
+
+
+"""
+Old stuff which isn't used anymore
+"""
 
 
 def sort_window_ids(window_ids):
