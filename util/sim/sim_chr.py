@@ -25,7 +25,8 @@ if __name__ == "__main__":
     rate_map = msprime.RateMap.read_hapmap(args.map_file_name, sequence_length=L)
     graph = demes.load(args.yaml_file_name)
     demography = msprime.Demography.from_demes(graph)
-    sample_config = {x.name: args.n_samples for x in demography.populations}
+    sample_config = {x.name: args.n_samples for x in graph.demes
+                     if x.end_time == 0}
     sample_names = list(sample_config.keys())
     #
     ts = msprime.sim_ancestry(

@@ -18,17 +18,15 @@ data_path = "/home/nick/Projects/archaic/data"
 
 class GeneticMap:
 
-    def __init__(self, positions, map_rates, map_vals, chrom):
+    def __init__(self, positions, map_vals, chrom):
         """
         Positions are assumed to be 1-indexed.
 
         :param positions:
-        :param map_rates:
         :param map_vals:
         :param chrom:
         """
         self.positions = positions
-        self.map_rates = map_rates
         self.map_vals = map_vals
         self.n_points = len(map_vals)
         self.chrom = chrom
@@ -40,20 +38,17 @@ class GeneticMap:
         and map values in cM at column with index 3
         """
         positions = []
-        map_rates = []
         map_vals = []
         with open(path, mode="r") as file:
             for i, line in enumerate(file):
                 if i > 0:
                     fields = line.strip().split()
                     positions.append(fields[1])
-                    map_rates.append(fields[2])
                     map_vals.append(fields[3])
         chrom = fields[0].strip("chr")
         positions = np.array(positions, dtype=np.int64)
-        map_rates = np.array(map_rates, dtype=np.float64)
         map_vals = np.array(map_vals, dtype=np.float64)
-        return cls(positions, map_rates, map_vals, chrom)
+        return cls(positions, map_vals, chrom)
 
     @classmethod
     def read_chr(cls, chrom):

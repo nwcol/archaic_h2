@@ -1,30 +1,11 @@
 
-This weeks primary goal:::
+various side goals
 
-- simulations to resolve H2 spike
+- clean up the functions for loading bootstraps etc. Might still be advisable to find a better way to save the bootstrap arrays but dont worry too much about it
 
--
-
-
-
-MAIN GOALS
-
-- clean up the likelihood function and develop good methods for estimation
-    eg save bootstraps as 3d arrays or something
-
-- write the wrapper for inference!
-
-- make a class holding mutliple sample sets such that genome wide statistics can be computed from memory (if this works---- maybe too big to hold in memory)
-    if this is possible, clean up the methods for computing and writing statistics to disk to avoid screwing around with so many .txts
-
-- the fine r bin mesa
-
-- look at divergence, etc to estimate split times
+- look at divergence, etc to estimate split times using one-locus stats and very simple models
 
 - keep improving the plot functions and trying to make them readable, pretty- reusable fxns
 
-- really work out plot functions and make some nice recipes for pretty, readable plots (essentially publication quality)
-
 -improve and document Bed class
 
--keep trying to understand the H_2 kick!

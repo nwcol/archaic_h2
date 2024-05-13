@@ -17,7 +17,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     n = len(args.curves)
-    colors = cm.nipy_spectral(np.linspace(0, 1, n+1))
+    colors = cm.nipy_spectral(np.linspace(0, 0.9, n))
 
     fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
     ax.grid(alpha=0.2)
@@ -26,13 +26,17 @@ if __name__ == "__main__":
 
     for i, file_name in enumerate(args.curves):
         header, vec = file_util.load_vec(file_name)
-        label = f"{header['sample_id']} : moments"
-        ax.plot(r, vec, color=colors[i], label=label)
+        name = header['sample_id']
+        label = f"{name}"
+        if type(name) == str:
+            ax.plot(r, vec, color=colors[i], label=label)
+        elif type(name) == tuple:
+            ax.plot(r, vec, color=colors[i], label=label, linestyle="dotted")
 
     for i, file_name in enumerate(args.scatters):
         header, vec = file_util.load_vec(file_name)
         label = f"{header['sample_id']} : msprime"
-        ax.scatter(r, vec, color=colors[i], label=label, marker='x')
+        ax.scatter(r, vec, color=colors[i], marker='x')
 
     ax.set_xlabel("r")
     ax.set_ylabel("H2")

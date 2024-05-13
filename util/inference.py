@@ -18,7 +18,7 @@ from util import file_util
 from util import plots
 
 
-out_of_bounds_val = -1e10
+out_of_bounds_val = 1e10
 counter = 0
 
 
@@ -67,7 +67,7 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
     )
 
     # check to make sure opt_method is a valid choice
-    opt_methods = ["fmin"]
+    opt_methods = ["fmin", "lbfgsb"]
     if opt_method not in opt_methods:
         raise ValueError(f"method: {opt_method} is not in {opt_methods}")
 
@@ -83,6 +83,20 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
             full_output=True,
         )
         params_opt, fopt, iter, fun_calls, warn_flag = out
+
+    elif opt_method == "lbfgsb":
+        out = scipy.optimize.minimize(
+            objective_fxn,
+            params_0,
+            args=opt_args,
+            method="L-BFGS-B",
+            options={"maxiter": max_iter}
+        )
+        params_opt = out.x
+        fopt = out.fun
+        iter = out.nit
+        fun_calls = None
+        warn_flag = out.status
 
     # build output graph using optimized parameters
     builder = moments_inference._update_builder(builder, options, params_opt)
@@ -353,19 +367,23 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
     two_sample_cm = cm.terrain
 
     sample_ids, means, covs = data
-    data = (sample_ids, means, np.linalg.inv(covs))
-    emp_H2 = np.array(means[:-1])
-    emp_H = means[-1]
     sample_pairs = enumerate_pairs(sample_ids)
     n_samples = len(sample_ids)
     n_pairs = len(sample_pairs)
+    prepped_data = (sample_ids, means, np.linalg.inv(covs))
+    idx = np.arange(n_samples + n_pairs)
+    vars = np.array([cov[idx, idx] for cov in covs])
+    stds = np.sqrt(vars)
+
+    emp_H2 = np.array(means[:-1])
+    emp_H = means[-1]
 
     # compute statistics and log likelihood
     exp_H2, exp_H = get_two_locus_stats(
         graph, sample_ids, r_bins, u=u, approx_method=approx_method
     )
     log_lik = eval_log_lik(
-        graph, data, r_bins, u=u, approx_method=approx_method
+        graph, prepped_data, r_bins, u=u, approx_method=approx_method
     )
     x = find_r_points(r_bins, method="midpoint")
 
@@ -375,34 +393,44 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
         colors = one_sample_cm(np.linspace(0, 0.9, n_samples))
 
         for i, sample_id in enumerate(sample_ids):
-            ax.plot(x, emp_H2[:, i], color=colors[i], label=sample_id)
-            ax.scatter(x, exp_H2[:, i], color=colors[i], marker='x')
+            ax.errorbar(
+                x, emp_H2[:, i], yerr=stds[:-1, i], color=colors[i],
+                label=sample_id, fmt="x", capthick=2
+            )
+            ax.plot(x, exp_H2[:, i], color=colors[i])
 
             if plot_H:
-                ax.scatter(0.5, emp_H[i] ** 2, color=colors[i], marker='+')
-                ax.scatter(0.5, exp_H[i] ** 2, color=colors[i], marker='x')
+                ax.errorbar(
+                    0.5, emp_H[i] ** 2, yerr=stds[-1, i], color=colors[i],
+                    marker='x', capthick=2
+                )
+                ax.scatter(0.5, exp_H[i] ** 2, color=colors[i], marker='+')
 
     if plot_two_sample:
         colors = two_sample_cm(np.linspace(0, 0.9, n_pairs))
 
         for i, pair in enumerate(sample_pairs):
             j = i + n_samples
-            ax.plot(
-                x, emp_H2[:, j], color=colors[i], label=pair, linestyle="dotted"
+            ax.errorbar(
+                x, emp_H2[:, j], yerr=stds[:-1, j], color=colors[i], label=pair,
+                fmt="x", capthick=2
             )
-            ax.scatter(x, exp_H2[:, j], color=colors[i], marker='1')
+            ax.plot(x, exp_H2[:, j], color=colors[i], linestyle="dotted")
 
             if plot_H:
-                ax.scatter(0.5, emp_H[j] ** 2, color=colors[i], marker='+')
-                ax.scatter(0.5, exp_H[j] ** 2, color=colors[i], marker='1')
+                ax.errorbar(
+                    0.5, emp_H[j] ** 2, yerr=stds[-1, j], color=colors[i],
+                    marker='x', capthick=2
+                )
+                ax.scatter(0.5, exp_H[j] ** 2, color=colors[i], marker='+')
 
     ax.set_ylim(0, )
     ax.set_xscale("log")
-    ax.set_ylabel("H_2")
-    ax.set_xlabel("r bin")
+    ax.set_ylabel("H2")
+    ax.set_xlabel("r")
     ax.legend(fontsize=8)
     ax.grid(alpha=0.2)
-    ax.set_title(f"log likelihood: {log_lik:.2e}")
+    ax.set_title(f"log lik: {log_lik:.2e}")
     return ax
 
 
