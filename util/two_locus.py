@@ -12,14 +12,14 @@ from util import masks
 os.environ["OMP_NUM_THREADS"] = "16"
 
 
-def count_site_pairs(positions, genetic_map, r_bins, window=None,
+def count_site_pairs(positions, site_map, r_bins, window=None,
                      limit_right=False, bp_threshold=0, vectorized=False):
     """
     Count the number of site pairs in a window, subdivided into bins by
     between-site recombination distance.
 
     :param positions:
-    :param genetic_map:
+    :param site_map:
     :param r_bins: vector specifying bin edges in recombination frequency r
     :param window: 2-tuple or 2-list specifying the interval of left loci
         to parse; default None selects all positions
@@ -34,13 +34,12 @@ def count_site_pairs(positions, genetic_map, r_bins, window=None,
     :return:
     """
     # if no window, select the entire interval of positions
-    if not window:
+    if window is None:
         window = [positions[0], positions[-1] + 1]
 
     # find min, max indices accessing left loci in the window
     first_left_idx, last_left_idx = get_window_idxs(positions, window)
     # find the max right index
-    site_map = genetic_map.approximate_map_values(positions)
     if limit_right:
         last_right_idx = last_left_idx
     else:
@@ -85,7 +84,7 @@ def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
     Count the number of jointly heterozygous site pairs for a single sample
     in a series of bins given in units of r.
     """
-    if not window:
+    if window is None:
         window = sample_set.big_window
     d_edges = maps.r_to_d(bin_edges)
     het_sites = sample_set.het_sites(sample_id)
@@ -190,7 +189,7 @@ def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
 
     H_2_XY = Pr(distinct left alleles) * Pr(distinct right alleles)
     """
-    if not window:
+    if window is None:
         window = sample_set.big_window
     var_idx = sample_set.multi_sample_variant_idx(sample_id_x, sample_id_y)
     first_left_idx, last_left_idx = get_window_idxs(

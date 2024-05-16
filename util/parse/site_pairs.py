@@ -53,7 +53,7 @@ if __name__ == "__main__":
         pair_counts.append(
             two_locus.count_site_pairs(
                 positions,
-                genetic_map,
+                genetic_map.approximate_map_values(positions),
                 r_edges,
                 window=bounds,
                 limit_right=lim_right,

@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import moments
 import moments.Demes.Inference as moments_inference
-import ruamel
+import pickle
+import yaml
+import os
 from two_locus import r, r_edges
 from util import file_util
 from util import plots
@@ -356,6 +358,121 @@ def subset_cov_matrix(cov_matrix, all_ids, subset_ids):
 
 
 """
+Setting up initial parameters and etc
+"""
+
+
+def uniform_random_params(graph_file_name, params_file_name):
+    """
+
+    :param graph_file_name:
+    :param params_file_name:
+    :param out_file_name:
+    :return:
+    """
+    # get demes graph dictionary and parameter dictionary
+    builder = moments_inference._get_demes_dict(graph_file_name)
+    options = moments_inference._get_params_dict(params_file_name)
+
+    # use existing moments functionality to get parameter bounds etc
+    param_names, params_0, lower_bound, upper_bound = \
+        moments_inference._set_up_params_and_bounds(options, builder)
+    constraints = moments_inference._set_up_constraints(options, param_names)
+
+    # draw parameter values uniformly randomly
+    constraints_satisfied = False
+    while not constraints_satisfied:
+        params = np.random.uniform(
+            lower_bound, upper_bound
+        )
+        if np.all(constraints(params) > 0):
+            constraints_satisfied = True
+
+    builder = moments_inference._update_builder(builder, options, params)
+    graph = demes.Graph.fromdict(builder)
+    return graph
+
+
+def build_pairwise_model(pop1_name, pop2_name, graph_file_name,
+                         params_file_name, time_units="years",
+                         generation_time=25):
+    """
+    Set up a graph defining a simple pairwise model with migration
+
+    parameters:
+    T divergence time
+    m migration rate
+    N_a ancestral N_e
+    N_1 population 1 N_e
+    N_2 population 2 N_e
+
+    :param pop1_name:
+    :param pop2_name:
+    :param graph_file_name:
+    :param params_file_name:
+    :param time_units:
+    :param generation_time:
+    :return:
+    """
+    init_m = 1e-5
+    init_T = 1e5
+    init_N = 1e4
+
+    # set up the graph
+    builder = demes.Builder(
+        time_units=time_units, generation_time=generation_time
+    )
+    builder.add_deme(
+        "ancestral", epochs=[{"end_time": init_T, "start_size": init_N}]
+    )
+    builder.add_deme(
+        pop1_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
+    )
+    builder.add_deme(
+        pop2_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
+    )
+    builder.add_migration(rate=init_m, demes=[pop1_name, pop2_name])
+    graph = builder.resolve()
+    demes.dump(graph, graph_file_name)
+
+    # set up parameters
+    param_dict = {
+        "parameters": [
+            get_param("T", "ancestral", "end_time", 1e2, 1e6),
+            get_param("N_a", "ancestral", "start_size", 1e2, 1e5),
+            get_param("N_1", pop1_name, "start_size", 1e2, 1e5),
+            get_param("N_2", pop2_name, "start_size", 1e2, 1e5),
+            {"name": "m", "values": [{"migrations": {0: "rate"}}],
+             "lower_bound": 0, "upper_bound": 1}
+        ]
+    }
+    with open(params_file_name, 'w') as file:
+        yaml.dump(param_dict, file)
+    return 0
+
+
+def get_param(name, deme, define, lower, upper):
+    """
+    Works only when you need to define a parameter that controls a single
+    value in the first epoch of a deme
+
+    :param name:
+    :param deme:
+    :param define:
+    :param lower:
+    :param upper:
+    :return:
+    """
+    param_dict = {
+        "name": name,
+        "values": [{"demes": {deme: {"epochs": {0: define}}}}],
+        "lower_bound": lower,
+        "upper_bound": upper
+    }
+    return param_dict
+
+
+"""
 Visualizing results of optimization
 """
 
@@ -401,7 +518,7 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
 
             if plot_H:
                 ax.errorbar(
-                    0.5, emp_H[i] ** 2, yerr=stds[-1, i], color=colors[i],
+                    0.5, emp_H[i] ** 2, yerr=stds[-1, i] ** 2, color=colors[i],
                     marker='x', capthick=2
                 )
                 ax.scatter(0.5, exp_H[i] ** 2, color=colors[i], marker='+')
@@ -412,14 +529,14 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
         for i, pair in enumerate(sample_pairs):
             j = i + n_samples
             ax.errorbar(
-                x, emp_H2[:, j], yerr=stds[:-1, j], color=colors[i], label=pair,
-                fmt="x", capthick=2
+                x, emp_H2[:, j], yerr=stds[:-1, j], color=colors[i],
+                label=pair, fmt="x", capthick=2
             )
             ax.plot(x, exp_H2[:, j], color=colors[i], linestyle="dotted")
 
             if plot_H:
                 ax.errorbar(
-                    0.5, emp_H[j] ** 2, yerr=stds[-1, j], color=colors[i],
+                    0.5, emp_H[j] ** 2, yerr=stds[-1, j] ** 2, color=colors[i],
                     marker='x', capthick=2
                 )
                 ax.scatter(0.5, exp_H[j] ** 2, color=colors[i], marker='+')
@@ -434,22 +551,42 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
     return ax
 
 
+def plot_deme(graph, ymin=4e4, ymax=1e6):
+
+    fig, ax = plt.subplots(figsize=(8, 7), layout="constrained")
+    demesdraw.tubes(graph, ax, log_time=True, inf_ratio=0.02, max_time=ymax)
+    plt.ylim(ymin, ymax)
+    return ax
+
+
 """
 Loading and setting up bootstrap statistics
 """
 
 
-def load_data(boot_path, sample_ids, idx_offset, n_bins):
+def read_data(boot_dir, sample_ids):
+    """
+    Load bootstrap means (1d np arrays) and covariance matrices (2d np arrays)
+    from a directory for a given set of sample_ids.
 
-    means = []
-    covs = []
-    for i in range(idx_offset, n_bins):
-        means.append(
-            read_boot_mean(f"{boot_path}/bin{i}_mean.txt", sample_ids)
-        )
-        covs.append(read_boot_cov(f"{boot_path}/bin{i}_cov.txt", sample_ids))
-    means.append(read_boot_mean(f"{boot_path}/H_mean.txt", sample_ids))
-    covs.append(read_boot_cov(f"{boot_path}/H_cov.txt", sample_ids))
+    :param boot_dir:
+    :param sample_ids:
+    :return:
+    """
+    file_names = os.listdir(boot_dir)
+    bins = [
+        int(name.strip("bin").strip("_mean.txt"))
+        for name in file_names if "mean" in name and "H" not in name
+    ]
+    bins.sort()
+
+    means = [
+        read_boot_mean(f"{boot_dir}/bin{i}_mean.txt", sample_ids) for i in bins
+    ] + [read_boot_mean(f"{boot_dir}/H_mean.txt", sample_ids)]
+
+    covs = [
+        read_boot_cov(f"{boot_dir}/bin{i}_cov.txt", sample_ids) for i in bins
+    ] + [read_boot_cov(f"{boot_dir}/H_cov.txt", sample_ids)]
     return sample_ids, means, covs
 
 
@@ -476,27 +613,6 @@ def read_boot_cov(file_name, sample_ids):
     )
     mesh_idx = np.ix_(idx, idx)
     return arr[mesh_idx]
-
-
-def load_means(boot_path, sample_ids):
-
-    boot_header = file_util.read_header(
-        f"{boot_path}/bin4_mean.txt"
-    )
-    all_sample_ids = boot_header["cols"]
-    raw_means = [
-        np.loadtxt(f"{boot_path}/bin{i}_mean.txt") for i in range(4, 19)
-    ]
-    raw_means.append(
-        np.loadtxt(f"{boot_path}/H_mean.txt")
-    )
-    idx = np.array(
-        [all_sample_ids.index(x) for x in sample_ids] +
-        [all_sample_ids.index(x) for x in enumerate_pairs(sample_ids)]
-    )
-    means = np.array([mean[idx] for mean in raw_means])
-    means = [means[:, i] for i in range(means.shape[1])]
-    return means
 
 
 """

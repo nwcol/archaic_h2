@@ -1,6 +1,8 @@
 
 various side goals
 
+- think of smarter ways to process and save statistics. dont make huge leaps, but try to make things as clear and rational as possible
+
 - clean up the functions for loading bootstraps etc. Might still be advisable to find a better way to save the bootstrap arrays but dont worry too much about it
 
 - look at divergence, etc to estimate split times using one-locus stats and very simple models

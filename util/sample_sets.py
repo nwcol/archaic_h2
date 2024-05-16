@@ -211,7 +211,7 @@ class SampleSet:
         Return the number of heterozygous sites for a given sample_id
         """
         het_indicator = self.het_indicator(sample_id)
-        if window:
+        if window is not None:
             bound_slice = self.get_variant_slice(window)
             het_indicator = het_indicator[bound_slice]
         else:
@@ -289,7 +289,7 @@ class SampleSet:
         """
         genotypes_x = self.genotype(sample_id_x)
         genotypes_y = self.genotype(sample_id_y)
-        if window:
+        if window is not None:
             slice = self.get_variant_slice(window)
             genotypes_x = genotypes_x[slice]
             genotypes_y = genotypes_y[slice]

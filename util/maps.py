@@ -18,7 +18,7 @@ data_path = "/home/nick/Projects/archaic/data"
 
 class GeneticMap:
 
-    def __init__(self, positions, map_vals, chrom):
+    def __init__(self, positions, map_vals):
         """
         Positions are assumed to be 1-indexed.
 
@@ -29,32 +29,54 @@ class GeneticMap:
         self.positions = positions
         self.map_vals = map_vals
         self.n_points = len(map_vals)
-        self.chrom = chrom
 
     @classmethod
-    def read_txt(cls, path):
+    def read_txt(cls, file_name, pos_col=None, map_col=None):
         """
-        Assumes a file with a 1-line header, positions at column with index 1
-        and map values in cM at column with index 3
+        Read a map from a .txt file. Designed to read the hapmap format;
+
+        Chromosome\tPosition(bp)\t(Rate(cM/Mb)\tMap(cM)
         """
+        pos_idx = None
+        map_idx = None
         positions = []
         map_vals = []
-        with open(path, mode="r") as file:
-            for i, line in enumerate(file):
-                if i > 0:
-                    fields = line.strip().split()
-                    positions.append(fields[1])
-                    map_vals.append(fields[3])
-        chrom = fields[0].strip("chr")
+        with open(file_name, mode="r") as file:
+            lines = iter(file)
+            header = next(lines)
+            header_fields = header.strip("\n").split()
+            header_fields = [x.strip('"') for x in header_fields]
+            if pos_col:
+                if pos_col in header_fields:
+                    pos_idx = header_fields.index(pos_col)
+                else:
+                    raise ValueError(f"pos_col {pos_col} isn't in header!")
+            else:
+                for x in ["Position(bp)", "Physical_Pos"]:
+                    if x in header_fields:
+                        pos_idx = header_fields.index(x)
+                        break
+                if pos_idx is None:
+                    raise ValueError("no position column found!")
+            if map_col:
+                if map_col in header_fields:
+                    map_idx = header_fields.index(map_col)
+                else:
+                    raise ValueError(f"map_col {map_col} isn't in header!")
+            else:
+                for x in ["Map(cM)"]:
+                    if x in header_fields:
+                        map_idx = header_fields.index(x)
+                        break
+                if pos_idx is None:
+                    raise ValueError("no map column found!")
+            for line in lines:
+                fields = line.strip("\n").split()
+                positions.append(fields[pos_idx])
+                map_vals.append(fields[map_idx])
         positions = np.array(positions, dtype=np.int64)
         map_vals = np.array(map_vals, dtype=np.float64)
-        return cls(positions, map_vals, chrom)
-
-    @classmethod
-    def read_chr(cls, chrom):
-
-        path = f"{data_path}/maps/hapmapII/chr{chrom}_map.txt"
-        return cls.read_txt(path)
+        return cls(positions, map_vals)
 
     @property
     def first_position(self):
@@ -130,7 +152,6 @@ class GeneticMap:
         ax.set_xlim(self.first_position / 1e6, self.last_position / 1e6)
         ax.set_xlabel("position, Mb")
         ax.set_ylabel("cM/Mb")
-        ax.set_title(f"Genetic map rate on chr{self.chrom}")
         fig.tight_layout()
         fig.show()
 
@@ -143,8 +164,7 @@ class GeneticMap:
         ax.set_xlim(self.first_position, self.last_position)
         ax.set_xlabel("position")
         ax.set_ylabel("cM")
-        ax.set_title(f"Genetic map on chr{self.chrom}")
-        ax.grid()
+        ax.grid(alpha=0.2)
         ax.set_ylim(0, )
         fig.tight_layout()
         fig.show()
@@ -160,12 +180,10 @@ class GeneticMap:
         ax.set_xlim(self.first_position, self.last_position)
         ax.set_xlabel("position")
         ax.set_ylabel("r")
-        ax.set_title(f"Genetic map on chr{self.chrom}")
         ax.grid(alpha=0.2)
         ax.set_ylim(0, )
         fig.tight_layout()
         fig.show()
-
 
     def compare(self):
 

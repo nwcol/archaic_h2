@@ -24,6 +24,6 @@ if __name__ == "__main__":
         sample_id = header["sample_id"]
         H2[sample_id] = arr.sum(0) / site_pairs
 
-    ax = plots.plot_r_stats(r_bins[1:], H2)
+    ax = plots.plot_r_stats(r_bins[1:], H2, markers=['x'] * len(H2))
     ax.set_ylim(0, args.y_lim)
     plt.savefig(args.out, dpi=args.dpi)

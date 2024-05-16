@@ -71,7 +71,7 @@ def plot_r_stat(x, y, ax=None, color="black", label=None, line_style="solid",
     return ax
 
 
-def plot_r_stats(x, dict, colors=None, line_styles=None):
+def plot_r_stats(x, dict, colors=None, line_styles=None, markers=None):
 
     n_curves = len(dict)
     labels = list(dict.keys())
@@ -79,12 +79,14 @@ def plot_r_stats(x, dict, colors=None, line_styles=None):
         colors = cm.nipy_spectral(np.linspace(0, 0.9, n_curves))
     if not line_styles:
         line_styles = ["solid"] * n_curves
+    if not markers:
+        markers = [None] * n_curves
     fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
     ax.grid(alpha=0.2)
     for i, label in enumerate(labels):
         plot_r_stat(
             x, dict[labels[i]], ax=ax, color=colors[i], label=labels[i],
-            line_style=line_styles[i]
+            line_style=line_styles[i], marker=markers[i]
         )
     ax.legend(fontsize=7)
     return ax
@@ -462,6 +464,56 @@ def triangle_window_plot(window_dict, genetic_map, max_r):
     ax.set_aspect('equal')
     ax.grid(alpha=0.4)
     return ax
+
+
+"""
+Plotting maps
+"""
+
+
+def plot_maps(ax=None, styles=None, colors=None, lim=1e5, **maps):
+
+    if not ax:
+        fig, ax = plt.subplots(figsize=(8, 6), layout="constrained")
+        ax.grid(alpha=0.2)
+        ax.set_ylabel("cM")
+        ax.set_xlabel("position")
+    n = len(maps)
+    if not styles:
+        styles = ["solid"] * n
+    if not colors:
+        colors = ["black"] * n
+
+    for i, key in enumerate(maps):
+        mapp = maps[key]
+        x = mapp.positions
+        y = mapp.map_vals
+        x_diff = np.diff(x)
+        breaks = np.nonzero(x_diff > lim)[0] + 1
+        breaks = np.insert(breaks, 0, 0)
+        breaks = np.insert(breaks, -1, len(x))
+        n_sections = len(breaks) - 1
+
+        for j in np.arange(n_sections):
+            start = breaks[j]
+            stop = breaks[j+1]
+            ax.plot(
+                x[start:stop], y[start:stop], color=colors[i]
+            )
+    ax.legend()
+    ax.set_ylim(0, )
+    ax.set_xlim(0, )
+    return ax
+
+
+def plot_map_seq(maps, ax=None, color="black", style="solid"):
+
+    if not ax:
+        fig, ax = plt.subplots(figsize=(8, 6), layout="constrained")
+        ax.grid(alpha=0.2)
+        ax.ylabel("cM")
+        ax.xlabel("position")
+
 
 
 """
