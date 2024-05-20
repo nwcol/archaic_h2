@@ -64,6 +64,7 @@ if __name__ == "__main__":
     )
 
     kwargs = {field: archive[field] for field in unique_fields}
+    kwargs["n_bins"] = len(r_bins) - 1
 
     # bootstrap H2
     for i in range(n_bins):

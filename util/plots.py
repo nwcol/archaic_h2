@@ -19,16 +19,18 @@ if __name__ == "__main__":
     data_path = "/home/nick/Projects/archaic/data"
     stat_path = "/home/nick/Projects/archaic/statistics"
 
-    sample_ids = ["Altai",
-                  "Chagyrskaya",
-                  "Denisova",
-                  "Vindija",
-                  "French-1",
-                  "Han-1",
-                  "Khomani_San-2",
-                  "Papuan-2",
-                  "Yoruba-1",
-                  "Yoruba-3"]
+    sample_ids = [
+        "Altai",
+        "Chagyrskaya",
+        "Denisova",
+        "Vindija",
+        "French-1",
+        "Han-1",
+        "Khomani_San-2",
+        "Papuan-2",
+        "Yoruba-1",
+        "Yoruba-3"
+    ]
 
     sample_colors = dict(
         zip(

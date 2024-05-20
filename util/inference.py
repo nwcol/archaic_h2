@@ -12,10 +12,10 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import moments
 import moments.Demes.Inference as moments_inference
+import time
 import pickle
 import yaml
 import os
-from two_locus import r, r_edges
 from util import file_util
 from util import plots
 
@@ -24,9 +24,17 @@ out_of_bounds_val = 1e10
 counter = 0
 
 
-def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
-             opt_method="fmin", approx_method="simpsons", u=1.35e-8,
-             verbose=True):
+def optimize(
+        graph_file_name,
+        params_file_name,
+        data,
+        r_bins,
+        max_iter=1_000,
+        opt_method="fmin",
+        approx_method="simpsons",
+        u=1.35e-8,
+        verbose=True,
+):
     """
     Optimize a demographic model.
 
@@ -40,6 +48,8 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
     :param u: generational mutation rate
     :return:
     """
+    t0 = time.time()
+
     # invert the covariance matrix
     sample_ids, means, covs = data
     inv_covs = [np.linalg.inv(cov) for cov in covs]
@@ -65,11 +75,11 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
         upper_bound,
         constraints,
         approx_method,
-        verbose
+        verbose,
     )
 
     # check to make sure opt_method is a valid choice
-    opt_methods = ["fmin", "lbfgsb"]
+    opt_methods = ["fmin", "BFGS", "LBFGSB"]
     if opt_method not in opt_methods:
         raise ValueError(f"method: {opt_method} is not in {opt_methods}")
 
@@ -84,9 +94,23 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
             maxfun=max_iter,
             full_output=True,
         )
-        params_opt, fopt, iter, fun_calls, warn_flag = out
+        params_opt, fopt, iter, funcalls, warnflag = out
 
-    elif opt_method == "lbfgsb":
+    elif opt_method == "BFGS":
+        out = scipy.optimize.minimize(
+            objective_fxn,
+            params_0,
+            args=opt_args,
+            method="BFGS",
+            options={"maxiter": max_iter}
+        )
+        params_opt = out.x
+        fopt = out.fun
+        iter = out.nit
+        funcalls = out.nfev
+        warnflag = out.status
+
+    elif opt_method == "LBFGSB":
         out = scipy.optimize.minimize(
             objective_fxn,
             params_0,
@@ -97,17 +121,31 @@ def optimize(graph_file_name, params_file_name, data, r_bins, max_iter=1_000,
         params_opt = out.x
         fopt = out.fun
         iter = out.nit
-        fun_calls = None
-        warn_flag = out.status
+        funcalls = out.nfev
+        warnflag = out.status
+
+    else:
+        return 1
 
     # build output graph using optimized parameters
     builder = moments_inference._update_builder(builder, options, params_opt)
     graph = demes.Graph.fromdict(builder)
 
+    # reset counter
     global counter
     counter = 0
 
-    return graph, param_names, params_opt, fopt, iter, fun_calls, warn_flag
+    out = {
+        "param_names": param_names,
+        "params_opt": params_opt,
+        "fopt": fopt,
+        "iter": iter,
+        "funcalls": funcalls,
+        "warnflag": warnflag,
+        "time_elapsed": time.time() - t0
+    }
+
+    return graph, out
 
 
 def objective_fxn(
@@ -121,7 +159,7 @@ def objective_fxn(
         upper_bound=None,
         constraints=None,
         approx_method="simpsons",
-        verbose=True
+        verbose=True,
 ):
     """
     Check validity of parameters within bounds and constraints, then evaluate
@@ -358,121 +396,6 @@ def subset_cov_matrix(cov_matrix, all_ids, subset_ids):
 
 
 """
-Setting up initial parameters and etc
-"""
-
-
-def uniform_random_params(graph_file_name, params_file_name):
-    """
-
-    :param graph_file_name:
-    :param params_file_name:
-    :param out_file_name:
-    :return:
-    """
-    # get demes graph dictionary and parameter dictionary
-    builder = moments_inference._get_demes_dict(graph_file_name)
-    options = moments_inference._get_params_dict(params_file_name)
-
-    # use existing moments functionality to get parameter bounds etc
-    param_names, params_0, lower_bound, upper_bound = \
-        moments_inference._set_up_params_and_bounds(options, builder)
-    constraints = moments_inference._set_up_constraints(options, param_names)
-
-    # draw parameter values uniformly randomly
-    constraints_satisfied = False
-    while not constraints_satisfied:
-        params = np.random.uniform(
-            lower_bound, upper_bound
-        )
-        if np.all(constraints(params) > 0):
-            constraints_satisfied = True
-
-    builder = moments_inference._update_builder(builder, options, params)
-    graph = demes.Graph.fromdict(builder)
-    return graph
-
-
-def build_pairwise_model(pop1_name, pop2_name, graph_file_name,
-                         params_file_name, time_units="years",
-                         generation_time=25):
-    """
-    Set up a graph defining a simple pairwise model with migration
-
-    parameters:
-    T divergence time
-    m migration rate
-    N_a ancestral N_e
-    N_1 population 1 N_e
-    N_2 population 2 N_e
-
-    :param pop1_name:
-    :param pop2_name:
-    :param graph_file_name:
-    :param params_file_name:
-    :param time_units:
-    :param generation_time:
-    :return:
-    """
-    init_m = 1e-5
-    init_T = 1e5
-    init_N = 1e4
-
-    # set up the graph
-    builder = demes.Builder(
-        time_units=time_units, generation_time=generation_time
-    )
-    builder.add_deme(
-        "ancestral", epochs=[{"end_time": init_T, "start_size": init_N}]
-    )
-    builder.add_deme(
-        pop1_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
-    )
-    builder.add_deme(
-        pop2_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
-    )
-    builder.add_migration(rate=init_m, demes=[pop1_name, pop2_name])
-    graph = builder.resolve()
-    demes.dump(graph, graph_file_name)
-
-    # set up parameters
-    param_dict = {
-        "parameters": [
-            get_param("T", "ancestral", "end_time", 1e2, 1e6),
-            get_param("N_a", "ancestral", "start_size", 1e2, 1e5),
-            get_param("N_1", pop1_name, "start_size", 1e2, 1e5),
-            get_param("N_2", pop2_name, "start_size", 1e2, 1e5),
-            {"name": "m", "values": [{"migrations": {0: "rate"}}],
-             "lower_bound": 0, "upper_bound": 1}
-        ]
-    }
-    with open(params_file_name, 'w') as file:
-        yaml.dump(param_dict, file)
-    return 0
-
-
-def get_param(name, deme, define, lower, upper):
-    """
-    Works only when you need to define a parameter that controls a single
-    value in the first epoch of a deme
-
-    :param name:
-    :param deme:
-    :param define:
-    :param lower:
-    :param upper:
-    :return:
-    """
-    param_dict = {
-        "name": name,
-        "values": [{"demes": {deme: {"epochs": {0: define}}}}],
-        "lower_bound": lower,
-        "upper_bound": upper
-    }
-    return param_dict
-
-
-"""
 Visualizing results of optimization
 """
 
@@ -512,14 +435,13 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
         for i, sample_id in enumerate(sample_ids):
             ax.errorbar(
                 x, emp_H2[:, i], yerr=stds[:-1, i], color=colors[i],
-                label=sample_id, fmt="x", capthick=2
+                label=sample_id, fmt="x", capsize=2
             )
             ax.plot(x, exp_H2[:, i], color=colors[i])
 
             if plot_H:
-                ax.errorbar(
-                    0.5, emp_H[i] ** 2, yerr=stds[-1, i] ** 2, color=colors[i],
-                    marker='x', capthick=2
+                ax.scatter(
+                    0.5, emp_H[i] ** 2,  color=colors[i], marker='x'
                 )
                 ax.scatter(0.5, exp_H[i] ** 2, color=colors[i], marker='+')
 
@@ -530,14 +452,13 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
             j = i + n_samples
             ax.errorbar(
                 x, emp_H2[:, j], yerr=stds[:-1, j], color=colors[i],
-                label=pair, fmt="x", capthick=2
+                label=pair, fmt="x", capsize=2
             )
             ax.plot(x, exp_H2[:, j], color=colors[i], linestyle="dotted")
 
             if plot_H:
-                ax.errorbar(
-                    0.5, emp_H[j] ** 2, yerr=stds[-1, j] ** 2, color=colors[i],
-                    marker='x', capthick=2
+                ax.scatter(
+                    0.5, emp_H[j] ** 2, color=colors[i], marker='x'
                 )
                 ax.scatter(0.5, exp_H[j] ** 2, color=colors[i], marker='+')
 
@@ -564,7 +485,39 @@ Loading and setting up bootstrap statistics
 """
 
 
-def read_data(boot_dir, sample_ids):
+def read_data(file_name, sample_ids):
+    """
+    Read bootstrap statistics from a .npz archive
+
+    :param file_name:
+    :param sample_ids:
+    :return:
+    """
+    archive = np.load(file_name)
+
+    sample_pairs = enumerate_pairs(sample_ids)
+    pair_strs = [f"{x},{y}" for (x, y) in sample_pairs]
+    all_samples = sample_ids + pair_strs
+    all_ids = list(
+        np.concatenate([archive["sample_ids"], archive["sample_pairs"]])
+    )
+    idx = np.array(
+        [all_ids.index(sample) for sample in all_samples]
+    )
+    n_bins = archive["n_bins"]
+    means = np.array(
+        [archive[f"H2_bin{i}_mean"][idx] for i in range(n_bins)]
+        + [archive["H_mean"][idx]]
+    )
+    mesh_idx = np.ix_(idx, idx)
+    covs = np.array(
+        [archive[f"H2_bin{i}_cov"][mesh_idx] for i in range(n_bins)]
+        + [archive["H_cov"][mesh_idx]]
+    )
+    return sample_ids, means, covs
+
+
+def read_data_dir(boot_dir, sample_ids):
     """
     Load bootstrap means (1d np arrays) and covariance matrices (2d np arrays)
     from a directory for a given set of sample_ids.
