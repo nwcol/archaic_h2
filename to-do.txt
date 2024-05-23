@@ -8,9 +8,11 @@ questions that can be asked about inference fxns:
         the spot at which convergence occurs
     with different initial parameters, do we tend to converge to the same spot or to various local maxima?
 
-- investigate the effectiveness of some different optimization routines and settle on one
 
-- write out everything needed to run pairwise inference from the terminal (figure out how the output is going to look)
+
+X- investigate the effectiveness of some different optimization routines and settle on one
+
+X- write out everything needed to run pairwise inference from the terminal (figure out how the output is going to look)
 
 - add timing to the pairwise inference and find a way to automate time assignments for the archaic demes
 
@@ -22,8 +24,25 @@ questions that can be asked about inference fxns:
 
 - really work out the plot functions/scripts and get automated plotting down nicely
 
+
+
+- learn about expectations of H2 and write methods to compute it analytically
+
+- write a fast optimization method
+
+- check the optimization approximation stuff and make sure it runs properly
+
+- go through the various parse functions and clean up, document, make sure things work
+
 - check two sample H2 parsing and just make sure it works as you understand it
 
+
+Week plan
+
+T: rewrite parse functions and verify that they work properly. write least squares inference method and test
+W: learn
+R:
+F:
 
 
 

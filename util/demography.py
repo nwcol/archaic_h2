@@ -82,7 +82,7 @@ def build_pair_params(
         deme_y,
         T_min=1e3,
         T_max=1e6,
-        N_A_min100,
+        N_A_min=100,
         N_A_max=1e5,
         N_min=100,
         N_max=1e5,
@@ -165,68 +165,6 @@ def get_random_params(graph, param_defines):
     return graph
 
 
-# OLD
-
-
-def build_pairwise_model(pop1_name, pop2_name, graph_file_name,
-                         params_file_name, time_units="years",
-                         generation_time=25):
-    """
-    Set up a graph defining a simple pairwise model with migration
-
-    parameters:
-    T divergence time
-    m migration rate
-    N_a ancestral N_e
-    N_1 population 1 N_e
-    N_2 population 2 N_e
-
-    :param pop1_name:
-    :param pop2_name:
-    :param graph_file_name:
-    :param params_file_name:
-    :param time_units:
-    :param generation_time:
-    :return:
-    """
-    init_m = 1e-5
-    init_T = 1e5
-    init_N = 1e4
-
-    # set up the graph
-    builder = demes.Builder(
-        time_units=time_units, generation_time=generation_time
-    )
-    builder.add_deme(
-        "ancestral", epochs=[{"end_time": init_T, "start_size": init_N}]
-    )
-    builder.add_deme(
-        pop1_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
-    )
-    builder.add_deme(
-        pop2_name, ancestors=["ancestral"], epochs=[{"start_size": init_N}]
-    )
-    builder.add_migration(rate=init_m, demes=[pop1_name, pop2_name])
-    graph = builder.resolve()
-    demes.dump(graph, graph_file_name)
-
-    # set up parameters
-    param_dict = {
-        "parameters": [
-            get_param("T", "ancestral", "end_time", 1e2, 1e6),
-            get_param("N_a", "ancestral", "start_size", 1e2, 1e5),
-            get_param("N_1", pop1_name, "start_size", 1e2, 1e5),
-            get_param("N_2", pop2_name, "start_size", 1e2, 1e5),
-            {"name": "m", "values": [{"migrations": {0: "rate"}}],
-             "lower_bound": 0, "upper_bound": 1}
-        ]
-    }
-    with open(params_file_name, 'w') as file:
-        yaml.dump(param_dict, file)
-    return 0
-
-
-
-
-
-
+"""
+Retrieving information from demes
+"""

@@ -3,15 +3,6 @@
 Parse statistics from a chromosome. Chromosome representations are constructed
 from three input types; a .vcf defining variant sites, a .bed mask defining
 coverage, and a .txt map file defining the recombination landscape.
-
-Emits a .npz file containing (X, Y are sample names)
-    sample_ids
-    r_bins
-    chroms
-    windows
-
-
-
 """
 
 import argparse
@@ -99,21 +90,8 @@ def one_locus_one_sample_H():
                 sample_set.count_het_sites(sample_id, window=window)
 
         counts[j] = sample_counts
-        #stat_name = f"{Abbrevs.one_locus_one_sample_het_counts}_{sample_id}"
-        #kwargs[stat_name] = sample_counts
-
-        # compute H
-        #if args.parse_site_counts:
-        #    site_counts = kwargs[Abbrevs.site_counts]
-        #    stat_name = f"{Abbrevs.one_locus_one_sample_H}_{sample_id}"
-        #    kwargs[stat_name] = sample_counts / site_counts
 
     kwargs[Abbrevs.one_locus_one_sample_het_counts] = counts
-
-    # compute H
-    #if args.parse_site_counts:
-    #    site_counts = kwargs[Abbrevs.site_counts]
-    #    kwargs[Abbrevs.one_locus_one_sample_H] = all_counts / site_counts
 
 
 def one_locus_two_sample_H():
@@ -124,26 +102,13 @@ def one_locus_two_sample_H():
         pair_counts = np.zeros(n_windows, dtype=np.float64)
 
         for i, window in enumerate(windows):
-            pair_counts[i] = sample_set.het_xy(sample_x, sample_y, window=window)
+            pair_counts[i] = sample_set.het_xy(
+                sample_x, sample_y, window=window
+            )
 
         counts[j] = pair_counts
-        #stat_name = (f"{Abbrevs.one_locus_two_sample_het_counts}"
-         #            f"_{sample_x},{sample_y}")
-        #kwargs[stat_name] = pair_counts
-
-        # compute H
-        #if args.parse_site_counts:
-        #    site_counts = kwargs[Abbrevs.site_counts]
-        #    stat_name = (f"{Abbrevs.one_locus_two_sample_H}"
-        #                 f"_{sample_x},{sample_y}")
-        #    kwargs[stat_name] = pair_counts / site_counts
 
     kwargs[Abbrevs.one_locus_two_sample_het_counts] = counts
-
-    # compute H
-    #if args.parse_site_counts:
-    #    site_counts = kwargs[Abbrevs.site_counts]
-    #    kwargs[Abbrevs.one_locus_two_sample_H] = all_counts / site_counts
 
 
 def two_locus_one_sample_H():
@@ -159,21 +124,8 @@ def two_locus_one_sample_H():
                 limit_right=right_lims[i]
             )
         counts[j] = sample_counts
-        #stat_name = f"{Abbrevs.two_locus_one_sample_het_counts}_{sample_id}"
-        #kwargs[stat_name] = sample_counts
-
-        # compute H2
-        #if args.parse_site_counts:
-        #    site_pairs = kwargs[Abbrevs.site_pair_counts]
-        #    stat_name = f"{Abbrevs.two_locus_one_sample_H}_{sample_id}"
-        #    kwargs[stat_name] = sample_counts / site_pairs
 
     kwargs[Abbrevs.two_locus_one_sample_het_counts] = counts
-
-    # compute H2
-    #if args.parse_site_counts:
-    #    site_pairs = kwargs[Abbrevs.site_pair_counts]
-    #    kwargs[Abbrevs.two_locus_one_sample_H] = all_counts / site_pairs
 
 
 def two_locus_two_sample_H():
@@ -189,21 +141,8 @@ def two_locus_two_sample_H():
                 limit_right=right_lims[i]
             )
         counts[j] = pair_counts
-        #stat_name = f"{Abbrevs.two_locus_two_sample_het_counts}_{sample_x},{sample_y}"
-        #kwargs[stat_name] = pair_counts
-
-        # compute H2
-        #if args.parse_site_counts:
-        #    site_pairs = kwargs[Abbrevs.site_pair_counts]
-        #    stat_name = f"{Abbrevs.two_locus_two_sample_H}_{sample_x},{sample_y}"
-        #   kwargs[stat_name] = pair_counts / site_pairs
 
     kwargs[Abbrevs.two_locus_two_sample_het_counts] = counts
-
-    # compute H2
-    #if args.parse_site_counts:
-    #    site_pairs = kwargs[Abbrevs.site_pair_counts]
-    #    kwargs[Abbrevs.two_locus_two_sample_H] = all_counts / site_pairs
 
 
 if __name__ == "__main__":
@@ -289,7 +228,6 @@ if __name__ == "__main__":
         "chroms": chrom_arr,
         "windows": windows
     }
-
     # site counting
     if args.parse_site_counts and args.parse_one_locus:
         count_sites()

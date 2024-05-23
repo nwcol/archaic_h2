@@ -79,7 +79,7 @@ def optimize(
     )
 
     # check to make sure opt_method is a valid choice
-    opt_methods = ["fmin", "BFGS", "LBFGSB"]
+    opt_methods = ["fmin", "BFGS", "LBFGSB", "LS"]
     if opt_method not in opt_methods:
         raise ValueError(f"method: {opt_method} is not in {opt_methods}")
 
@@ -123,6 +123,10 @@ def optimize(
         iter = out.nit
         funcalls = out.nfev
         warnflag = out.status
+
+    # least-squares
+    elif opt_method == "LS":
+        pass
 
     else:
         return 1
@@ -212,6 +216,67 @@ def objective_fxn(
     return -log_lik
 
 
+def LS_objective_fxn(
+        params,
+        builder,
+        data,
+        options,
+        r_bins,
+        u,
+        lower_bound=None,
+        upper_bound=None,
+        constraints=None,
+        approx_method="simpsons",
+        verbose=True,
+):
+    s = None
+
+    global counter
+    counter += 1
+
+    # bounds check
+    if lower_bound is not None and np.any(params < lower_bound):
+        s = out_of_bounds_val
+    elif upper_bound is not None and np.any(params > upper_bound):
+        s = out_of_bounds_val
+
+    # constraints check
+    elif constraints is not None and np.any(constraints(params) <= 0):
+        s = out_of_bounds_val
+
+    else:
+        # update builder and build graph
+        builder = moments_inference._update_builder(builder, options, params)
+        graph = demes.Graph.fromdict(builder)
+
+        # evaluate likelihood!
+        s = eval_LS(
+            graph, data, r_bins, u=u, approx_method=approx_method
+        )
+
+    # print summary
+    if verbose > 0 and counter % verbose == 0:
+        param_str = "array([%s])" % (", ".join(["%- 12g" % v for v in params]))
+        print("%-8i, %-12g, %s" % (counter, s, param_str))
+
+    return s
+
+
+def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
+
+    sample_ids, emp_means, emp_covs = data
+
+    H2, H = get_two_locus_stats(
+        graph, sample_ids, r_bins, u=u, approx_method="midpoint"
+    )
+
+    s = 0
+
+
+    return s
+
+
+
 def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
     """
     Compute the composite likelihood of a demes graph defining a demography,
@@ -284,7 +349,6 @@ def get_two_locus_stats(graph, sample_ids, r_bins, u,
         [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
         [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
     )
-
     return H2, H
 
 

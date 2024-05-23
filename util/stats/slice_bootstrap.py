@@ -1,5 +1,8 @@
 """
 Remove some bins from a bootstrap archive
+
+start is an inclusive bin index; stop is noninclusive
+eg 10:18 selects bins 10 to 17 corresponding to r edges 10 to 18
 """
 
 import argparse

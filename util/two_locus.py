@@ -1,267 +1,174 @@
 
-"""
-Functions for computing two-locus genetic statistics
-"""
-
+import gzip
 import numpy as np
-import os
-from util import maps
-from util import masks
+from util import one_locus
 
 
-os.environ["OMP_NUM_THREADS"] = "16"
+"""
+Read files
+"""
 
 
-def count_site_pairs(positions, site_map, r_bins, window=None,
-                     limit_right=False, bp_threshold=0, vectorized=False):
-    """
-    Count the number of site pairs in a window, subdivided into bins by
-    between-site recombination distance.
+def read_map_file(map_fname, map_col="Map(cM)"):
 
-    :param positions:
-    :param site_map:
-    :param r_bins: vector specifying bin edges in recombination frequency r
-    :param window: 2-tuple or 2-list specifying the interval of left loci
-        to parse; default None selects all positions
-    :param limit_right: if True, restrict the maximum right locus to equal
-        the maximum left locus (e.g., count only site pairs where both sites
-        are in the window)
-    :param bp_threshold: defines a minimum distance in bp between the left
-        and right loci; default 0
-    :param vectorized: if True, use a faster vectorized method to find site
-        pair counts. This method is inaccurate when the lowest r bin extends
-        to or near 0. [not sure how inaccurate yet]
-    :return:
-    """
-    # if no window, select the entire interval of positions
-    if window is None:
-        window = [positions[0], positions[-1] + 1]
-
-    # find min, max indices accessing left loci in the window
-    first_left_idx, last_left_idx = get_window_idxs(positions, window)
-    # find the max right index
-    if limit_right:
-        last_right_idx = last_left_idx
+    if ".gz" in map_fname:
+        open_fxn = gzip.open
     else:
-        last_right_idx = get_last_right_idx(site_map, last_left_idx, r_bins)
+        open_fxn = open
+    file = open_fxn(map_fname, "rb")
+    header = file.readline()
+    file.close()
+    header_fields = header.decode().strip('\n').split()
+    if "Position(bp)" in header_fields:
+        pos_idx = header_fields.index("Position(bp)")
+    else:
+        raise ValueError("There must be a 'Position(bp)' column!")
+    if map_col in header_fields:
+        map_idx = header_fields.index(map_col)
+    else:
+        raise ValueError(f"There must be a '{map_col}' column!")
+    map_positions = []
+    map_vals = []
+    with open_fxn(map_fname, "rb") as file:
+        for line_b in file:
+            line = line_b.decode()
+            fields = line.strip('\n').split('\t')
+            if "Position(bp)" not in fields:
+                map_positions.append(int(fields[pos_idx]))
+                map_vals.append(float(fields[map_idx]))
+    map_positions = np.array(map_positions)
+    map_vals = np.array(map_vals)
+    return map_positions, map_vals
 
-    # convert r bin edges into cM
-    d_edges = maps.r_to_d(r_bins)
 
-    # subset map, position vectors
-    window_map = site_map[first_left_idx:last_right_idx]
-    window_pos = positions[first_left_idx:last_right_idx]
+def get_map_vals(map_fname, positions, map_col="Map(cM)"):
 
-    n_left_loci = last_left_idx - first_left_idx
-    cum_counts = np.zeros(len(r_bins), dtype=np.int64)
+    map_pos, map_vals = read_map_file(map_fname, map_col=map_col)
+    if np.any(positions < map_pos[0]):
+        print("There are positions below map start")
+    if np.any(positions > map_pos[-1]):
+        print("There are positions beyond map end")
+    vals = np.interp(
+        positions, map_pos, map_vals, left=map_vals[0], right=map_vals[-1]
+    )
+    return vals
 
-    if not vectorized:
-        # loop over left loci
-        for left_idx in np.arange(n_left_loci):
-            if bp_threshold > 0:
-                min_right_idx = np.searchsorted(
-                        window_pos, window_pos[left_idx] + bp_threshold + 1
-                )
-            else:
-                min_right_idx = left_idx + 1
-            locus_edges = d_edges + window_map[left_idx]
-            cum_counts += np.searchsorted(
-                window_map[min_right_idx:], locus_edges
-            )
 
-    elif vectorized:
-        edges = window_map[:n_left_loci, np.newaxis] + d_edges[np.newaxis, :]
-        counts = np.searchsorted(window_map, edges)
+"""
+Map transformations
+"""
+
+
+def map_function(r_vals):
+    # r > d
+    return -50 * np.log(1 - 2 * r_vals)
+
+
+"""
+Compute statistics
+"""
+
+
+def count_site_pairs(map_vals, r_bins, positions=None, window=None,
+                     vectorized=False, bp_thresh=0, lim_right=False):
+    if bp_thresh:
+        if not np.any(positions):
+            raise ValueError("You must provide positions to use bp_thresh!")
+    d_bins = map_function(r_bins)
+    if np.any(window):
+        if not np.any(positions):
+            raise ValueError("You must provide positions to use a window!")
+        l_start, l_stop = one_locus.get_window_bounds(window, positions)
+        if lim_right:
+            r_stop = l_stop
+        else:
+            max_d = map_vals[l_stop - 1] + d_bins[-1]
+            r_stop = np.searchsorted(map_vals, max_d)
+        map_vals = map_vals[l_start:r_stop]
+        if bp_thresh:
+            positions = positions[l_start:r_stop]
+    else:
+        l_start = 0
+        l_stop = len(map_vals)
+    n_left_loci = l_stop - l_start
+    cum_counts = np.zeros(len(d_bins), dtype=np.int64)
+    if vectorized:
+        edges = map_vals[:n_left_loci, np.newaxis] + d_bins[np.newaxis, :]
+        counts = np.searchsorted(map_vals, edges)
+        # correction
         cum_counts = counts.sum(0)
-
+    else:
+        for i in np.arange(n_left_loci):
+            if bp_thresh > 0:
+                j = np.searchsorted(positions, positions[i] + bp_thresh + 1)
+            else:
+                j = i + 1
+            _bins = d_bins + map_vals[i]
+            cum_counts += np.searchsorted(map_vals[j:], _bins)
+            if i % 1e6 == 0:
+                print(f"locus {i} of {n_left_loci} loci")
     pair_counts = np.diff(cum_counts)
     return pair_counts
 
 
-def count_het_pairs(sample_set, sample_id, bin_edges, window=None,
-                    limit_right=False, bp_threshold=0):
-    """
-    Count the number of jointly heterozygous site pairs for a single sample
-    in a series of bins given in units of r.
-    """
-    if window is None:
-        window = sample_set.big_window
-    d_edges = maps.r_to_d(bin_edges)
-    het_sites = sample_set.het_sites(sample_id)
-    first_left_idx, last_left_idx = get_window_idxs(het_sites, window)
-    het_map = sample_set.het_map(sample_id)
-    if limit_right:
-        last_right_idx = last_left_idx
+def count_H2(genotypes, map_vals, r_bins, positions=None, window=None,
+             vectorized=False, bp_thresh=0, lim_right=False):
+
+    het_idx = one_locus.get_het_idx(genotypes)
+    het_map_vals = map_vals[het_idx]
+    if np.any(positions):
+        het_positions = positions[het_idx]
     else:
-        last_right_idx = get_last_right_idx(
-            het_map, last_left_idx, bin_edges
-        )
-    abbrev_map = het_map[first_left_idx:last_right_idx]
-    abbrev_pos = het_sites[first_left_idx:last_right_idx]
-    n_left_loci = last_left_idx - first_left_idx
-    cum_counts = np.zeros(len(bin_edges), dtype=np.int64)
-    #
-    for left_idx in np.arange(n_left_loci):
-        if bp_threshold > 0:
-            min_right_idx = np.searchsorted(
-                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
-            )
-        else:
-            min_right_idx = left_idx + 1
-        site_d_edges = d_edges + abbrev_map[left_idx]
-        cum_counts += np.searchsorted(abbrev_map[min_right_idx:], site_d_edges)
-    #
-    het_pair_counts = np.diff(cum_counts)
-    return het_pair_counts
-
-
-def count_per_site_het_pairs(sample_set, sample_id, bin_edges, window=None,
-                             limit_right=False, bp_threshold=0):
-    if not window:
-        window = sample_set.big_window
-    d_edges = maps.r_to_d(bin_edges)
-    het_sites = sample_set.het_sites(sample_id)
-    first_left_idx, last_left_idx = get_window_idxs(het_sites, window)
-    het_map = sample_set.het_map(sample_id)
-    if limit_right:
-        last_right_idx = last_left_idx
-    else:
-        last_right_idx = get_last_right_idx(
-            het_map, last_left_idx, bin_edges
-        )
-    abbrev_map = het_map[first_left_idx:last_right_idx]
-    abbrev_pos = het_sites[first_left_idx:last_right_idx]
-    n_left_loci = last_left_idx - first_left_idx
-    out = []
-    #
-    for left_idx in np.arange(n_left_loci):
-        if bp_threshold > 0:
-            min_right_idx = np.searchsorted(
-                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
-            )
-        else:
-            min_right_idx = left_idx + 1
-        site_d_edges = d_edges + abbrev_map[left_idx]
-        x = np.searchsorted(abbrev_map[min_right_idx:], site_d_edges)
-        out.append(np.diff(x))
-    #
-    return np.array(out)
-
-
-def count_per_site_site_pairs(sample_set, bin_edges, window=None,
-                              limit_right=False, bp_threshold=0):
-    if not window:
-        window = sample_set.big_window
-    first_left_idx, last_left_idx = get_window_idxs(
-        sample_set.positions, window
+        het_positions = None
+    H2_counts = count_site_pairs(
+        het_map_vals, r_bins, positions=het_positions, window=window,
+        vectorized=vectorized, bp_thresh=bp_thresh, lim_right=lim_right
     )
-    if limit_right:
-        last_right_idx = last_left_idx
-    else:
-        last_right_idx = get_last_right_idx(
-            sample_set.position_map, last_left_idx, bin_edges
-        )
-    d_edges = maps.r_to_d(bin_edges)
-    abbrev_map = sample_set.position_map[first_left_idx:last_right_idx]
-    abbrev_pos = sample_set.positions[first_left_idx:last_right_idx]
-    n_left_loci = last_left_idx - first_left_idx
-    out = []
-    #
-    for left_idx in np.arange(n_left_loci):
-        if bp_threshold > 0:
-            min_right_idx = np.searchsorted(
-                    abbrev_pos, abbrev_pos[left_idx] + bp_threshold + 1
-            )
+    return H2_counts
+
+
+def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
+               window=None, bp_thresh=0, lim_right=False):
+    # unphased, of course
+    if bp_thresh:
+        if not np.any(positions):
+            raise ValueError("You must provide positions to use bp_thresh!")
+    d_bins = map_function(r_bins)
+    if np.any(window):
+        if not np.any(positions):
+            raise ValueError("You must provide positions to use a window!")
+        l_start, l_stop = one_locus.get_window_bounds(window, positions)
+        if lim_right:
+            r_stop = l_stop
         else:
-            min_right_idx = left_idx + 1
-        locus_edges = d_edges + abbrev_map[left_idx]
-        out.append(np.searchsorted(abbrev_map[min_right_idx:], locus_edges))
-    #
-    out = np.array(out)
-    return np.diff(out, axis=1)
-
-
-def count_two_sample_het_pairs(sample_set, sample_id_x, sample_id_y, bin_edges,
-                               window=None, limit_right=False):
-    """
-    Compute the sums of probabilities of sampling distinct alleles at both
-    sites in site pairs between two samples, in bins given in units of r.
-
-    H_2_XY = Pr(distinct left alleles) * Pr(distinct right alleles)
-    """
-    if window is None:
-        window = sample_set.big_window
-    var_idx = sample_set.multi_sample_variant_idx(sample_id_x, sample_id_y)
-    first_left_idx, last_left_idx = get_window_idxs(
-        sample_set.variant_sites[var_idx], window
-    )
-    if limit_right:
-        last_right_idx = last_left_idx
+            max_d = map_vals[l_stop - 1] + d_bins[-1]
+            r_stop = np.searchsorted(map_vals, max_d)
+        map_vals = map_vals[l_start:r_stop]
+        genotypes_y = genotypes_y[l_start:r_stop]
+        genotypes_x = genotypes_x[l_start:r_stop]
+        if bp_thresh:
+            positions = positions[l_start:r_stop]
     else:
-        last_right_idx = get_last_right_idx(
-            sample_set.variant_site_map[var_idx], last_left_idx, bin_edges
-        )
-    slic = slice(first_left_idx, last_right_idx)
-    abbrev_map = sample_set.variant_site_map[var_idx][slic]
-    site_diff_probs = \
-        sample_set.site_diff_probs(sample_id_x, sample_id_y)[var_idx][slic]
-    site_diff_probs = np.append(site_diff_probs, 0)
-    precomputed = {
-        x: np.cumsum(x * site_diff_probs) for x in [0., 0.25, 0.5, 0.75, 1.]
-    }
-    d_edges = maps.r_to_d(bin_edges)
-    right_lims = np.searchsorted(abbrev_map, abbrev_map + d_edges[-1])
-    cum_counts = np.zeros(len(bin_edges), dtype=np.float64)
-    n_left_sites = last_left_idx - first_left_idx
-    #
-    for left_idx in np.arange(n_left_sites):
-        lim = right_lims[left_idx]
-        site_diff_prob = site_diff_probs[left_idx]
-        joint_diff_probs = precomputed[site_diff_prob][left_idx:lim]
-        site_d_edges = d_edges + abbrev_map[left_idx]
-        edges = np.searchsorted(abbrev_map[left_idx + 1:lim], site_d_edges)
-        cum_counts += joint_diff_probs[edges]
-    #
-    het_pair_counts = np.diff(cum_counts)
-    return het_pair_counts
-
-
-def get_window_idxs(pos, window):
-    """
-    Return the indices that access the first and last positions in a
-    given window. Upper position is noninclusive.
-    """
-    lower, upper = window
-    first_idx = np.searchsorted(pos, lower)
-    last_idx = np.searchsorted(pos, upper)
-    return first_idx, last_idx
-
-
-def get_last_right_idx(map_vec, last_left_idx, bin_edges):
-    """
-    Find the index of the rightmost right locus ~ noninclusive.
-    """
-    map_distance = maps.r_to_d(bin_edges)[-1]
-    left_map_val = map_vec[last_left_idx - 1]
-    right_map_val = left_map_val + map_distance
-    last_right_idx = np.searchsorted(map_vec, right_map_val)
-    return last_right_idx
-
-
-def compute_pseudo_corr(H, H_2):
-
-    corr = H_2 / H ** 2 - 1
-    return corr
-
-
-r_edges = np.array([0,
-                    1e-7, 2e-7, 5e-7,
-                    1e-6, 2e-6, 5e-6,
-                    1e-5, 2e-5, 5e-5,
-                    1e-4, 2e-4, 5e-4,
-                    1e-3, 2e-3, 5e-3,
-                    1e-2, 2e-2, 5e-2,
-                    1e-1], dtype=np.float64)
-
-r = r_edges[1:]
-
+        l_start = 0
+        l_stop = len(map_vals)
+    n_left_loci = l_stop - l_start
+    right_lims = np.searchsorted(map_vals, map_vals + d_bins[-1])
+    site_Hxy = new_one_locus.get_site_Hxy(genotypes_x, genotypes_y)
+    allowed_Hxy = np.array([0.25, 0.5, 0.75, 1])
+    precomputed_H2xy = np.cumsum(allowed_Hxy[:, np.newaxis] * site_Hxy, axis=1)
+    cum_counts = np.zeros(len(d_bins), dtype=np.float64)
+    for i in np.arange(n_left_loci):
+        if bp_thresh > 0:
+            j_min = np.searchsorted(positions, positions[i] + bp_thresh + 1)
+        else:
+            j_min = i + 1
+        j_max = right_lims[i]
+        left_Hxy = site_Hxy[i]
+        if left_Hxy > 0:
+            _bins = d_bins + map_vals[i]
+            edges = np.searchsorted(map_vals[j_min:j_max], _bins)
+            select = np.searchsorted(allowed_Hxy, left_Hxy)
+            locus_H2xy = precomputed_H2xy[select, i:j_max]
+            cum_counts += locus_H2xy[edges]
+    H2xy_counts = np.diff(cum_counts)
+    return H2xy_counts
