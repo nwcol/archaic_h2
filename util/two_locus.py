@@ -153,7 +153,7 @@ def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
         l_stop = len(map_vals)
     n_left_loci = l_stop - l_start
     right_lims = np.searchsorted(map_vals, map_vals + d_bins[-1])
-    site_Hxy = new_one_locus.get_site_Hxy(genotypes_x, genotypes_y)
+    site_Hxy = one_locus.get_site_Hxy(genotypes_x, genotypes_y)
     allowed_Hxy = np.array([0.25, 0.5, 0.75, 1])
     precomputed_H2xy = np.cumsum(allowed_Hxy[:, np.newaxis] * site_Hxy, axis=1)
     cum_counts = np.zeros(len(d_bins), dtype=np.float64)
@@ -172,3 +172,28 @@ def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
             cum_counts += locus_H2xy[edges]
     H2xy_counts = np.diff(cum_counts)
     return H2xy_counts
+
+
+def get_two_chromosome_H2(site_counts, H_counts):
+    # all in one r-bin; 0.5. iterates over all pairs. returns H2, not a count
+    n = len(site_counts)
+    if len(H_counts) != n:
+        raise ValueError("length mismatch")
+    n_pairs = int(n * (n - 1) / 2)
+    H2 = np.zeros(n_pairs)
+    for i, (j, k) in enumerate(one_locus.enumerate_indices(n)):
+        site_pair_count = site_counts[j] * site_counts[k]
+        H2_count = H_counts[j] * H_counts[k]
+        H2[i] = H2_count / site_pair_count
+    return H2
+
+
+"""
+Utilities
+"""
+
+
+def n_choose_2(n):
+
+    return int(n * (n - 1) * 0.5)
+

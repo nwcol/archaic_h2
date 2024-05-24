@@ -7,10 +7,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-from util.two_locus import r, r_edges
-from util import file_util
-from util import sample_sets
-from util import maps
 
 
 if __name__ == "__main__":

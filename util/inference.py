@@ -16,7 +16,6 @@ import time
 import pickle
 import yaml
 import os
-from util import file_util
 from util import plots
 
 
@@ -126,7 +125,16 @@ def optimize(
 
     # least-squares
     elif opt_method == "LS":
-        pass
+        out = scipy.optimize.fmin(
+            LS_objective_fxn,
+            params_0,
+            args=opt_args,
+            disp=True,
+            maxiter=max_iter,
+            maxfun=max_iter,
+            full_output=True,
+        )
+        params_opt, fopt, iter, funcalls, warnflag = out
 
     else:
         return 1
@@ -265,16 +273,13 @@ def LS_objective_fxn(
 def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
 
     sample_ids, emp_means, emp_covs = data
-
     H2, H = get_two_locus_stats(
-        graph, sample_ids, r_bins, u=u, approx_method="midpoint"
+        graph, sample_ids, r_bins, u=u, approx_method="right"
     )
-
-    s = 0
-
-
+    # exp_means = np.vstack([H2, H])
+    # s = np.square(exp_means - emp_means).sum()
+    s = np.sum(np.square(H2 - emp_means[:-1]))
     return s
-
 
 
 def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
@@ -309,7 +314,7 @@ def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons"):
     return composite_lik
 
 
-def get_two_locus_stats(graph, sample_ids, r_bins, u,
+def get_two_locus_stats(graph, sample_ids, r_bins, u=1.35e-8,
                         approx_method="simpsons"):
     """
     Get an array of expected statistics. Each array column corresponds to
@@ -390,7 +395,7 @@ def approximate_midpoints(arr, method="simpsons"):
     :param method:
     :return:
     """
-    methods = ["simpsons"]
+    methods = ["right", "midpoint", "simpsons"]
     if method not in methods:
         raise ValueError(
             f"{method} is not in methods: {methods}"

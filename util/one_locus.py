@@ -33,6 +33,17 @@ def mask_positions_from_regions(regions, first_idx=1):
     return positions
 
 
+def mask_regions_from_positions(positions, first_idx=1):
+
+    bool_mask = np.zeros(positions.max() - first_idx + 1)
+    bool_mask[positions - first_idx] = 1
+    jumps = np.diff(np.concatenate([np.array([0]), bool_mask, np.array([0])]))
+    starts = np.where(jumps == 1)[0]
+    stops = np.where(jumps == -1)[0]
+    regions = np.stack([starts, stops], axis=1)
+    return regions
+
+
 def read_mask_positions(mask_fname, first_idx=1):
 
     regions = read_mask_regions(mask_fname)

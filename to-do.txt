@@ -24,6 +24,9 @@ X- write out everything needed to run pairwise inference from the terminal (figu
 
 - really work out the plot functions/scripts and get automated plotting down nicely
 
+- make functions more verbose and nicer, like Aarons
+
+- build a library of pre-parsed map/etc combinations!
 
 
 - learn about expectations of H2 and write methods to compute it analytically
@@ -36,14 +39,13 @@ X- write out everything needed to run pairwise inference from the terminal (figu
 
 - check two sample H2 parsing and just make sure it works as you understand it
 
+- relationship between LD, H2
 
-Week plan
 
-T: rewrite parse functions and verify that they work properly. write least squares inference method and test
-W: learn
-R:
-F:
-
+Read:
+- Moments papers
+- Two locus statistic papers listed in Ragsdale 2019
+- F-statistic papers
 
 
 various side goals

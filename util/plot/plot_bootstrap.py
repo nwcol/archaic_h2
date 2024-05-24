@@ -4,8 +4,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-from util import plots
 from util.inference import read_data
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("archive_name")
+    parser.add_argument("out_prefix")
+    parser.add_argument("-y1", "--y_max1", type=float, default=4e-6)
+    parser.add_argument("-y2", "--y_max2", type=float, default=2e-7)
+    parser.add_argument("-c", "--ci", type=float, default=1.96)
+    return parser.parse_args()
 
 
 def plot(y, err, labels, styles=None):
@@ -26,14 +35,7 @@ def plot(y, err, labels, styles=None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("archive_name")
-    parser.add_argument("out_prefix")
-    parser.add_argument("-y1", "--y_max1", type=float, default=4e-6)
-    parser.add_argument("-y2", "--y_max2", type=float, default=2e-7)
-    parser.add_argument("-c", "--ci", type=float, default=1.96)
-    args = parser.parse_args()
-
+    args = get_args()
     archive = np.load(args.archive_name)
     sample_ids = list(archive["sample_ids"])
     sample_pairs = list(archive["sample_pairs"])

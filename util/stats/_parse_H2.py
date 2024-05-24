@@ -71,8 +71,7 @@ def count_site_pairs():
             r_bins,
             positions=mask_positions,
             window=window,
-            bp_thresh=args.bp_thresh,
-            lim_right=right_lims[i]
+            bp_thresh=args.bp_thresh
         )
     kwargs["site_pair_counts"] = site_pair_counts
     kwargs["n_site_pairs"] = site_pair_counts.sum()
@@ -116,8 +115,7 @@ def get_H2():
                 r_bins,
                 positions=vcf_pos,
                 window=window,
-                bp_thresh=args.bp_thresh,
-                lim_right=right_lims[j]
+                bp_thresh=args.bp_thresh
             )
     kwargs["H2_counts"] = counts
 
@@ -133,8 +131,7 @@ def get_H2xy():
                 vcf_map,
                 r_bins,
                 positions=vcf_pos,
-                window=window,
-                lim_right=right_lims[j]
+                window=window
             )
     kwargs["H2xy_counts"] = counts
 
