@@ -568,7 +568,7 @@ def read_data(file_name, sample_ids):
     pair_strs = [f"{x},{y}" for (x, y) in sample_pairs]
     all_samples = sample_ids + pair_strs
     all_ids = list(
-        np.concatenate([archive["sample_ids"], archive["sample_pairs"]])
+        np.concatenate([archive["sample_names"], archive["sample_pairs"]])
     )
     idx = np.array(
         [all_ids.index(sample) for sample in all_samples]

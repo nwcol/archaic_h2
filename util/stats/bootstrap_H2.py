@@ -6,11 +6,10 @@ the output distributions,
 
 import argparse
 import numpy as np
-from util.stats.parse_old import Abbrevs
 
 
 unique_fields = [
-    "sample_ids",
+    "sample_names",
     "sample_pairs",
     "r_bins"
 ]

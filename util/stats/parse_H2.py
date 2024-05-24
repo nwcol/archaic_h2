@@ -35,22 +35,15 @@ def get_args():
     return parser.parse_args()
 
 
-def window_discontinuity(windows):
-    """
-    Return a vector indicating whether the "lim_right" pair-counting parameter
-    should be true or false (it should be false unless the window is the last
-    window, or there is a discontinuity between it and the next window start)
+def get_right_bounds(windows):
 
-    :param windows:
-    :return:
-    """
     n_windows = len(windows)
-    indicator = np.full(n_windows, 0)
+    upper = windows[-1, 1]
+    bounds = np.full(n_windows, upper)
     for i in range(n_windows - 1):
         if windows[i, 1] < windows[i+1, 0]:
-            indicator[i] = 1
-    indicator[-1] = 1
-    return indicator
+            bounds[:i + 1] = windows[i, 1]
+    return bounds
 
 
 def count_sites():
@@ -72,7 +65,8 @@ def count_site_pairs():
             positions=mask_positions,
             window=window,
             bp_thresh=args.bp_thresh,
-            lim_right=right_lims[i]
+            upper_bound=right_bounds[i],
+            vectorized=True
         )
     kwargs["site_pair_counts"] = site_pair_counts
     kwargs["n_site_pairs"] = site_pair_counts.sum()
@@ -117,7 +111,7 @@ def get_H2():
                 positions=vcf_pos,
                 window=window,
                 bp_thresh=args.bp_thresh,
-                lim_right=right_lims[j]
+                upper_bound=right_bounds[j]
             )
     kwargs["H2_counts"] = counts
 
@@ -134,7 +128,7 @@ def get_H2xy():
                 r_bins,
                 positions=vcf_pos,
                 window=window,
-                lim_right=right_lims[j]
+                upper_bound=right_bounds[j]
             )
     kwargs["H2xy_counts"] = counts
 
@@ -142,6 +136,10 @@ def get_H2xy():
 if __name__ == "__main__":
     t0 = time.time()
     args = get_args()
+    print(
+        two_locus.get_time(),
+        f"loading files for chromosome {args.chromosome_number}"
+    )
     if args.window:
         windows = np.array(eval(args.window))
     elif args.window_fname:
@@ -150,7 +148,6 @@ if __name__ == "__main__":
         raise ValueError("you must provide windows!")
     if windows.ndim != 2:
         raise ValueError(f"windows must be dim2, but are dim{windows.ndim}")
-    right_lims = window_discontinuity(windows)
 
     if args.parse_two_locus:
         if args.r_bins:
@@ -171,6 +168,7 @@ if __name__ == "__main__":
     )
     pos_map = two_locus.get_map_vals(args.map_fname, mask_positions)
     vcf_map = two_locus.get_map_vals(args.map_fname, vcf_pos)
+    right_bounds = get_right_bounds(windows)
 
     if np.any(args.sample_names):
         sample_names = []
@@ -199,6 +197,10 @@ if __name__ == "__main__":
         "chroms": chrom_arr,
         "windows": windows
     }
+    print(
+        two_locus.get_time(),
+        f"files loaded for chromosome {args.chromosome_number}"
+    )
     if args.parse_site_counts and args.parse_one_locus:
         count_sites()
     if args.parse_site_counts and args.parse_two_locus:
@@ -214,4 +216,7 @@ if __name__ == "__main__":
     np.savez(args.out_fname, **kwargs)
     t = np.round(time.time() - t0, 0)
     time_now = time.strftime("%H:%M:%S", time.localtime())
-    print(f"chromosome {args.chromosome_number} parsed in\t{t} s\t@ {time_now}")
+    print(
+        two_locus.get_time(),
+        f"chromosome {args.chromosome_number} parsed in\t{t} s"
+    )

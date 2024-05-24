@@ -8,7 +8,7 @@ import numpy as np
 
 
 unique_fields = [
-    "sample_ids",
+    "sample_names",
     "sample_pairs",
     "r_bins"
 ]

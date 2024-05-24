@@ -15,14 +15,14 @@ def get_args():
     return parser.parse_args()
 
 
-def plot(y, err, labels, styles=None):
+def plot(y, labels, styles=None, marker=None):
     if not styles:
         styles = ["solid"] * len(labels)
     fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
     ax.grid(alpha=0.2)
     for i, label in enumerate(labels):
-        ax.errorbar(
-            r, y[i], yerr=err[i], color=colors[i], label=label, capsize=2,
+        ax.plot(
+            r, y[i], color=colors[i], label=label, marker=marker,
             linestyle=styles[i]
         )
     ax.set_xscale("log")
@@ -36,43 +36,45 @@ if __name__ == "__main__":
     args = get_args()
 
     archive = np.load(args.archive_name)
-    sample_ids = list(archive["sample_ids"])
+    sample_names = list(archive["sample_names"])
     sample_pairs = list(archive["sample_pairs"])
     r = archive["r_bins"][1:]
-    mean_H2 = archive["H2"]
-    mean_H = archive["H"]
-    n_samples = len(sample_ids)
+    n_samples = len(sample_names)
     n_pairs = len(sample_pairs)
     n = n_samples + n_pairs
     std_H2 = archive["window_H2"].std(1)
     yerrs = std_H2 * args.ci
 
-    colors = cm.nipy_spectral(np.linspace(0, 0.95, len(sample_ids)))
+    colors = cm.nipy_spectral(np.linspace(0, 0.95, len(sample_names)))
 
     # summary H2 plot
-    plot(mean_H2, yerrs[:, :n_samples], sample_ids)
+    plot(archive["H2"], sample_names)
+    plt.scatter([1] * n_samples, archive["H"] ** 2, color=colors, marker='x')
     plt.savefig(f"{args.out_prefix}H2_summary.png", dpi=200)
     plt.close()
 
     # archaic plot
     archaics = ["Altai", "Denisova", "Vindija", "Chagyrskaya"]
-    idx = np.searchsorted(sample_ids, archaics)
-    y_max = np.max(mean_H2[:, idx]) * 1.1
-    plot(means[:, idx], yerrs[:, idx], archaics)
+    idx = np.searchsorted(sample_names, archaics)
+    y_max = np.max(archive["H2"][:, idx]) * 1.1
+    plot(archive["H2"][idx], archaics)
     plt.ylim(0, y_max)
     plt.savefig(f"{args.out_prefix}H2_archaics.png", dpi=200)
     plt.close()
 
     # individual plots
-    all_ids = sample_ids + sample_pairs
-    for j, sample_id in enumerate(sample_ids):
-        idx = [i for i in np.arange(n) if sample_id in all_ids[i]]
+    all_ids = sample_names + sample_pairs
+    all_H = np.concatenate([archive["H"], archive["Hxy"]], axis=0)
+    all_H2 = np.concatenate([archive["H2"], archive["H2xy"]], axis=0)
+    for j, sample_name in enumerate(sample_names):
+        idx = [i for i in np.arange(n) if sample_name in all_ids[i]]
         # rearrange to retain id order
         idx.insert(j, idx.pop(0))
         idx = np.array(idx)
         ids = [all_ids[i] for i in idx]
         styles = ["dashed"] * n_samples
         styles[j] = "solid"
-        plot(means[:, idx], yerrs[:, idx], ids, styles=styles)
-        plt.savefig(f"{args.out_prefix}H2_{sample_id}.png", dpi=200)
+        plot(all_H2[idx], ids, styles=styles)
+        plt.scatter([1] * n_samples, all_H[idx], color=colors, marker='x')
+        plt.savefig(f"{args.out_prefix}H2_{sample_name}.png", dpi=200)
         plt.close()

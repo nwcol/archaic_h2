@@ -37,28 +37,28 @@ def plot(y, err, labels, styles=None):
 if __name__ == "__main__":
     args = get_args()
     archive = np.load(args.archive_name)
-    sample_ids = list(archive["sample_ids"])
+    sample_names = list(archive["sample_names"])
     sample_pairs = list(archive["sample_pairs"])
     r = archive["r_bins"][1:]
-    sample_ids, means, covs = read_data(args.archive_name, sample_ids)
+    sample_names, means, covs = read_data(args.archive_name, sample_names)
     means = means[:-1]  # remove H
     covs = covs[:-1]
-    n_samples = len(sample_ids)
+    n_samples = len(sample_names)
     n_pairs = len(sample_pairs)
     n = n_samples + n_pairs
     stds = np.sqrt(covs[:, np.arange(n), np.arange(n)])
     yerrs = stds * args.ci
 
-    colors = cm.nipy_spectral(np.linspace(0, 0.95, len(sample_ids)))
+    colors = cm.nipy_spectral(np.linspace(0, 0.95, len(sample_names)))
 
     # summary H2 plot
-    plot(means[:, :n_samples], yerrs[:, :n_samples], sample_ids)
+    plot(means[:, :n_samples], yerrs[:, :n_samples], sample_names)
     plt.savefig(f"{args.out_prefix}H2_summary.png", dpi=200)
     plt.close()
 
     # archaic plot
     archaics = ["Altai", "Denisova", "Vindija", "Chagyrskaya"]
-    idx = np.searchsorted(sample_ids, archaics)
+    idx = np.searchsorted(sample_names, archaics)
     y_max = np.max(means[:, idx]) * 1.1
     plot(means[:, idx], yerrs[:, idx], archaics)
     plt.ylim(0, y_max)
@@ -66,9 +66,9 @@ if __name__ == "__main__":
     plt.close()
 
     # individual plots
-    all_ids = sample_ids + sample_pairs
-    for j, sample_id in enumerate(sample_ids):
-        idx = [i for i in np.arange(n) if sample_id in all_ids[i]]
+    all_ids = sample_names + sample_pairs
+    for j, sample_name in enumerate(sample_names):
+        idx = [i for i in np.arange(n) if sample_name in all_ids[i]]
         # rearrange to retain id order
         idx.insert(j, idx.pop(0))
         idx = np.array(idx)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         styles = ["dashed"] * n_samples
         styles[j] = "solid"
         plot(means[:, idx], yerrs[:, idx], ids, styles=styles)
-        plt.savefig(f"{args.out_prefix}H2_{sample_id}.png", dpi=200)
+        plt.savefig(f"{args.out_prefix}H2_{sample_names}.png", dpi=200)
         plt.close()
 
 
