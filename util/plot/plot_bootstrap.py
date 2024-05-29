@@ -76,7 +76,7 @@ if __name__ == "__main__":
         styles = ["dashed"] * n_samples
         styles[j] = "solid"
         plot(means[:, idx], yerrs[:, idx], ids, styles=styles)
-        plt.savefig(f"{args.out_prefix}H2_{sample_names}.png", dpi=200)
+        plt.savefig(f"{args.out_prefix}H2_{sample_name}.png", dpi=200)
         plt.close()
 
 

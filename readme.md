@@ -1,1 +1,1 @@
-Project (under construction) to use simple demographic models to study ancient introgressions in human relatives
+A project to learn about ancient introgression among human lineages using two-locus genetic statistics. 

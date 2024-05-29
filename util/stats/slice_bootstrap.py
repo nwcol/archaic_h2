@@ -26,7 +26,7 @@ if __name__ == "__main__":
     kwargs = {
         "n_bins": n_bins,
         "r_bins": sliced_r,
-        "sample_ids": in_archive["sample_ids"],
+        "sample_names": in_archive["sample_names"],
         "sample_pairs": in_archive["sample_pairs"],
         "H_dist": in_archive["H_dist"],
         "H_mean": in_archive["H_mean"],

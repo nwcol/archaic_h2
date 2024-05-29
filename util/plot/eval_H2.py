@@ -1,4 +1,10 @@
 
+"""
+Usage:
+
+"""
+
+
 import argparse
 import demes
 import matplotlib.pyplot as plt
@@ -6,27 +12,23 @@ import numpy as np
 from util import inference
 
 
-if __name__ == "__main__":
+def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("archive_fname")
     parser.add_argument("graph_fname")
     parser.add_argument("out_fname")
-    parser.add_argument("-d", "--boot_archive", default=None)
-    args = parser.parse_args()
+    parser.add_argument("-m", "--name_map", type=str, nargs="*")
+    return parser.parse_args()
 
-    r = np.logspace(-6, -2, 41)
 
+if __name__ == "__main__":
+    args = get_args()
     graph = demes.load(args.graph_fname)
-    deme_names = [x.name for x in graph.demes if x.epochs[-1].end_time == 0]
-    sample_ids =
-
-    fig, ax = plt.subplots(figsize=(7, 6), layout="constrained")
-
-    if args.boot_archive:
-        data = inference.read_data_dir(args.boot_archive, sample_ids)
-        r = np.load(args.boot_archive)["r_bins"]
-        inference.plot()
-
-    else:
-        pass
-
-
+    sample_dict = {x.split(":")[0]: x.split(":")[1] for x in args.name_map}
+    sample_demes = list(sample_dict.keys())
+    sample_names = list(sample_dict.values())
+    data = inference.read_data(args.archive_fname, sample_names)
+    r_bins = np.load(args.archive_fname)["r_bins"]
+    _data = (sample_demes, data[1], data[2])
+    inference.plot(graph, _data, r_bins)
+    plt.savefig(args.out_fname, dpi=200, bbox_inches='tight')

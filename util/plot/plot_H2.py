@@ -58,7 +58,8 @@ if __name__ == "__main__":
     idx = np.searchsorted(sample_names, archaics)
     y_max = np.max(archive["H2"][:, idx]) * 1.1
     plot(archive["H2"][idx], archaics)
-    plt.ylim(0, y_max)
+    plt.scatter([1] * len(archaics), archive["H"][idx] ** 2, color=colors, marker='x')
+    plt.ylim(0, args.y_max2)
     plt.savefig(f"{args.out_prefix}H2_archaics.png", dpi=200)
     plt.close()
 

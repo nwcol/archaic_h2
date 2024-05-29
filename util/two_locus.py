@@ -71,7 +71,8 @@ Compute statistics
 
 
 def count_site_pairs(map_vals, r_bins, positions=None, window=None,
-                     vectorized=False, bp_thresh=0, upper_bound=None):
+                     vectorized=False, bp_thresh=0, upper_bound=None,
+                     verbose=2):
     if bp_thresh:
         if not np.any(positions):
             raise ValueError("You must provide positions to use bp_thresh!")
@@ -101,11 +102,10 @@ def count_site_pairs(map_vals, r_bins, positions=None, window=None,
         # correction on lowest bin
         if r_bins[0] == 0:
             n_redundant = np.sum(
-                np.arange(len(map_vals)) - np.searchsorted(map_vals, map_vals)
-            )
+                np.arange(n_left_loci)
+                - np.searchsorted(map_vals, map_vals[:n_left_loci])
+            ) + n_left_loci
             pair_counts[0] -= n_redundant
-            pair_counts[0] -= n_left_loci
-        print(get_time(), f"{n_left_loci} loci parsed [vectorized]")
     else:
         for i in np.arange(n_left_loci):
             if bp_thresh > 0:
@@ -115,15 +115,16 @@ def count_site_pairs(map_vals, r_bins, positions=None, window=None,
             _bins = d_bins + map_vals[i]
             cum_counts += np.searchsorted(map_vals[j:], _bins)
             if i % 1e6 == 0:
-                if n_left_loci > 1e6:
+                if n_left_loci > 1e6 and verbose == 2:
                     print(get_time(), f"locus {i} of {n_left_loci} loci")
         pair_counts = np.diff(cum_counts)
-    print(get_time(), f"loci at idx {l_start}:{l_stop}-{r_stop} parsed")
+    if verbose >= 1:
+        print(get_time(), f"loci at idx {l_start}:{l_stop}-{r_stop} parsed")
     return pair_counts
 
 
 def count_H2(genotypes, map_vals, r_bins, positions=None, window=None,
-             vectorized=False, bp_thresh=0, upper_bound=None):
+             vectorized=False, bp_thresh=0, upper_bound=None, verbose=1):
 
     het_idx = one_locus.get_het_idx(genotypes)
     het_map_vals = map_vals[het_idx]
@@ -133,13 +134,14 @@ def count_H2(genotypes, map_vals, r_bins, positions=None, window=None,
         het_positions = None
     H2_counts = count_site_pairs(
         het_map_vals, r_bins, positions=het_positions, window=window,
-        vectorized=vectorized, bp_thresh=bp_thresh, upper_bound=upper_bound
+        vectorized=vectorized, bp_thresh=bp_thresh, upper_bound=upper_bound,
+        verbose=verbose
     )
     return H2_counts
 
 
 def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
-               window=None, bp_thresh=0, upper_bound=None):
+               window=None, bp_thresh=0, upper_bound=None, verbose=True):
     # unphased, of course
     if bp_thresh:
         if not np.any(positions):
@@ -181,7 +183,8 @@ def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
             select = np.searchsorted(allowed_Hxy, left_Hxy)
             locus_H2xy = precomputed_H2xy[select, i:j_max]
             cum_counts += locus_H2xy[edges]
-    print(get_time(), f"H2xy parsed for {n_left_loci} loci")
+    if verbose:
+        print(get_time(), f"H2xy parsed for {n_left_loci} loci")
     H2xy_counts = np.diff(cum_counts)
     return H2xy_counts
 

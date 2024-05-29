@@ -9,54 +9,27 @@ questions that can be asked about inference fxns:
     with different initial parameters, do we tend to converge to the same spot or to various local maxima?
 
 
-
-X- investigate the effectiveness of some different optimization routines and settle on one
-
-X- write out everything needed to run pairwise inference from the terminal (figure out how the output is going to look)
-
-- add timing to the pairwise inference and find a way to automate time assignments for the archaic demes
-
-- write a higher-level apparatus for doing and evaluating pairwise demogs in parallel with randomly generated initial parameters
-
-- run a bunch of these
-
-- find some way of summarizing across runs and pairs! work towards the construction of a general model.
-
 - really work out the plot functions/scripts and get automated plotting down nicely
 
-- make functions more verbose and nicer, like Aarons
+- make functions more verbose and nicer
 
 - build a library of pre-parsed map/etc combinations!
 
-
 - learn about expectations of H2 and write methods to compute it analytically
 
-- write a fast optimization method
+- learn about the relationship between LD, H2! Review definitions of statistics that measure LD
 
-- check the optimization approximation stuff and make sure it runs properly
+- Understand the two locus recursion system
 
-- go through the various parse functions and clean up, document, make sure things work
+=> check the optimization approximation stuff and make sure it runs properly. clean up this file
+
+- decide what to do with the remaining complex classes for maps, masks
 
 - check two sample H2 parsing and just make sure it works as you understand it
 
-- relationship between LD, H2
-
 
 Read:
-- Moments papers
-- Two locus statistic papers listed in Ragsdale 2019
+- Moments and 2-locus papers [goal: understanding of moments, of LD in history, of two-locus statistics] [check out 2-locus papers cited in Ragsdale 2019]
 - F-statistic papers
-
-
-various side goals
-
-- think of smarter ways to process and save statistics. dont make huge leaps, but try to make things as clear and rational as possible
-
-- clean up the functions for loading bootstraps etc. Might still be advisable to find a better way to save the bootstrap arrays but dont worry too much about it
-
-- look at divergence, etc to estimate split times using one-locus stats and very simple models
-
-- keep improving the plot functions and trying to make them readable, pretty- reusable fxns
-
--improve and document Bed class
+- Papers about history (of course)
 

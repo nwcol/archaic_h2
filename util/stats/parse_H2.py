@@ -66,7 +66,8 @@ def count_site_pairs():
             window=window,
             bp_thresh=args.bp_thresh,
             upper_bound=right_bounds[i],
-            vectorized=True
+            vectorized=True,
+            verbose=1
         )
     kwargs["site_pair_counts"] = site_pair_counts
     kwargs["n_site_pairs"] = site_pair_counts.sum()
@@ -83,6 +84,7 @@ def get_H():
                 window=window
             )
     kwargs["H_counts"] = counts
+    print(two_locus.get_time(), f"H parsed")
 
 
 def get_Hxy():
@@ -97,6 +99,7 @@ def get_Hxy():
                 window=window
             )
     kwargs["Hxy_counts"] = counts
+    print(two_locus.get_time(), f"Hxy parsed")
 
 
 def get_H2():
@@ -111,9 +114,11 @@ def get_H2():
                 positions=vcf_pos,
                 window=window,
                 bp_thresh=args.bp_thresh,
-                upper_bound=right_bounds[j]
+                upper_bound=right_bounds[j],
+                verbose=0
             )
     kwargs["H2_counts"] = counts
+    print(two_locus.get_time(), f"H2 parsed")
 
 
 def get_H2xy():
@@ -128,9 +133,11 @@ def get_H2xy():
                 r_bins,
                 positions=vcf_pos,
                 window=window,
-                upper_bound=right_bounds[j]
+                upper_bound=right_bounds[j],
+                verbose=False
             )
     kwargs["H2xy_counts"] = counts
+    print(two_locus.get_time(), f"H2xy parsed")
 
 
 if __name__ == "__main__":

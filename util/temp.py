@@ -21,6 +21,12 @@ def n_choose_2(n):
     return int(n * (n - 1) * 0.5)
 
 
+def get_H(archive, sample_idx):
+
+    H = archive["H_counts"][sample_idx].sum() / archive["site_counts"].sum()
+    return H
+
+
 def get_H_squared(archive, sample_idx):
 
     H = archive["H_counts"][sample_idx].sum() / archive["site_counts"].sum()
@@ -46,6 +52,37 @@ def get_tot_H2(archive, sample_idx):
     site_pair_counts = archive["site_pair_counts"].sum()
     tot_H2 = archive["H2_counts"][sample_idx].sum() / site_pair_counts
     return tot_H2
+
+
+def get_proper_H_squared(archive, sample_idx):
+    # exclude cross-centromere pairings; eg (h_0 + h_1) / (s_0 + s_1)
+    chroms = archive["chroms"]
+    all_windows = archive["windows"]
+    all_h = archive["H_counts"][sample_idx]
+    all_s = archive["site_counts"]
+    H = []
+    for c in np.unique(chroms):
+        ind = chroms == c
+        h = all_h[ind]
+        s = all_s[ind]
+        windows = all_windows[ind]
+        bounds = get_right_bounds(windows)
+        # no centromere indicated by windows
+        if np.all(bounds == bounds[0]):
+            H.append(
+                n_choose_2(h.sum()) / n_choose_2(s.sum())
+            )
+        # centromere
+        else:
+            h_0 = h[bounds == bounds[0]].sum()
+            h_1 = h[bounds != bounds[0]].sum()
+            s_0 = s[bounds == bounds[0]].sum()
+            s_1 = s[bounds != bounds[0]].sum()
+            H.append(
+                (n_choose_2(h_0) + n_choose_2(h_1)) /
+                (n_choose_2(s_0) + n_choose_2(s_1))
+            )
+    return np.array(H)
 
 
 def window_discontinuity(windows):
@@ -124,10 +161,10 @@ def count_site_pairs(map_vals, r_bins, positions=None, window=None,
         # correction on lowest bin
         if r_bins[0] == 0:
             n_redundant = np.sum(
-                np.arange(len(map_vals)) - np.searchsorted(map_vals, map_vals)
-            )
+                np.arange(n_left_loci)
+                - np.searchsorted(map_vals, map_vals[:n_left_loci])
+            ) + n_left_loci
             pair_counts[0] -= n_redundant
-            pair_counts[0] -= n_left_loci
     else:
         for i in np.arange(n_left_loci):
             if bp_thresh > 0:
