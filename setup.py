@@ -6,8 +6,5 @@ setup(
     version="2024.1",
     author="Nick Collier",
     author_email="nwcollier@wisc.edu",
-    packages=["util"],
-    scripts=[
-        "util/scripts/simplify_vcf.py"
-    ]
+    packages=["archaic"],
 )
