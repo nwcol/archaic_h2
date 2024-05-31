@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument("-p", "--param_fname", required=True)
     parser.add_argument("-d", "--boot_archive", required=True)
     parser.add_argument("-o", "--out_prefix", required=True)
-    parser.add_argument("-n", "--name_map", type=str, nargs="*")
+    parser.add_argument("-n", "--name_map", type=str, nargs="*", default=[])
     parser.add_argument("-i", "--max_iter", type=int, default=1_000)
     parser.add_argument("-v", "--verbose", type=int, default=10)
     parser.add_argument("-r", "--opt_routine", type=str, default="fmin")
@@ -40,19 +40,6 @@ def get_args():
     parser.add_argument("-H", "--use_H", type=int, default=1)
     parser.add_argument("-l", "--log_scale", type=bool, default=False)
     return parser.parse_args()
-
-
-def map_names(name_map_strs):
-    # of the form deme_name:archive_sample_name
-    name_map = {}
-    for mapping in name_map_strs:
-        x, y = mapping.split(":")
-        name_map[x] = y
-    deme_names = list(name_map.keys())
-    sample_names = list(name_map.values())
-    print(name_map)
-    return name_map, deme_names, sample_names
-
 
 
 def get_name_map(all_deme_names):
@@ -68,6 +55,8 @@ def get_name_map(all_deme_names):
         if deme not in name_map.values():
             if deme in deme_to_sample:
                 name_map[deme_to_sample[deme]] = deme
+    if len(name_map) == 0:
+        raise ValueError("sample/deme name configuration selects 0 samples!")
     sample_names = list(name_map.keys())
     deme_names = list(name_map.values())
     return name_map, sample_names, deme_names
@@ -77,7 +66,8 @@ def main():
 
     graph = demes.load(args.graph_fname)
     all_deme_names = [deme.name for deme in graph.demes]
-    name_map, deme_names, sample_names = get_name_map(all_deme_names)
+    name_map, sample_names, deme_names = get_name_map(all_deme_names)
+    print(name_map)
     r_bins, data = inference.read_data(
         args.boot_archive, sample_names, get_H=args.use_H
     )
@@ -99,8 +89,11 @@ def main():
             file.write(str(x) + '\n')
     out_graph = opt[0]
     demes.dump(out_graph, f"{args.out_prefix}inferred.yaml")
+    r_bins, __data = inference.read_data(args.boot_archive, sample_names)
+    __data = inference.rename_data_samples(__data, name_map)
     inference.plot(
-        out_graph, _data, r_bins, u=args.u, log_scale=args.log_scale
+        out_graph, __data, r_bins, u=args.u, log_scale=args.log_scale,
+        use_H=args.use_H
     )
     plt.savefig(f"{args.out_prefix}fit.png", dpi=200, bbox_inches='tight')
     plt.close()

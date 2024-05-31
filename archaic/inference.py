@@ -3,7 +3,6 @@
 Functions for computing approx composite likelihoods and inferring demographies
 """
 
-from datetime import datetime
 import demes
 import demesdraw
 import numpy as np
@@ -11,8 +10,9 @@ import scipy
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import moments
-import moments.Demes.Inference as infer
+import moments.Demes.Inference as m_infer
 import time
+from archaic import utils
 
 
 out_of_bounds_val = 1e10
@@ -31,46 +31,27 @@ def optimize(
         verbose=True,
         use_H=True
 ):
-    """
-    Optimize a demographic model.
 
-    :param graph_file_name: path to .yaml file specifying initial demes model
-    :param params_file_name: path to .yaml options file defining parameters
-    :param r_bins: ndarray specifying r bin edges
-    :param data: tuple of (sample_ids, empirical means, empirical covariances)
-    :param max_iter:
-    :param opt_method:
-    :param approx_method: method to approximate H2 within each r bin
-    :param u: generational mutation rate
-    :param verbose:
-    :param use_H:
-    :return:
-    """
     t0 = time.time()
-
-    # invert the covariance matrix
-    sample_ids, means, covs = data
+    samples, pairs, means, covs = data
+    # repackage data
     inv_covs = [np.linalg.inv(cov) for cov in covs]
-    data = (sample_ids, means, inv_covs)
-
-    # get demes graph dictionary and parameter dictionary
-    builder = infer._get_demes_dict(graph_file_name)
-    options = infer._get_params_dict(params_file_name)
-
-    # use existing moments functionality to get parameter bounds etc
+    data = (samples, pairs, means, inv_covs)
+    # get graph, parameter dicts
+    builder = m_infer._get_demes_dict(graph_file_name)
+    options = m_infer._get_params_dict(params_file_name)
+    # get parameter bounds, constraints
     param_names, params_0, lower_bound, upper_bound = \
-        infer._set_up_params_and_bounds(options, builder)
-    constraints = infer._set_up_constraints(options, param_names)
-
-    param_str = "array([%s])" % (", ".join(["%- 10s" % v for v in param_names]))
-    print(get_time(), "%-8i, %-8g, %s" % (0, 0, param_str))
-
+        m_infer._set_up_params_and_bounds(options, builder)
+    constraints = m_infer._set_up_constraints(options, param_names)
+    r = get_r(r_bins, method=approx_method)
+    printout(0, 0, param_names, mode='s')
     # tuple of arguments to objective_fxn
     opt_args = (
         builder,
         data,
         options,
-        r_bins,
+        r,
         u,
         lower_bound,
         upper_bound,
@@ -92,7 +73,7 @@ def optimize(
             maxfun=max_iter,
             full_output=True,
         )
-        params_opt, fopt, iter, funcalls, warnflag = out
+        params_opt, fopt, iters, funcalls, warnflag = out
 
     elif opt_method == "BFGS":
         out = scipy.optimize.minimize(
@@ -104,7 +85,7 @@ def optimize(
         )
         params_opt = out.x
         fopt = out.fun
-        iter = out.nit
+        iters = out.nit
         funcalls = out.nfev
         warnflag = out.status
 
@@ -118,7 +99,7 @@ def optimize(
         )
         params_opt = out.x
         fopt = out.fun
-        iter = out.nit
+        iters = out.nit
         funcalls = out.nfev
         warnflag = out.status
 
@@ -132,23 +113,21 @@ def optimize(
             maxfun=max_iter,
             full_output=True,
         )
-        params_opt, fopt, iter, funcalls, warnflag = out
+        params_opt, fopt, iters, funcalls, warnflag = out
 
     else:
         return 1
 
     # build output graph using optimized parameters
-    builder = infer._update_builder(builder, options, params_opt)
+    builder = m_infer._update_builder(builder, options, params_opt)
     graph = demes.Graph.fromdict(builder)
-
     global counter
     counter = 0
-
     out = {
         "param_names": param_names,
         "params_opt": params_opt,
         "fopt": fopt,
-        "iter": iter,
+        "iter": iters,
         "funcalls": funcalls,
         "warnflag": warnflag,
         "time_elapsed": time.time() - t0
@@ -161,7 +140,7 @@ def objective_fxn(
         builder,
         data,
         options,
-        r_bins,
+        r,
         u,
         lower_bound=None,
         upper_bound=None,
@@ -170,28 +149,9 @@ def objective_fxn(
         verbose=True,
         use_H=True
 ):
-    """
-    Check validity of parameters within bounds and constraints, then evaluate
-    likelihood given a builder for a demes graph, a set of data (H, H2) in the
-    form of empirical means and covariances, and a mutation rate.
-
-    :param params:
-    :param builder:
-    :param data:
-    :param options:
-    :param r_bins:
-    :param u: generational mutation rate
-    :param lower_bound:
-    :param upper_bound:
-    :param constraints: function to check that parameter constraints are met
-    :param approx_method:
-    :return:
-    """
-    log_lik = None
 
     global counter
     counter += 1
-
     # bounds and constraints checks
     if lower_bound is not None and np.any(params < lower_bound):
         log_lik = -out_of_bounds_val
@@ -201,16 +161,138 @@ def objective_fxn(
         log_lik = -out_of_bounds_val
     else:
         # update builder and build graph
-        builder = infer._update_builder(builder, options, params)
+        builder = m_infer._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
         # evaluate likelihood!
         log_lik = eval_log_lik(
-            graph, data, r_bins, u=u, approx_method=approx_method, use_H=use_H
+            graph, data, r, u=u, approx_method=approx_method, use_H=use_H
         )
     if verbose > 0 and counter % verbose == 0:
-        param_str = "array([%s])" % (", ".join(["%- 10g" % v for v in params]))
-        print(get_time(), "%-8i, %-8g, %s" % (counter, log_lik, param_str))
+        printout(counter, log_lik, params)
     return -log_lik
+
+
+def printout(i, log_lik, params, mode='g'):
+    # used to print parameter names and parameter values
+    if mode == 'g':
+        param_str = "array([%s])" % (", ".join(["%- 10g" % v for v in params]))
+    elif mode == 's':
+        param_str = "array([%s])" % (", ".join(["%- 10s" % v for v in params]))
+    else:
+        param_str = ""
+    print(utils.get_time(), "%-8i, %-8g, %s" % (i, log_lik, param_str))
+
+
+def eval_log_lik(
+        graph,
+        data,
+        r_bins,
+        u=1.35e-8,
+        approx_method="simpsons",
+        use_H=True
+):
+
+    samples, pairs, H2, inv_cov = data
+    E_H2 = get_moments_stats(
+        graph, samples, pairs, r_bins, u=u, approx_method=approx_method,
+        get_H=use_H
+    )
+    E_H2 = [row for row in E_H2]
+    n = len(H2)
+    lik = sum([normal_log_lik(E_H2[i], inv_cov[i], H2[i]) for i in range(n)])
+    return lik
+
+
+def normal_log_lik(mu, inv_cov, x):
+    # requires that the covariance matrix is already inverted
+    log_lik = - (x - mu) @ inv_cov @ (x - mu)
+    return log_lik
+
+
+"""
+Getting expected statistics using moments.LD
+"""
+
+
+def get_moments_stats(graph, samples, pairs, r, u=1.35e-8, get_H=True,
+                      approx_method="simpsons"):
+
+    n_samples = len(samples)
+    ld_stats = moments.LD.LDstats.from_demes(
+        graph, sampled_demes=samples, theta=None, r=r, u=u
+    )
+    H2 = np.array(
+        [ld_stats.H2(samples, phased=True) for samples in samples] +
+        [ld_stats.H2(x, y, phased=False) for x, y in pairs]
+    ).T
+    H2 = approximate_H2(H2, method=approx_method)
+    if get_H:
+        idx_pairs = utils.get_pair_idxs(n_samples)
+        H = np.array(
+            [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
+            [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
+        )
+        H2 = np.vstack([H2, H])
+    return H2
+
+
+"""
+Numerical approximations
+"""
+
+
+approx_methods = [
+    "left_bound",
+    "right_bound",
+    "midpoint",
+    "simpsons"
+]
+
+
+def get_r(r_bins, method="simpsons"):
+    # get values of r as required by approximation method
+    if method not in approx_methods:
+        raise ValueError(f"{method} is not in methods: {approx_methods}")
+    if method == "left":
+        r = r_bins[:-1]
+    elif method == "right":
+        r = r_bins[1:]
+    elif method == "midpoint":
+        r = r_bins[:-1] + np.diff(r_bins) / 2
+    elif method == "simpsons":
+        midpoints = r_bins[:-1] + np.diff(r_bins) / 2
+        r = np.sort(np.concatenate([r_bins, midpoints]))
+    else:
+        r = None
+    return r
+
+
+def approximate_H2(arr, method="simpsons"):
+
+    if method not in approx_methods:
+        raise ValueError(f"{method} is not in methods: {approx_methods}")
+    if method == "left":
+        out = arr
+    elif method == "right":
+        out = arr
+    # elif method == "midpoint":
+    #    out = (arr[1:] + arr[:-1]) / 2
+    elif method == "midpoint":
+        out = arr
+    elif method == "simpsons":
+        n_rows = len(arr)
+        n_bins = (n_rows - 1) // 2
+        out = np.zeros((n_bins, arr.shape[1]))
+        for i in range(n_bins):
+            out[i] = 1 / 6 * (arr[i * 2] + 4 * arr[i * 2 + 1] + arr[i * 2 + 2])
+    else:
+        out = None
+    return out
+
+
+"""
+Least squares optimization
+"""
 
 
 def LS_objective_fxn(
@@ -241,18 +323,13 @@ def LS_objective_fxn(
     elif constraints is not None and np.any(constraints(params) <= 0):
         s = out_of_bounds_val
     else:
-        # update builder and build graph
-        builder = infer._update_builder(builder, options, params)
+        builder = m_infer._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
-
-        # evaluate likelihood!
         s = eval_LS(
             graph, data, r_bins, u=u, approx_method=approx_method
         )
-    # print summary
     if verbose > 0 and counter % verbose == 0:
-        param_str = "array([%s])" % (", ".join(["%- 12g" % v for v in params]))
-        print(get_time(), "%-8i, %-10g, %s" % (counter, s, param_str))
+        printout(counter, s, params)
     return s
 
 
@@ -260,195 +337,26 @@ def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
             use_H=True):
 
     sample_demes, H2, inv_cov = data
-    E_H2 = get_two_locus_stats(
+    E_H2 = get_moments_stats(
         graph, sample_demes, r_bins, u=u, approx_method="right", get_H=use_H
     )
     s = np.sum(np.square(H2 - E_H2))
     return s
 
 
-def eval_log_lik(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
-                 use_H=True):
-    """
-    Compute the composite likelihood of a demes graph defining a demography,
-    given empirical means and covariances obtained from sequence data and a
-    mutation rate u.
-
-    :param graph:
-    :param data:
-    :param r_bins:
-    :param u:
-    :param approx_method:
-    :param use_H:
-    :return:
-    """
-    sample_demes, H2, inv_cov = data
-
-    # compute expected H2 and H values given the demes graph
-    E_H2 = get_two_locus_stats(
-        graph, sample_demes, r_bins, u=u, approx_method=approx_method,
-        get_H=use_H
-    )
-    E_H2 = [row for row in E_H2]
-
-    # compute log likelihood with multivariate gaussian function
-    n = len(H2)
-    lik = 0
-    for i in range(n):
-        lik += pre_inverted_normal_log_lik(E_H2[i], inv_cov[i], H2[i])
-    return lik
-
-
-def get_two_locus_stats(graph, sample_demes, r_bins, u=1.35e-8,
-                        approx_method="simpsons", get_H=True):
-    """
-    Get an array of expected statistics. Each array column corresponds to
-    one r bin defined by r_bins except the last, which holds expected
-    heterozygosities. The order of entry along rows is thus;
-
-    sample_id_0, ... sample_id_n-1, sample_pair_0, ... sample_pair_n*(n-1)/2-1
-
-    :param graph:
-    :param sample_ids:
-    :param r_bins:
-    :param u:
-    :param approx_method: method for approximating H values along the curve
-    :return:
-    """
-    n_samples = len(sample_demes)
-    deme_pairs = enumerate_pairs(sample_demes)
-    r = get_r_points(r_bins, method=approx_method)
-    ld_stats = moments.LD.LDstats.from_demes(
-        graph, sampled_demes=sample_demes, theta=None, r=r, u=u
-    )
-    # get H2 and approximate its value in each r bin
-    H2 = np.array(
-        [ld_stats.H2(sample_id, phased=True) for sample_id in sample_demes] +
-        [ld_stats.H2(id_x, id_y, phased=False) for id_x, id_y in deme_pairs]
-    ).T
-    H2 = approximate_midpoints(H2, method=approx_method)
-    idx_pairs = enumerate_pairs(np.arange(n_samples))
-    if get_H:
-        H = np.array(
-            [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
-            [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
-        )
-        H2 = np.vstack([H2, H])
-    return H2
-
-
-def get_r_points(r_bins, method="simpsons"):
-    """
-    Return a vector of r-points for computing H2
-
-    :param r_bins:
-    :param method:
-    :return:
-    """
-    methods = [None, "right", "midpoint", "simpsons"]
-    if method not in methods:
-        raise ValueError(f"{method} is not in methods: {methods}")
-    if method == "right":
-        r = r_bins[1:]
-    elif method == "midpoint":
-        r = r_bins[:-1] + np.diff(r_bins) / 2
-    elif method == "simpsons":
-        midpoints = r_bins[:-1] + np.diff(r_bins) / 2
-        r = np.sort(np.concatenate([r_bins, midpoints]))
-    else:
-        return 1
-    return r
-
-
-def approximate_midpoints(arr, method="simpsons"):
-    """
-    Numerically approximate bin values across an array.
-
-    Note: different array sizes will interact differently with different
-    methods-
-
-    :param arr:
-    :param method:
-    :return:
-    """
-    methods = ["right", "midpoint", "simpsons"]
-    if method not in methods:
-        raise ValueError(
-            f"{method} is not in methods: {methods}"
-        )
-    if method == "right":
-        out = arr
-    elif method == "midpoint":
-        out = (arr[1:] + arr[:-1]) / 2
-    elif method == "simpsons":
-        n_rows = len(arr)
-        n_bins = (n_rows - 1) // 2
-        out = np.zeros((n_bins, arr.shape[1]))
-        for i in range(n_bins):
-            out[i] = 1 / 6 * (arr[i * 2] + 4 * arr[i * 2 + 1] + arr[i * 2 + 2])
-    else:
-        return 1
-    return out
-
-
-def pre_inverted_normal_log_lik(mu, inv_cov, x):
-    """
-
-    :param mu: vector of means
-    :param inv_cov: pre-inverted covariance matrix
-    :param x: vector of points
-    :return:
-    """
-    log_lik = - (x - mu) @ inv_cov @ (x - mu)
-    return log_lik
-
-
-def normal_log_lik(mu, cov, x):
-    """
-
-    :param mu: vector of means
-    :param cov: covariance matrix
-    :param x: vector of points
-    :return:
-    """
-    log_lik = - (x - mu) @ np.linalg.inv(cov) @ (x - mu)
-    return log_lik
-
-
-def enumerate_pairs(items):
-    """
-    Return a list of sorted 2-tuples containing every pair of objects in
-    'items'
-
-    :param items: list of objects
-    :return: list of 2-tuples of paired objects
-    """
-    n = len(items)
-    pairs = []
-    for i in np.arange(n):
-        for j in np.arange(i + 1, n):
-            pair = [items[i], items[j]]
-            pair.sort()
-            pairs.append((pair[0], pair[1]))
-    return pairs
-
-
 """
-Visualizing results of optimization
+Plotting results of optimization
 """
 
 
 def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
          two_sample=True, plot_demog=True, log_scale=False, use_H=True):
-
+    # it's expected that the data tuple has H in it
     one_sample_cm = cm.gnuplot
     two_sample_cm = cm.terrain
-
-    sample_names, means, covs = data
-    pair_names = enumerate_pairs(sample_names)
-    n_samples = len(sample_names)
-    n_pairs = len(pair_names)
-
+    samples, pairs, means, covs = data
+    n_samples = len(samples)
+    n_pairs = len(pairs)
     # retrieve empirical statistics and confidences
     H2 = np.array(means[:-1])
     H = means[-1]
@@ -456,50 +364,46 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
     stds = np.sqrt(np.array([cov[idx, idx] for cov in covs]))
     H_err = stds[-1] * ci
     H2_err = stds[:-1] * ci
-
     # compute expected statistics and log likelihood
-    E_H_stats = get_two_locus_stats(
-        graph, sample_names, r_bins, u=u, approx_method=approx_method
+    r = get_r(r_bins, method="midpoint")
+    _r = get_r(r_bins, method=approx_method)
+    E_H_stats = get_moments_stats(
+        graph, samples, pairs, r, u=u, approx_method="midpoint"
     )
     E_H2 = E_H_stats[:-1]
     E_H = E_H_stats[-1]
     if use_H:
-        _data = (sample_names, means, np.linalg.inv(covs))
+        _data = (samples, pairs, means, np.linalg.inv(covs))
     else:
-        _data = (sample_names, means[:-1], np.linalg.inv(covs))
+        _data = (samples, pairs, means[:-1], np.linalg.inv(covs[:-1]))
     log_lik = eval_log_lik(
-        graph, _data, r_bins, u=u, approx_method=approx_method, use_H=use_H
+        graph, _data, _r, u=u, approx_method=approx_method, use_H=use_H
     )
-    r = get_r_points(r_bins, method="midpoint")
     colors = list(one_sample_cm(np.linspace(0, 0.95, n_samples)))
     if plot_demog:
         fig, axs = plt.subplot_mosaic(
-            [["x", "y"], ["z", "z"]], figsize=(10, 8), layout="constrained"
+            [[0, 1], [2, 2]], figsize=(10, 8), layout="constrained"
         )
-        ax2 = axs["x"]
-        ax1 = axs["y"]
-        ax0 = axs["z"]
-        color_map = {name: colors[i] for i, name in enumerate(sample_names)}
-        plot_graph(ax2, graph, color_map)
+        ax0 = axs[0]
+        ax1 = axs[1]
+        ax2 = axs[2]
+        color_map = {name: colors[i] for i, name in enumerate(samples)}
+        plot_graph(ax0, graph, color_map)
     else:
-        fig, (ax0, ax1) = plt.subplots(
+        fig, (ax1, ax2) = plt.subplots(
             1, 2, figsize=(12, 6), layout="constrained", width_ratios=[1.5, 1]
         )
     if two_sample:
         colors += list(two_sample_cm(np.linspace(0, 0.90, n_pairs)))
-        sample_names += pair_names
-    plot_H2(ax0, r, H2, H2_err, E_H2, sample_names, colors)
-    plot_H(ax1, H, H_err, E_H, sample_names, colors)
-
-    fig.legend(fontsize=9, loc='center left', bbox_to_anchor=(1, 0.5))
-
+        samples += pairs
+    plot_H(ax1, H, H_err, E_H, samples, colors)
+    plot_H2(ax2, r, H2, H2_err, E_H2, samples, colors)
+    fig.legend(fontsize=10, loc='center left', bbox_to_anchor=(1, 0.5))
     if log_scale:
-        ax0.set_yscale("log")
+        ax2.set_yscale("log")
     else:
-        ax0.set_ylim(0, )
-
+        ax2.set_ylim(0, )
     fig.suptitle(f"log lik: {log_lik:.2e}")
-    return ax0, ax1
 
 
 def plot_H2(ax, r, H2, H2_err, E_H2, names, colors):
@@ -546,11 +450,6 @@ def plot_graph(ax, graph, color_map):
     return ax
 
 
-def get_time():
-
-    return " [" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
-
-
 """
 Loading and setting up bootstrap statistics
 """
@@ -558,34 +457,34 @@ Loading and setting up bootstrap statistics
 
 def rename_data_samples(data, name_map):
     # name map of form old: new
-    _names, means, covs = data
+    _names, _pairs, means, covs = data
     names = []
+    pairs = []
     for _name in _names:
         if _name in name_map:
             names.append(name_map[_name])
         else:
             names.append(_name)
-    return names, means, covs
+    for _pair in _pairs:
+        pair = []
+        for _name in _pair:
+            if _name not in names:
+                pair.append(name_map[_name])
+            else:
+                pair.append(_name)
+        pairs.append(tuple(pair))
+    return names, pairs, means, covs
 
 
-def read_data(file_name, sample_names, get_H=True):
-    """
-    Read bootstrap statistics from a .npz archive.
-
-    :param file_name:
-    :param sample_names:
-    :param get_H: if True, read heterozygosities from the archive and append
-        them to the data arrays
-    :return:
-    """
+def read_data(file_name, samples, get_H=True):
+    # read bootstrap statistics from a .npz archive.
     archive = np.load(file_name)
     r_bins = archive["r_bins"]
-    sample_pairs = enumerate_pairs(sample_names)
-    pair_names = [f"{x},{y}" for (x, y) in sample_pairs]
-    sample_names += pair_names
+    pairs = utils.get_pairs(samples)
     all_names = list(archive["sample_names"]) + list(archive["sample_pairs"])
     idx = np.array(
-        [all_names.index(sample) for sample in sample_names]
+        [all_names.index(sample) for sample in samples]
+        + [all_names.index(f"{x},{y}") for x, y in pairs]
     )
     n_bins = archive["n_bins"]
     means = [archive[f"H2_bin{i}_mean"][idx] for i in range(n_bins)]
@@ -594,7 +493,7 @@ def read_data(file_name, sample_names, get_H=True):
     if get_H:
         means += [archive["H_mean"][idx]]
         covs += [archive["H_cov"][mesh_idx]]
-    return r_bins, (sample_names, np.array(means), np.array(covs))
+    return r_bins, (samples, pairs, np.array(means), np.array(covs))
 
 
 """
