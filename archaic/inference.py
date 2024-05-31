@@ -3,6 +3,7 @@
 Functions for computing approx composite likelihoods and inferring demographies
 """
 
+from datetime import datetime
 import demes
 import demesdraw
 import numpy as np
@@ -60,6 +61,9 @@ def optimize(
     param_names, params_0, lower_bound, upper_bound = \
         infer._set_up_params_and_bounds(options, builder)
     constraints = infer._set_up_constraints(options, param_names)
+
+    param_str = "array([%s])" % (", ".join(["%- 10s" % v for v in param_names]))
+    print(get_time(), "%-8i, %-8g, %s" % (0, 0, param_str))
 
     # tuple of arguments to objective_fxn
     opt_args = (
@@ -204,8 +208,8 @@ def objective_fxn(
             graph, data, r_bins, u=u, approx_method=approx_method, use_H=use_H
         )
     if verbose > 0 and counter % verbose == 0:
-        param_str = "array([%s])" % (", ".join(["%- 12g" % v for v in params]))
-        print("%-8i, %-12g, %s" % (counter, log_lik, param_str))
+        param_str = "array([%s])" % (", ".join(["%- 10g" % v for v in params]))
+        print(get_time(), "%-8i, %-8g, %s" % (counter, log_lik, param_str))
     return -log_lik
 
 
@@ -233,11 +237,9 @@ def LS_objective_fxn(
         s = out_of_bounds_val
     elif upper_bound is not None and np.any(params > upper_bound):
         s = out_of_bounds_val
-
     # constraints check
     elif constraints is not None and np.any(constraints(params) <= 0):
         s = out_of_bounds_val
-
     else:
         # update builder and build graph
         builder = infer._update_builder(builder, options, params)
@@ -247,12 +249,10 @@ def LS_objective_fxn(
         s = eval_LS(
             graph, data, r_bins, u=u, approx_method=approx_method
         )
-
     # print summary
     if verbose > 0 and counter % verbose == 0:
         param_str = "array([%s])" % (", ".join(["%- 12g" % v for v in params]))
-        print("%-8i, %-12g, %s" % (counter, s, param_str))
-
+        print(get_time(), "%-8i, %-10g, %s" % (counter, s, param_str))
     return s
 
 
@@ -439,7 +439,7 @@ Visualizing results of optimization
 
 
 def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
-         two_sample=True, plot_demog=True):
+         two_sample=True, plot_demog=True, log_scale=False, use_H=True):
 
     one_sample_cm = cm.gnuplot
     two_sample_cm = cm.terrain
@@ -463,9 +463,12 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
     )
     E_H2 = E_H_stats[:-1]
     E_H = E_H_stats[-1]
-    _data = (sample_names, means, np.linalg.inv(covs))
+    if use_H:
+        _data = (sample_names, means, np.linalg.inv(covs))
+    else:
+        _data = (sample_names, means[:-1], np.linalg.inv(covs))
     log_lik = eval_log_lik(
-        graph, _data, r_bins, u=u, approx_method=approx_method
+        graph, _data, r_bins, u=u, approx_method=approx_method, use_H=use_H
     )
     r = get_r_points(r_bins, method="midpoint")
     colors = list(one_sample_cm(np.linspace(0, 0.95, n_samples)))
@@ -490,6 +493,11 @@ def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
 
     fig.legend(fontsize=9, loc='center left', bbox_to_anchor=(1, 0.5))
 
+    if log_scale:
+        ax0.set_yscale("log")
+    else:
+        ax0.set_ylim(0, )
+
     fig.suptitle(f"log lik: {log_lik:.2e}")
     return ax0, ax1
 
@@ -507,7 +515,6 @@ def plot_H2(ax, r, H2, H2_err, E_H2, names, colors):
             label=name, capsize=0
         )
         ax.plot(r, E_H2[:, i], color=colors[i], linestyle=style)
-    ax.set_ylim(0, )
     ax.set_xscale("log")
     ax.set_ylabel("$H_2$")
     ax.set_xlabel("r")
@@ -522,7 +529,7 @@ def plot_H(ax, H, H_err, E_H, names, colors):
         if type(name) == str:
             name = name[:3]
         else:
-            name = f"{name[0][:3]}-{name[0][:3]}"
+            name = f"{name[0][:3]}-{name[1][:3]}"
         abbrev_names.append(name)
         ax.errorbar(i, H[i], yerr=H_err[i], color=colors[i], fmt='.')
         ax.scatter(i, E_H[i], color=colors[i], marker='+')
@@ -539,15 +546,26 @@ def plot_graph(ax, graph, color_map):
     return ax
 
 
+def get_time():
+
+    return " [" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
+
+
 """
 Loading and setting up bootstrap statistics
 """
 
 
-def map_sample_names(data, name_map):
-
-
-    return 0
+def rename_data_samples(data, name_map):
+    # name map of form old: new
+    _names, means, covs = data
+    names = []
+    for _name in _names:
+        if _name in name_map:
+            names.append(name_map[_name])
+        else:
+            names.append(_name)
+    return names, means, covs
 
 
 def read_data(file_name, sample_names, get_H=True):
@@ -561,6 +579,7 @@ def read_data(file_name, sample_names, get_H=True):
     :return:
     """
     archive = np.load(file_name)
+    r_bins = archive["r_bins"]
     sample_pairs = enumerate_pairs(sample_names)
     pair_names = [f"{x},{y}" for (x, y) in sample_pairs]
     sample_names += pair_names
@@ -575,21 +594,7 @@ def read_data(file_name, sample_names, get_H=True):
     if get_H:
         means += [archive["H_mean"][idx]]
         covs += [archive["H_cov"][mesh_idx]]
-    return sample_names, np.array(means), np.array(covs)
-
-
-def subset_cov_matrix(cov_matrix, all_ids, subset_ids):
-    """
-
-    :param cov_matrix:
-    :param all_ids:
-    :param subset_ids:
-    :return:
-    """
-    idx = np.array([all_ids.index(x) for x in subset_ids])
-    mesh_idx = np.ix_(idx, idx)
-    subset_matrix = cov_matrix[mesh_idx]
-    return subset_matrix
+    return r_bins, (sample_names, np.array(means), np.array(covs))
 
 
 """

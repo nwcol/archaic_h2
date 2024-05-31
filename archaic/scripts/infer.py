@@ -1,55 +1,87 @@
 
-"""
-You must provide a mapping between sample ids and deme names of the form
--m sample0:deme0 sample1:deme1 ...
-"""
-
 import argparse
 import demes
-import demesdraw
 import matplotlib.pyplot as plt
 import numpy as np
-from util import inference
+from archaic import inference
 
 
-if __name__ == "__main__":
+deme_to_sample = {
+    "Altai": "Altai",
+    "Chagyrskaya": "Chagyrskaya",
+    "Vindija": "Vindija",
+    "Denisova": "Denisova",
+    "Denisovan": "Denisova",
+    "Yoruba": "Yoruba-1",
+    "Yoruba1": "Yoruba-1",
+    "Yoruba3": "Yoruba-3",
+    "KhomaniSan": "Khomani_San-2",
+    "Khomani_San": "Khomani_San-2",
+    "Papuan": "Papuan-2",
+    "French": "French-1",
+    "Han": "Han-1"
+}
+generic_samples = list(deme_to_sample.values())
+generic_demes = list(deme_to_sample.keys())
+
+
+def get_args():
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("graph_fname")
-    parser.add_argument("param_fname")
-    parser.add_argument("boot_archive")
-    parser.add_argument("out")
-    parser.add_argument("-m", "--name_map", type=str, nargs="*")
-    parser.add_argument("-i", "--max_iter", type=int, default=2_000)
-    parser.add_argument("-v", "--verbose", type=int, default=5)
+    parser.add_argument("-g", "--graph_fname", required=True)
+    parser.add_argument("-p", "--param_fname", required=True)
+    parser.add_argument("-d", "--boot_archive", required=True)
+    parser.add_argument("-o", "--out_prefix", required=True)
+    parser.add_argument("-n", "--name_map", type=str, nargs="*")
+    parser.add_argument("-i", "--max_iter", type=int, default=1_000)
+    parser.add_argument("-v", "--verbose", type=int, default=10)
     parser.add_argument("-r", "--opt_routine", type=str, default="fmin")
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
-    parser.add_argument("-H", "--use_H", type=bool, default=True)
-    args = parser.parse_args()
+    parser.add_argument("-H", "--use_H", type=int, default=1)
+    parser.add_argument("-l", "--log_scale", type=bool, default=False)
+    return parser.parse_args()
 
-    # map graph populations to sample ids. form deme_name:sample_name
-    sample_dict = {x.split(":")[0]: x.split(":")[1] for x in args.name_map}
-    sample_demes = list(sample_dict.keys())
-    sample_names = list(sample_dict.values())
 
-    all_ids = np.load(args.boot_archive)["sample_names"]
-    for sample_name in sample_names:
-        if sample_name not in all_ids:
-            raise ValueError(f"sample {sample_name} isn't in the given archive!")
+def map_names(name_map_strs):
+    # of the form deme_name:archive_sample_name
+    name_map = {}
+    for mapping in name_map_strs:
+        x, y = mapping.split(":")
+        name_map[x] = y
+    deme_names = list(name_map.keys())
+    sample_names = list(name_map.values())
+    print(name_map)
+    return name_map, deme_names, sample_names
+
+
+
+def get_name_map(all_deme_names):
+    # get the names that need to be loaded from data. form samples: demes
+    name_map = {}
+    arg_map = {x: y for x, y in [m.split(':') for m in args.name_map]}
+    for deme in arg_map:
+        if deme in all_deme_names:
+            name_map[arg_map[deme]] = deme
+        else:
+            raise ValueError(f"deme {deme} is not present in the graph!")
+    for deme in all_deme_names:
+        if deme not in name_map.values():
+            if deme in deme_to_sample:
+                name_map[deme_to_sample[deme]] = deme
+    sample_names = list(name_map.keys())
+    deme_names = list(name_map.values())
+    return name_map, sample_names, deme_names
+
+
+def main():
 
     graph = demes.load(args.graph_fname)
-    deme_names = [deme.name for deme in graph.demes]
-    for sample_deme in sample_demes:
-        if sample_deme not in deme_names:
-            raise ValueError(f"deme {sample_deme} isn't in the given graph!")
-
-    # load stuff up and run the inference
-    r_bins = np.load(args.boot_archive)["r_bins"]
-    data = inference.read_data(args.boot_archive, sample_names, get_H=args.use_H)
-
-    print(sample_names)
-    print(sample_demes)
-
-    _data = (sample_demes, data[1], data[2])
+    all_deme_names = [deme.name for deme in graph.demes]
+    name_map, deme_names, sample_names = get_name_map(all_deme_names)
+    r_bins, data = inference.read_data(
+        args.boot_archive, sample_names, get_H=args.use_H
+    )
+    _data = inference.rename_data_samples(data, name_map)
     opt = inference.optimize(
         args.graph_fname,
         args.param_fname,
@@ -61,18 +93,19 @@ if __name__ == "__main__":
         u=args.u,
         use_H=args.use_H
     )
-    out_graph = opt[0]
-    name_dict = {x: sample_dict[x].replace("-", "").replace("_", "")
-                 for x in sample_dict}
-    demes.dump(out_graph, f"{args.out}inferred.yaml")
-    with open(f"{args.out}log.txt", 'w') as file:
+    with open(f"{args.out_prefix}log.txt", 'w') as file:
+        file.write(str(name_map) + '\n')
         for x in opt:
-            file.write(str(x) + "\n")
-    # demesdraw.tubes(out_graph)
-    # plt.savefig(f"{args.out}demes.png", dpi=200)
-    # plt.close()
-    __data = (list(name_dict.values()), data[1], data[2])
-    _graph = out_graph.rename_demes(name_dict)
-    inference.plot(_graph, __data, r_bins, u=args.u)
-    plt.savefig(f"{args.out}fit.png", dpi=200, bbox_inches='tight')
+            file.write(str(x) + '\n')
+    out_graph = opt[0]
+    demes.dump(out_graph, f"{args.out_prefix}inferred.yaml")
+    inference.plot(
+        out_graph, _data, r_bins, u=args.u, log_scale=args.log_scale
+    )
+    plt.savefig(f"{args.out_prefix}fit.png", dpi=200, bbox_inches='tight')
     plt.close()
+
+
+if __name__ == "__main__":
+    args = get_args()
+    main()

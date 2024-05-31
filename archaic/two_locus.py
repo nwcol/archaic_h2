@@ -2,7 +2,7 @@
 from datetime import datetime
 import gzip
 import numpy as np
-from util import one_locus
+from archaic import one_locus
 
 
 """

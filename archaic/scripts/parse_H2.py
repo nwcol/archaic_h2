@@ -8,8 +8,9 @@ coverage, and a .txt map file defining the recombination landscape.
 import argparse
 import numpy as np
 import time
-from util import one_locus
-from util import two_locus
+from archaic import masks
+from archaic import one_locus
+from archaic import two_locus
 
 
 def get_args():
@@ -168,8 +169,8 @@ if __name__ == "__main__":
         r_bins = None
         n_bins = 0
 
-    mask_regions = one_locus.read_mask_regions(args.mask_fname)
-    mask_positions = one_locus.mask_positions_from_regions(mask_regions)
+    mask_regions = masks.read_mask_regions(args.mask_fname)
+    mask_positions = masks.regions_to_positions(mask_regions)
     vcf_pos, vcf_sample_names, genotypes = one_locus.read_vcf_file(
         args.vcf_fname, mask_regions=mask_regions
     )

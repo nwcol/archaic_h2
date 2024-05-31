@@ -8,53 +8,6 @@ Read files
 """
 
 
-def read_mask_regions(mask_fname):
-
-    regions = []
-    if ".gz" in mask_fname:
-        open_fxn = gzip.open
-    else:
-        open_fxn = open
-    with open_fxn(mask_fname, "rb") as file:
-        for line in file:
-            _, start, stop = line.decode().strip('\n').split('\t')
-            if start.isnumeric():
-                regions.append([int(start), int(stop)])
-    return np.array(regions)
-
-
-def mask_positions_from_regions(regions, first_idx=1):
-
-    bool_mask = np.zeros(regions.max())
-    for start, stop in regions:
-        bool_mask[start:stop] = True
-    positions = np.nonzero(bool_mask)[0]
-    positions += first_idx
-    return positions
-
-
-def mask_regions_from_positions(positions, first_idx=1):
-
-    bool_mask = np.zeros(positions.max() - first_idx + 1)
-    bool_mask[positions - first_idx] = 1
-    jumps = np.diff(np.concatenate([np.array([0]), bool_mask, np.array([0])]))
-    starts = np.where(jumps == 1)[0]
-    stops = np.where(jumps == -1)[0]
-    regions = np.stack([starts, stops], axis=1)
-    return regions
-
-
-def read_mask_positions(mask_fname, first_idx=1):
-
-    regions = read_mask_regions(mask_fname)
-    bool_mask = np.zeros(regions.max())
-    for [start, stop] in regions:
-        bool_mask[start:stop] = True
-    positions = np.nonzero(bool_mask)[0]
-    positions += first_idx
-    return positions
-
-
 def read_vcf_file(vcf_fname, mask_regions=None):
 
     pos_idx = 1
