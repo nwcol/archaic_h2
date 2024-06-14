@@ -5,14 +5,7 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import msprime
 import numpy as np
-
-
-linestyles = [
-    "solid",
-    "dashed",
-    "dotted",
-    "dashdot"
-]
+from archaic import plots
 
 
 def get_args():
@@ -22,15 +15,19 @@ def get_args():
     parser.add_argument("-s", "--samples", required=True, nargs='*')
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-n", "--n_samples", type=int, default=2)
-    parser.add_argument("-T", "--max_T", type=int, default=5e5)
+    parser.add_argument("-T", "--max_t", type=float, default=None)
     parser.add_argument("-t", "--n_times", type=int, default=100)
     parser.add_argument("-gt", "--generation_time", type=int, default=30)
     return parser.parse_args()
 
 
-def get_t():
+def get_t(graph):
 
-    T = int(args.max_T / args.generation_time)
+    if args.max_t:
+        max_t = args.max_t
+    else:
+        max_t = max([deme.start_time for deme in graph.demes[1:]])
+    T = int(max_t / args.generation_time)
     t = np.linspace(0, T, args.n_times)
     return t
 
@@ -51,11 +48,12 @@ def get_rate(graph, t, samples):
 
 def main():
 
+    graph = demes.load(args.graph_fnames[0])
     n = len(args.samples)
     cmap = dict(
         zip(args.samples, list(cm.gnuplot(np.linspace(0, 0.95, n))))
     )
-    t = get_t()
+    t = get_t(graph)
     t_years = t * args.generation_time
     rates = {
         graph_fname: get_rate(demes.load(graph_fname), t, args.samples)
@@ -63,7 +61,7 @@ def main():
     }
     fig, ax = plt.subplots(figsize=(8, 7), layout="constrained")
     for i, graph_name in enumerate(rates):
-        linestyle = linestyles[i]
+        linestyle = plots.line_styles[i]
         rate_dict = rates[graph_name]
         for j, sample in enumerate(rate_dict):
             ax.plot(

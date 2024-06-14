@@ -73,6 +73,7 @@ Compute statistics
 def count_site_pairs(map_vals, r_bins, positions=None, window=None,
                      vectorized=False, bp_thresh=0, upper_bound=None,
                      verbose=2):
+
     if bp_thresh:
         if not np.any(positions):
             raise ValueError("You must provide positions to use bp_thresh!")
@@ -201,6 +202,25 @@ def get_two_chromosome_H2(site_counts, H_counts):
         H2_count = H_counts[j] * H_counts[k]
         H2[i] = H2_count / site_pair_count
     return H2
+
+
+"""
+Measuring Var(S)
+"""
+
+
+def get_var_S(genotypes, positions, vcf_positions, map_vals, loci):
+
+    n_left_loci = len(genotypes)
+
+    n_loci_sites = np.searchsorted(vcf_positions, loci)
+    midpoints = 0
+
+    for i, locus in enumerate(loci):
+
+        pass
+
+    return 0
 
 
 """

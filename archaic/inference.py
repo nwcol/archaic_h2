@@ -222,7 +222,7 @@ def get_moments_stats(graph, samples, pairs, r, u=1.35e-8, get_H=True,
         graph, sampled_demes=samples, theta=None, r=r, u=u
     )
     H2 = np.array(
-        [ld_stats.H2(samples, phased=True) for samples in samples] +
+        [ld_stats.H2(sample, phased=True) for sample in samples] +
         [ld_stats.H2(x, y, phased=False) for x, y in pairs]
     ).T
     H2 = approximate_H2(H2, method=approx_method)

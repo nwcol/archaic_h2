@@ -1,4 +1,8 @@
 
+"""
+Evaluate H2 from a demes graph and plot it alongside empirical means and CIs
+"""
+
 import argparse
 import demes
 import matplotlib.pyplot as plt
@@ -29,17 +33,12 @@ def get_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--graph_fname", required=True)
-    parser.add_argument("-p", "--param_fname", required=True)
     parser.add_argument("-d", "--boot_archive", required=True)
-    parser.add_argument("-o", "--out_prefix", required=True)
+    parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-n", "--name_map", type=str, nargs="*", default=[])
-    parser.add_argument("-i", "--max_iter", type=int, default=1_000)
-    parser.add_argument("-v", "--verbose", type=int, default=10)
-    parser.add_argument("-r", "--opt_routine", type=str, default="fmin")
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
     parser.add_argument("-H", "--use_H", type=int, default=1)
     parser.add_argument("-l", "--log_scale", type=bool, default=False)
-    parser.add_argument("-lt", "--log_time", type=bool, default=False)
     return parser.parse_args()
 
 
@@ -60,55 +59,19 @@ def get_name_map(all_deme_names):
         raise ValueError("sample/deme name configuration selects 0 samples!")
     sample_names = list(name_map.keys())
     deme_names = list(name_map.values())
-    return name_map, sample_names, deme_names, arg_map
+    return name_map, sample_names, deme_names
 
 
 def main():
+
     graph = demes.load(args.graph_fname)
     all_deme_names = [deme.name for deme in graph.demes]
-    name_map, sample_names, deme_names, arg_map = get_name_map(all_deme_names)
-    print(name_map)
-    r_bins, data = inference.read_data(
-        args.boot_archive, sample_names, get_H=args.use_H
-    )
-    _data = inference.rename_data_samples(data, name_map)
-    opt = inference.optimize(
-        args.graph_fname,
-        args.param_fname,
-        _data,
-        r_bins,
-        args.max_iter,
-        verbose=args.verbose,
-        opt_method=args.opt_routine,
-        u=args.u,
-        use_H=args.use_H
-    )
-    with open(f"{args.out_prefix}log.txt", 'w') as file:
-        file.write(str(name_map) + '\n')
-        file.write(args.__str__() + '\n')
-        for x in opt:
-            file.write(str(x) + '\n')
-    graph = opt[0]
-    demes.dump(graph, f"{args.out_prefix}graph.yaml")
+    name_map, sample_names, deme_names = get_name_map(all_deme_names)
+    # _graph = graph.rename_demes(reverse_map)
     r_bins, data = inference.read_data(args.boot_archive, sample_names)
-    # if a deme was manually mapped to a sample, some trickery is needed
-    graph_name_map = {}
-    for sample_name in name_map:
-        deme_name = name_map[sample_name]
-        if deme_name in arg_map:
-            epithet = sample_name.replace('-', '')
-            name_map[sample_name] = epithet
-            graph_name_map[deme_name] = epithet
-        else:
-            pass
-    __data = inference.rename_data_samples(data, name_map)
-    _graph = graph.rename_demes(graph_name_map)
-    inference.plot(
-        _graph, __data, r_bins, u=args.u, log_scale=args.log_scale,
-        use_H=args.use_H
-    )
-    plt.savefig(f"{args.out_prefix}fit.png", dpi=200, bbox_inches='tight')
-    plt.close()
+    _data = inference.rename_data_samples(data, name_map)
+    inference.plot(graph, _data, r_bins, log_scale=args.log_scale, use_H=args.use_H)
+    plt.savefig(args.out_fname, dpi=200, bbox_inches='tight')
 
 
 if __name__ == "__main__":
