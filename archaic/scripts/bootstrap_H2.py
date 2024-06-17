@@ -15,8 +15,17 @@ unique_fields = [
 ]
 
 
-def bootstrap(site_pairs, het_arr, n_resamplings, sample_size=None):
+def get_args():
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("in_fname")
+    parser.add_argument("out_fname")
+    parser.add_argument("-b", "--n_resamplings", type=int, default=1_000)
+    parser.add_argument("-n", '--sample_size', type=int, default=None)
+    return parser.parse_args()
+
+
+def bootstrap(site_pairs, het_arr, n_resamplings, sample_size=None):
     # rows correspond to samples, cols to windows
     n_rows, n_cols = het_arr.shape
     if not sample_size:
@@ -30,22 +39,13 @@ def bootstrap(site_pairs, het_arr, n_resamplings, sample_size=None):
     return arr
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("in_fname")
-    parser.add_argument("out_fname")
-    parser.add_argument("-b", "--n_resamplings", type=int, default=1_000)
-    parser.add_argument("-n", '--sample_size', type=int, default=None)
-    args = parser.parse_args()
+def main():
 
-    # load up the archive
     archive = np.load(args.in_fname)
     r_bins = archive["r_bins"]
     n_bins = len(r_bins) - 1
-
-    site_counts = archive["site_counts"]
-    site_pair_counts = archive["site_pair_counts"]
-    # concatenate along the "sample" axis
+    H_norm = archive["site_counts"]
+    H2_norm = archive["site_pair_counts"]
     het_pair_counts = np.concatenate(
         [archive["H2_counts"], archive["H2xy_counts"]], axis=0
     )
@@ -54,21 +54,25 @@ if __name__ == "__main__":
     )
     kwargs = {field: archive[field] for field in unique_fields}
     kwargs["n_bins"] = len(r_bins) - 1
-    # bootstrap H2
     for i in range(n_bins):
         boot_dist = bootstrap(
-            site_pair_counts[:, i], het_pair_counts[:, :, i],
+            H2_norm[:, i], het_pair_counts[:, :, i],
             n_resamplings=args.n_resamplings, sample_size=args.sample_size
         )
         kwargs[f"H2_bin{i}_dist"] = boot_dist
         kwargs[f"H2_bin{i}_mean"] = boot_dist.mean(0)
         kwargs[f"H2_bin{i}_cov"] = np.cov(boot_dist, rowvar=False)
-    # bootstrap H
     boot_dist = bootstrap(
-        site_counts, het_counts,
+        H_norm, het_counts,
         n_resamplings=args.n_resamplings, sample_size=args.sample_size
     )
     kwargs[f"H_dist"] = boot_dist
     kwargs[f"H_mean"] = boot_dist.mean(0)
     kwargs[f"H_cov"] = np.cov(boot_dist, rowvar=False)
     np.savez(args.out_fname, **kwargs)
+    return 0
+
+
+if __name__ == "__main__":
+    args = get_args()
+    main()

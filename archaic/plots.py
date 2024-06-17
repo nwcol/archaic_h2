@@ -60,6 +60,25 @@ def plot_H(ax, H, names, colors, fmts=None, y_errs=None):
     return ax
 
 
+def plot_H_err(ax, H, H_err, E_H, names, colors, E_colors, title=None):
+
+    abbrev_names = []
+    for i, name in enumerate(names):
+        if type(name) == str:
+            name = name[:3]
+        else:
+            name = f"{name[0][:3]}-{name[1][:3]}"
+        abbrev_names.append(name)
+        ax.errorbar(i, H[i], yerr=H_err[i], color=colors[i], fmt='.')
+        ax.scatter(i, E_H[i], color=E_colors[i], marker='+')
+    ax.set_ylim(0, )
+    ax.set_xticks(np.arange(len(names)), abbrev_names)
+    ax.grid(alpha=0.2)
+    if title:
+        ax.set_title(title)
+    return ax
+
+
 def plot_H2(ax, r, H2, names, colors, styles=None, log_scale=False, y_lim=None):
     # plot several H2 curves. H2 is expected to be shape (n, r) array
     if H2.ndim == 1:
@@ -92,7 +111,23 @@ def plot_H2(ax, r, H2, names, colors, styles=None, log_scale=False, y_lim=None):
     return ax
 
 
-def plot_H2_err(ax, r, H2, names, colors, fmts=None, y_errs=None, log_scale=False, y_lim=None):
+def plot_H2_err(ax, r, H2, H2_err, E_H2, color, E_color, log_scale=False,
+                title=None):
+
+    ax.errorbar(
+        r, H2, yerr=H2_err, color=color, fmt=".", capsize=0
+    )
+    ax.plot(r, E_H2, color=E_color)
+    ax.set_xscale("log")
+    if log_scale:
+        ax.set_yscale("log")
+    ax.grid(alpha=0.2)
+    if title:
+        ax.set_title(title)
+    return ax
+
+
+def _plot_H2_err(ax, r, H2, names, colors, fmts=None, y_errs=None, log_scale=False, y_lim=None, title=None):
     # plot several H2 curves. H2 is expected to be shape (n, r) array
     if H2.ndim == 1:
         n = 1
@@ -123,5 +158,7 @@ def plot_H2_err(ax, r, H2, names, colors, fmts=None, y_errs=None, log_scale=Fals
             ax.set_ylim(0, y_lim)
         else:
             ax.set_ylim(0, )
+    if title:
+        ax.set_title(title)
     return ax
 

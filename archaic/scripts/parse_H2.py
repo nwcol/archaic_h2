@@ -14,12 +14,12 @@ from archaic import two_locus
 
 
 def get_args():
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--vcf_fname", required=True)
     parser.add_argument("-m", "--mask_fname", required=True)
     parser.add_argument("-r", "--map_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
-
     parser.add_argument("-n", "--chromosome_number", type=int)
     parser.add_argument("-w", "--window")
     parser.add_argument("-W", "--window_fname", default=None)
@@ -27,7 +27,6 @@ def get_args():
     parser.add_argument("-B", "--r_bin_fname", default=None)
     parser.add_argument("-s", "--sample_names", default=None, nargs='*')
     parser.add_argument("-bp", "--bp_thresh", type=int, default=0)
-
     parser.add_argument("-c", "--parse_site_counts", type=int, default=1)
     parser.add_argument("-1l", "--parse_one_locus", type=int, default=1)
     parser.add_argument("-2l", "--parse_two_locus", type=int, default=1)

@@ -10,7 +10,7 @@ import scipy
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import moments
-import moments.Demes.Inference as m_infer
+import moments.Demes.Inference as minf
 import time
 from archaic import utils
 
@@ -20,45 +20,45 @@ counter = 0
 
 
 def optimize(
-        graph_file_name,
-        params_file_name,
+        graph_fname,
+        params_fname,
         data,
         r_bins,
         max_iter=1_000,
         opt_method="fmin",
-        approx_method="simpsons",
+        num_method="simpsons",
         u=1.35e-8,
-        verbose=True,
-        use_H=True
+        verbosity=1,
+        use_H=True,
+        use_H2=True
 ):
-
+    # the optimization function
     t0 = time.time()
-    samples, pairs, means, covs = data
-    # repackage data
-    inv_covs = [np.linalg.inv(cov) for cov in covs]
-    data = (samples, pairs, means, inv_covs)
-    # get graph, parameter dicts
-    builder = m_infer._get_demes_dict(graph_file_name)
-    options = m_infer._get_params_dict(params_file_name)
-    # get parameter bounds, constraints
-    param_names, params_0, lower_bound, upper_bound = \
-        m_infer._set_up_params_and_bounds(options, builder)
-    constraints = m_infer._set_up_constraints(options, param_names)
-    r = get_r(r_bins, method=approx_method)
-    printout(0, 0, param_names, mode='s')
-    # tuple of arguments to objective_fxn
+    samples, pairs, H, H_cov, H2, H2_cov = data
+    data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
+    builder = minf._get_demes_dict(graph_fname)
+    options = minf._get_params_dict(params_fname)
+    param_names, params_0, lower_bounds, upper_bounds = \
+        minf._set_up_params_and_bounds(options, builder)
+    constraints = minf._set_up_constraints(options, param_names)
+    r = get_r(r_bins, method=num_method)
+    if verbosity > 0:
+        lik0 = eval_log_lik(demes.load(graph_fname), data, r, u=u)
+        printout(0, 0, param_names, mode='s')
+        printout(0, lik0, params_0)
     opt_args = (
         builder,
         data,
         options,
         r,
         u,
-        lower_bound,
-        upper_bound,
+        lower_bounds,
+        upper_bounds,
         constraints,
-        approx_method,
-        verbose,
-        use_H
+        num_method,
+        verbosity,
+        use_H,
+        use_H2
     )
     opt_methods = ["fmin", "BFGS", "LBFGSB", "LS"]
     if opt_method not in opt_methods:
@@ -72,9 +72,9 @@ def optimize(
             maxiter=max_iter,
             maxfun=max_iter,
             full_output=True,
+            retall=True
         )
-        params_opt, fopt, iters, funcalls, warnflag = out
-
+        xopt, fopt, iters, funcalls, warnflag, allvecs = out
     elif opt_method == "BFGS":
         out = scipy.optimize.minimize(
             objective_fxn,
@@ -83,12 +83,11 @@ def optimize(
             method="BFGS",
             options={"maxiter": max_iter}
         )
-        params_opt = out.x
+        xopt = out.x
         fopt = out.fun
         iters = out.nit
         funcalls = out.nfev
         warnflag = out.status
-
     elif opt_method == "LBFGSB":
         out = scipy.optimize.minimize(
             objective_fxn,
@@ -97,12 +96,11 @@ def optimize(
             method="L-BFGS-B",
             options={"maxiter": max_iter}
         )
-        params_opt = out.x
+        xopt = out.x
         fopt = out.fun
         iters = out.nit
         funcalls = out.nfev
         warnflag = out.status
-
     elif opt_method == "LS":
         out = scipy.optimize.fmin(
             LS_objective_fxn,
@@ -113,26 +111,15 @@ def optimize(
             maxfun=max_iter,
             full_output=True,
         )
-        params_opt, fopt, iters, funcalls, warnflag = out
-
+        xopt, fopt, iters, funcalls, warnflag = out
     else:
         return 1
-
-    # build output graph using optimized parameters
-    builder = m_infer._update_builder(builder, options, params_opt)
+    builder = minf._update_builder(builder, options, xopt)
     graph = demes.Graph.fromdict(builder)
     global counter
     counter = 0
-    out = {
-        "param_names": param_names,
-        "params_opt": params_opt,
-        "fopt": fopt,
-        "iter": iters,
-        "funcalls": funcalls,
-        "warnflag": warnflag,
-        "time_elapsed": time.time() - t0
-    }
-    return graph, out
+    end_printout(fopt, iters, funcalls, warnflag, t0)
+    return graph, (fopt, iters, funcalls, warnflag, t0)
 
 
 def objective_fxn(
@@ -145,9 +132,10 @@ def objective_fxn(
         lower_bound=None,
         upper_bound=None,
         constraints=None,
-        approx_method="simpsons",
-        verbose=True,
-        use_H=True
+        num_method="simpsons",
+        verbosity=1,
+        use_H=True,
+        use_H2=True
 ):
 
     global counter
@@ -161,13 +149,19 @@ def objective_fxn(
         log_lik = -out_of_bounds_val
     else:
         # update builder and build graph
-        builder = m_infer._update_builder(builder, options, params)
+        builder = minf._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
         # evaluate likelihood!
         log_lik = eval_log_lik(
-            graph, data, r, u=u, approx_method=approx_method, use_H=use_H
+            graph,
+            data,
+            r,
+            u=u,
+            num_method=num_method,
+            use_H=use_H,
+            use_H2=use_H2
         )
-    if verbose > 0 and counter % verbose == 0:
+    if verbosity > 0 and counter % verbosity == 0:
         printout(counter, log_lik, params)
     return -log_lik
 
@@ -183,23 +177,37 @@ def printout(i, log_lik, params, mode='g'):
     print(utils.get_time(), "%-8i, %-8g, %s" % (i, log_lik, param_str))
 
 
+def end_printout(fopt, iters, funcalls, warnflag, t0):
+
+    print(f"fopt:\t{fopt}")
+    print(f"iterations:\t{iters}")
+    print(f"fxn calls:\t{funcalls}")
+    print(f"flags:\t{warnflag}")
+    print(f"s elapsed:\t{time.time() - t0}")
+
+
 def eval_log_lik(
         graph,
         data,
-        r_bins,
-        u=1.35e-8,
-        approx_method="simpsons",
-        use_H=True
+        r,
+        u,
+        num_method="simpsons",
+        use_H=True,
+        use_H2=True
 ):
 
-    samples, pairs, H2, inv_cov = data
-    E_H2 = get_moments_stats(
-        graph, samples, pairs, r_bins, u=u, approx_method=approx_method,
-        get_H=use_H
+    samples, pairs, H, H_cov, H2, H2_cov = data
+    E_H, E_H2 = get_H_stats(
+        graph, samples, pairs, r, u, num_method=num_method
     )
-    E_H2 = [row for row in E_H2]
-    n = len(H2)
-    lik = sum([normal_log_lik(E_H2[i], inv_cov[i], H2[i]) for i in range(n)])
+    lik = 0
+    if use_H:
+        lik += normal_log_lik(E_H, H_cov, H)
+    if use_H2:
+        n = len(E_H2)
+        lik += sum(
+            [normal_log_lik(E_H2[i], H2_cov[i], H2[i]) for i in range(n)]
+        )
     return lik
 
 
@@ -214,26 +222,27 @@ Getting expected statistics using moments.LD
 """
 
 
-def get_moments_stats(graph, samples, pairs, r, u=1.35e-8, get_H=True,
-                      approx_method="simpsons"):
+def get_H_stats(graph, samples, pairs, r, u, num_method="simpsons"):
 
-    n_samples = len(samples)
     ld_stats = moments.LD.LDstats.from_demes(
-        graph, sampled_demes=samples, theta=None, r=r, u=u
+        graph,
+        sampled_demes=samples,
+        theta=None,
+        r=r,
+        u=u
     )
-    H2 = np.array(
+    n = len(samples)
+    idx_pairs = utils.get_pair_idxs(n)
+    E_H = np.array(
+        [ld_stats.H(pops=[i])[0] for i in range(n)] +
+        [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
+    )
+    E_H2 = np.array(
         [ld_stats.H2(sample, phased=True) for sample in samples] +
         [ld_stats.H2(x, y, phased=False) for x, y in pairs]
     ).T
-    H2 = approximate_H2(H2, method=approx_method)
-    if get_H:
-        idx_pairs = utils.get_pair_idxs(n_samples)
-        H = np.array(
-            [ld_stats.H(pops=[i])[0] for i in range(n_samples)] +
-            [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
-        )
-        H2 = np.vstack([H2, H])
-    return H2
+    E_H2 = approximate_H2(E_H2, method=num_method)
+    return E_H, E_H2
 
 
 """
@@ -241,7 +250,7 @@ Numerical approximations
 """
 
 
-approx_methods = [
+num_methods = [
     "left_bound",
     "right_bound",
     "midpoint",
@@ -251,8 +260,8 @@ approx_methods = [
 
 def get_r(r_bins, method="simpsons"):
     # get values of r as required by approximation method
-    if method not in approx_methods:
-        raise ValueError(f"{method} is not in methods: {approx_methods}")
+    if method not in num_methods:
+        raise ValueError(f"{method} is not in methods: {num_methods}")
     if method == "left":
         r = r_bins[:-1]
     elif method == "right":
@@ -269,14 +278,12 @@ def get_r(r_bins, method="simpsons"):
 
 def approximate_H2(arr, method="simpsons"):
 
-    if method not in approx_methods:
-        raise ValueError(f"{method} is not in methods: {approx_methods}")
+    if method not in num_methods:
+        raise ValueError(f"{method} is not in methods: {num_methods}")
     if method == "left":
         out = arr
     elif method == "right":
         out = arr
-    # elif method == "midpoint":
-    #    out = (arr[1:] + arr[:-1]) / 2
     elif method == "midpoint":
         out = arr
     elif method == "simpsons":
@@ -309,21 +316,18 @@ def LS_objective_fxn(
         verbose=True,
         use_H=True
 ):
-    s = None
 
+    s = None
     global counter
     counter += 1
-
-    # bounds check
     if lower_bound is not None and np.any(params < lower_bound):
         s = out_of_bounds_val
     elif upper_bound is not None and np.any(params > upper_bound):
         s = out_of_bounds_val
-    # constraints check
     elif constraints is not None and np.any(constraints(params) <= 0):
         s = out_of_bounds_val
     else:
-        builder = m_infer._update_builder(builder, options, params)
+        builder = minf._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
         s = eval_LS(
             graph, data, r_bins, u=u, approx_method=approx_method
@@ -337,7 +341,7 @@ def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
             use_H=True):
 
     sample_demes, H2, inv_cov = data
-    E_H2 = get_moments_stats(
+    E_H2 = get_ld_stats(
         graph, sample_demes, r_bins, u=u, approx_method="right", get_H=use_H
     )
     s = np.sum(np.square(H2 - E_H2))
@@ -455,6 +459,18 @@ Loading and setting up bootstrap statistics
 """
 
 
+def scan_names(graph_fname, boot_fname):
+    # return a list of sample names that are also deme names
+    graph = demes.load(graph_fname)
+    deme_names = [deme.name for deme in graph.demes]
+    sample_names = [str(x) for x in np.load(boot_fname)["sample_names"]]
+    names = []
+    for name in sample_names:
+        if name in deme_names:
+            names.append(name)
+    return names
+
+
 def rename_data_samples(data, name_map):
     # name map of form old: new
     _names, _pairs, means, covs = data
@@ -476,7 +492,26 @@ def rename_data_samples(data, name_map):
     return names, pairs, means, covs
 
 
-def read_data(file_name, samples, get_H=True):
+def read_data(fname, sample_names):
+
+    archive = np.load(fname)
+    r_bins = archive["r_bins"]
+    pairs = utils.get_pairs(sample_names)
+    pair_names = utils.get_pair_names(sample_names)
+    all_names = list(archive["sample_names"]) + list(archive["pair_names"])
+    idx = np.array(
+        [all_names.index(x) for x in sample_names]
+        + [all_names.index(x) for x in pair_names]
+    )
+    mesh_idx = np.ix_(idx, idx)
+    H = archive["H_mean"][idx]
+    H_cov = archive["H_cov"][mesh_idx]
+    H2 = archive["H2_mean"][:, idx]
+    H2_cov = np.array([x[mesh_idx] for x in archive["H2_cov"]])
+    return r_bins, (sample_names, pairs, H, H_cov, H2, H2_cov)
+
+
+def _read_data(file_name, samples, get_H=True):
     # read bootstrap statistics from a .npz archive.
     archive = np.load(file_name)
     r_bins = archive["r_bins"]

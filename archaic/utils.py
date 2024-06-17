@@ -8,13 +8,6 @@ import numpy as np
 
 
 """
-
-    pair_names = [f"{x},{y}" for (x, y) in sample_pairs]
-"""
-
-
-
-"""
 Indexing
 """
 
@@ -31,8 +24,15 @@ def get_pairs(items):
     return pairs
 
 
+def get_pair_names(items):
+
+    pairs = get_pairs(items)
+    pair_names = [f"{x},{y}" for x, y in pairs]
+    return pair_names
+
+
 def get_pair_idxs(n):
-    # return a list of 2-tuples contaning pairs of indices up to n
+    # return a list of 2-tuples containing pairs of indices up to n
     pairs = []
     for i in np.arange(n):
         for j in np.arange(i + 1, n):

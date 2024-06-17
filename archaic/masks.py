@@ -36,6 +36,27 @@ def read_mask_positions(mask_fname, first_idx=1):
 
 
 """
+Saving masks
+"""
+
+
+def save_mask_regions(regions, out_fname, chr_n, write_header=True):
+
+    if ".gz" in out_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(out_fname, "wb") as file:
+        if write_header:
+            header = "chrom\tchromStart\tchromEnd\n".encode()
+            file.write(header)
+        for start, stop in regions:
+            line = f"{chr_n}\t{start}\t{stop}\n".encode()
+            file.write(line)
+    return 0
+
+
+"""
 Transformations between region, position, and indicator arrays
 """
 

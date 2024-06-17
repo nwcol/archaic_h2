@@ -1,6 +1,28 @@
 
 primary goals
 
+for getting pipeline hammered out for publication:
+- script to make masks from vcfs
+- exon masks and flank
+- script to intersect and build restrictive masks
+
+
+for getting CHTC running:
+
+- edit parse script
+- decide on final formats for output/bootstrap npzs
+- edit bootstrap script
+- edit infer scripts
+- rebuild stats, bootstrap
+- nice plotting fxns
+
+
+
+
+
+
+
+
 - a real understanding of the statistic's dynamics!!!
 
 - discriminating between structured and unstructured models
