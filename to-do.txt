@@ -4,6 +4,7 @@ primary goals
 for getting pipeline hammered out for publication:
 - script to make masks from vcfs
 - exon masks and flank
+- verify mask files
 - script to intersect and build restrictive masks
 
 

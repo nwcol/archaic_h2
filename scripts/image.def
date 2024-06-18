@@ -1,0 +1,8 @@
+Bootstrap: docker
+From: python:3.11
+
+%post
+	python3 -m pip install scipy numpy demes demesdraw matplotlib 
+	python3 -m pip install git+https://github.com/MomentsLD/moments.git@d290152480ca9fb069ba186b6eb917ba09a5ec62
+	python3 -m pip install git+https://github.com/nwcol/archaic.git
+

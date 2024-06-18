@@ -1,8 +1,12 @@
 
+"""
+Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
+"""
 
 import argparse
 import demes
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 import scipy
 from archaic import inference
@@ -10,22 +14,25 @@ from archaic import plots
 from archaic import utils
 
 
-n_cols = 5
-emp_color = "red"
-E_color = "blue"
-
-
 def get_args():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--graph_fname", required=True)
-    parser.add_argument("-d", "--boot_fname", required=True)
+    parser.add_argument("-g", "--graph_fnames", nargs='*', default=[])
+    parser.add_argument("-arch", "--archive_fnames", nargs='*', default=[])
+    parser.add_argument("-d", "--boot_fnames", nargs='*', default=[])
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
     parser.add_argument("-H", "--use_H", type=int, default=1)
     parser.add_argument("-H2", "--use_H2", type=int, default=1)
     parser.add_argument("-m", "--num_method", default="simpsons")
     parser.add_argument("-a", "--alpha", type=float, default=0.05)
+    parser.add_argument("-s", "--sample_names", nargs='*', default=[])
+    parser.add_argument("-ly", "--log_y", type=int, default=0)
+    parser.add_argument("-yH", "--H_ylim", type=float, default=None)
+    parser.add_argument("-yH2", "--H2_ylim", type=float, default=None)
+    parser.add_argument("-neg", "--allow_negatives", type=int, default=0)
+    parser.add_argument("-t", "--fig_title", default=None)
+    parser.add_argument("--n_cols", type=int, default=5)
     return parser.parse_args()
 
 
@@ -41,51 +48,112 @@ def get_ci(cov_H, cov_H2, alpha):
 
 def main():
 
-    sample_names = inference.scan_names(args.graph_fname, args.boot_fname)
-    pair_names = utils.get_pair_names(sample_names)
+    sample_names = args.sample_names
     pairs = utils.get_pairs(sample_names)
-    n_samples = len(sample_names)
+    pair_names = utils.get_pair_names(sample_names)
+    n_samples = len(args.sample_names)
     n_pairs = len(pair_names)
-    n_axs = 2 + n_samples + n_pairs
-    n_rows = np.ceil(n_axs / n_cols).astype(int)
-    ax_shape = (n_rows, n_cols)
+    if n_pairs > 0:
+        offset = 2
+    else:
+        offset = 1
+    n_plots = offset + n_samples + n_pairs
+    if n_plots < args.n_cols:
+        n_rows = 1
+        n_cols = n_plots
+    else:
+        n_rows = np.ceil(n_plots / args.n_cols).astype(int)
+        n_cols = args.n_cols
+    shape = (n_rows, n_cols)
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * 3, n_rows * 2), layout="constrained"
+        n_rows, n_cols, figsize=(n_cols * 4, n_rows * 3), layout="constrained"
     )
-
-    r_bins, data = inference.read_data(args.boot_fname, sample_names)
-    _, __, H, cov_H, H2, cov_H2 = data
+    if n_rows == 1:
+        axs = axs[np.newaxis, :]
+    if len(args.boot_fnames) > 0:
+        r_bins = np.load(args.boot_fnames[0])["r_bins"]
+    else:
+        r_bins = np.logspace(-6, -2, 30)
     r = inference.get_r(r_bins, method="midpoint")
     _r = inference.get_r(r_bins, method=args.num_method)
-    graph = demes.load(args.graph_fname)
-    E_H, E_H2 = inference.get_H_stats(
-        graph, sample_names, pairs, _r, args.u, num_method=args.num_method
-    )
-    H_err, H2_err = get_ci(cov_H, cov_H2, args.alpha)
 
-    plots.plot_H_err(
-        axs[0, 0], H[:n_samples], H_err[:n_samples], E_H[:n_samples],
-        sample_names, ['blue'] * n_samples, ["red"] * n_samples, title="$H$"
-    )
-    plots.plot_H_err(
-        axs[0, 1], H[n_samples:], H_err[n_samples:], E_H[n_samples:],
-        pair_names, ['blue'] * n_samples, ["red"] * n_samples, title="$H_{xy}$"
-    )
+    n_boots = len(args.boot_fnames)
+    n_graphs = len(args.graph_fnames)
+    n_archives = len(args.archive_fnames)
+    b_colors = plots.get_terrain_cmap(n_boots)
+    colors = plots.get_gnu_cmap(n_graphs + n_archives)
 
-    for i in np.arange(n_samples):
-        idx = np.unravel_index(i + 2, ax_shape)
-        plots.plot_H2_err(
-            axs[idx], r, H2[:, i], H2_err[:, i], E_H2[:, i], emp_color,
-            E_color, log_scale=True, title=f"$H_2$:{sample_names[i]}"
+    for k, fname in enumerate(args.boot_fnames):
+        r_bins, data = inference.read_data(fname, sample_names)
+        __r = inference.get_r(r_bins, method="midpoint")
+        _, __, H, cov_H, H2, cov_H2 = data
+        H_err, H2_err = get_ci(cov_H, cov_H2, args.alpha)
+        label = fname.replace(".npz", "")
+        plots.plot_error_points(
+            axs, H, H_err, H2, H2_err, r, sample_names, pair_names,
+            b_colors[k], args.log_y, label=label
         )
-    for i in np.arange(n_pairs):
-        idx = np.unravel_index(i + 2 + n_samples, ax_shape)
-        plots.plot_H2_err(
-            axs[idx], r, H2[:, i], H2_err[:, i], E_H2[:, i], emp_color,
-            E_color, log_scale=True, title=f"$H_2$:{pair_names[i]}"
+    for k, fname in enumerate(args.graph_fnames):
+        graph = demes.load(fname)
+        E_H, E_H2 = inference.get_H_stats(
+            graph, sample_names, pairs, _r, args.u, num_method=args.num_method
         )
+        label = fname.replace(".yaml", "")
+        plots.plot_curves(
+            axs, E_H, E_H2, r, sample_names, pair_names, colors[k],
+            args.log_y, label=label
+        )
+    for k, fname in enumerate(args.archive_fnames):
+        archive = np.load(fname)
+        __r = archive["r"]
+        H = archive["H"]
+        H2 = archive["H2"]
+        label = fname.replace(".npz", "")
+        plots.plot_curves(
+            axs, H, H2, __r, sample_names, pair_names, colors[k + n_graphs],
+            args.log_y, label=label
+        )
+    if args.allow_negatives:
+        bottom = None
+    else:
+        bottom = 0
+    if n_pairs == 0:
+        offset = 1
+    else:
+        offset = 2
+    for i in np.arange(0, offset):
+        idx = np.unravel_index(i, shape)
+        if args.H_ylim:
+            axs[idx].set_ylim(bottom, args.H_ylim)
+        else:
+            axs[idx].set_ylim(bottom=bottom)
+    for i in np.arange(offset, n_plots):
+        idx = np.unravel_index(i, shape)
+        if not args.log_y:
+            if args.H2_ylim:
+                axs[idx].set_ylim(bottom, args.H2_ylim)
+            else:
+                axs[idx].set_ylim(bottom=bottom)
 
-    plt.savefig(args.out_fname, dpi=200)
+    #handles = [
+    #    mpatches.Patch(color=colors[i], label=series_names[i])
+    #    for i in range(n_labels)
+    #]
+    #fig.legend(
+    #    handles=handles, loc="lower center", shadow=True, fontsize=8,
+    #    bbox_to_anchor=(0.5, -0.2), ncols=n_labels
+    #)
+
+    fig.legend(
+        loc="lower center", shadow=True, fontsize=9, bbox_to_anchor=(0.5, -0.1),
+        ncols=n_graphs + n_boots + n_archives
+    )
+    if args.fig_title:
+        fig.title(args.fig_title)
+    axs = axs.flat
+    for ax in axs[2 + n_samples + n_pairs:]:
+        ax.remove()
+    plt.savefig(args.out_fname, dpi=200, bbox_inches='tight')
     return 0
 
 

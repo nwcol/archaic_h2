@@ -242,6 +242,8 @@ def get_H_stats(graph, samples, pairs, r, u, num_method="simpsons"):
         [ld_stats.H2(x, y, phased=False) for x, y in pairs]
     ).T
     E_H2 = approximate_H2(E_H2, method=num_method)
+    if E_H2.ndim == 1:
+        E_H2 = E_H2[:, np.newaxis]
     return E_H, E_H2
 
 

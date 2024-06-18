@@ -46,6 +46,7 @@ def main():
             file.write(
                 f"      - {{end_time: {out_times[i]}, start_size: {Ne[i]}}}\n"
             )
+    return 0
 
 
 if __name__ == "__main__":

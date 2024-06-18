@@ -10,7 +10,7 @@ Useful constants
 """
 
 
-line_styles = [
+_line_styles = [
     "solid",
     "dashed",
     "dotted",
@@ -22,16 +22,77 @@ line_styles = [
 ]
 
 
+_colors = [
+    "red",
+    "blue",
+    "green"
+]
+
+
 """
 Colors and color maps
 """
 
 
-def get_gnu_cmap(samples):
+def get_gnu_cmap(n):
 
-    n = len(samples)
     cmap = list(cm.gnuplot(np.linspace(0, 0.95, n)))
     return cmap
+
+
+def get_terrain_cmap(n):
+
+    cmap = list(cm.terrain(np.linspace(0, 0.95, n)))
+    return cmap
+
+
+"""
+Plotting graph statistics
+"""
+
+
+def plot_curves(axs, H, H2, r, sample_names, pair_names, color, log_scale,
+                label=None):
+
+    shape = axs.shape
+    offset = 1
+    n = len(sample_names)
+    plot_H(axs[0, 0], H[:n], sample_names, color, label=label, title="$H$")
+    if len(pair_names) > 0:
+        offset += 1
+        plot_H(axs[0, 1], H[n:], pair_names, color, title="$H_{xy}$")
+    for i in range(len(sample_names)):
+        idx = np.unravel_index(i + offset, shape)
+        title = f"$H_2$:{sample_names[i]}"
+        plot_H2(axs[idx], r, H2[:, i], color, log_scale=log_scale, title=title)
+    offset += n
+    for i in range(len(pair_names)):
+        idx = np.unravel_index(i + offset, shape)
+        title = f"$H_{{2,xy}}$:{pair_names[i]}"
+        plot_H2(axs[idx], r, H2[:, i], color, log_scale=log_scale, title=title)
+    return 0
+
+
+def plot_error_points(axs, H, H_err, H2, H2_err, r, sample_names, pair_names,
+                      color, log_scale, label=None):
+
+    shape = axs.shape
+    offset = 1
+    n = len(sample_names)
+    plot_H_err(axs[0, 0], H[:n], H_err[:n], sample_names, color, label=label, title="$H$")
+    if len(pair_names) > 0:
+        offset += 1
+        plot_H_err(axs[0, 1], H[n:], H_err[n:], pair_names, color, title="$H_{xy}$")
+    for i in range(len(sample_names)):
+        idx = np.unravel_index(i + offset, shape)
+        title = f"$H_2$:{sample_names[i]}"
+        plot_H2_err(axs[idx], r, H2[:, i], H2_err[:, i], color, log_scale=log_scale, title=title)
+    offset += len(sample_names)
+    for i in range(len(pair_names)):
+        idx = np.unravel_index(i + offset, shape)
+        title = f"$H_{{2,xy}}$:{pair_names[i]}"
+        plot_H2_err(axs[idx], r, H2[:, i], H2_err[:, i], color, log_scale=log_scale, title=title)
+    return 0
 
 
 """
@@ -39,28 +100,32 @@ Plotting functions dedicated to statistics
 """
 
 
-def plot_H(ax, H, names, colors, fmts=None, y_errs=None):
+def plot_H(ax, H, names, color, label=None, title=None):
 
-    n = len(H)
-    if fmts == None:
-        fmts = ["."] * n
-    else:
-        if type(fmts) != list:
-            fmts = [fmts] * n
-        elif len(fmts) < n:
-            fmts = [fmts[0]] * n
-    if y_errs == None:
-        y_errs = [None] * n
-    for i, name in enumerate(names):
-        ax.errorbar(i, H[i], color=colors[i], yerr=y_errs[i], fmt=fmts[i])
-    ax.set_ylim(0, )
-    ax.set_ylabel("$H$")
+    for i, H in enumerate(H):
+        if i >= 1:
+            label = None
+        ax.scatter(i, H, color=color, marker="_", label=label)
     ax.set_xticks(np.arange(len(names)), names)
     ax.grid(alpha=0.2)
-    return ax
+    if title:
+        ax.set_title(title)
 
 
-def plot_H_err(ax, H, H_err, E_H, names, colors, E_colors, title=None):
+def plot_H_err(ax, H, H_err, names, color, label=None, title=None):
+
+    for i, H in enumerate(H):
+        if i >= 1:
+            label = None
+        ax.errorbar(i, H, yerr=H_err[i], color=color, fmt='.', label=label)
+    ax.set_ylim(0, )
+    ax.set_xticks(np.arange(len(names)), names)
+    ax.grid(alpha=0.2)
+    if title:
+        ax.set_title(title)
+
+
+def _plot_H_err(ax, H, H_err, E_H, names, colors, E_colors, title=None):
 
     abbrev_names = []
     for i, name in enumerate(names):
@@ -79,39 +144,34 @@ def plot_H_err(ax, H, H_err, E_H, names, colors, E_colors, title=None):
     return ax
 
 
-def plot_H2(ax, r, H2, names, colors, styles=None, log_scale=False, y_lim=None):
-    # plot several H2 curves. H2 is expected to be shape (n, r) array
-    if H2.ndim == 1:
-        n = 1
-    else:
-        n = len(H2)
-    if styles == None:
-        styles = ["-"] * n
-    else:
-        if type(styles) != list:
-            styles = [styles] * n
-        elif len(styles) < n:
-            styles = [styles[0]] * n
-
-    for i, name in enumerate(names):
-        ax.plot(
-            r, H2[i], color=colors[i], linestyle=styles[i], label=name
-        )
+def plot_H2(ax, r, H2, color, log_scale=False, title=None):
+    # for plotting expectations
+    ax.plot(r, H2, color=color)
     ax.set_xscale("log")
-    ax.set_ylabel("$H_2$")
-    ax.set_xlabel("r")
+    ax.autoscale()
+    ax.grid(alpha=0.2)
+    if log_scale:
+        ax.set_yscale("log")
+    if title:
+        ax.set_title(title)
+    return ax
+
+
+def plot_H2_err(ax, r, H2, H2_err, color, log_scale=False, title=None):
+    # for plotting empirical values
+    ax.errorbar(r, H2, yerr=H2_err, color=color, fmt=".", capsize=0)
+    ax.set_xscale("log")
     ax.grid(alpha=0.2)
     if log_scale:
         ax.set_yscale("log")
     else:
-        if y_lim:
-            ax.set_ylim(0, y_lim)
-        else:
-            ax.set_ylim(0, )
+        ax.set_ylim(0, )
+    if title:
+        ax.set_title(title)
     return ax
 
 
-def plot_H2_err(ax, r, H2, H2_err, E_H2, color, E_color, log_scale=False,
+def _plot_H2_err(ax, r, H2, H2_err, E_H2, color, E_color, log_scale=False,
                 title=None):
 
     ax.errorbar(

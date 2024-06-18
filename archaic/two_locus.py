@@ -234,5 +234,6 @@ def n_choose_2(n):
 
 
 def get_time():
+
     return " [" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
 

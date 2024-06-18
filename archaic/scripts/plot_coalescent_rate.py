@@ -61,7 +61,7 @@ def main():
     }
     fig, ax = plt.subplots(figsize=(8, 7), layout="constrained")
     for i, graph_name in enumerate(rates):
-        linestyle = plots.line_styles[i]
+        linestyle = plots._line_styles[i]
         rate_dict = rates[graph_name]
         for j, sample in enumerate(rate_dict):
             ax.plot(

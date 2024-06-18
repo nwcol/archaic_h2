@@ -57,6 +57,31 @@ def save_mask_regions(regions, out_fname, chr_n, write_header=True):
 
 
 """
+Reading positions from .vcf files
+"""
+
+
+def read_vcf_positions(vcf_fname):
+    # read the column of positions from a .vcf file
+    pos_idx = 1
+    _positions = []
+    if ".gz" in vcf_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(vcf_fname, "rb") as file:
+        for line_b in file:
+            line = line_b.decode()
+            if line.startswith('#'):
+                continue
+            fields = line.strip('\n').split('\t')
+            position = int(fields[pos_idx])
+            _positions.append(position)
+    positions = np.array(_positions)
+    return positions
+ 
+
+"""
 Transformations between region, position, and indicator arrays
 """
 
@@ -122,8 +147,11 @@ def simplify_regions(regions):
 
 def add_region_flank(regions, flank):
 
-
-    return 0
+    flanks = np.repeat([[-flank, flank]], len(regions), axis=0)
+    flanked = regions + flanks
+    flanked[flanked < 0] = 0
+    simplified  = simplify_regions(flanked)
+    return simplified
 
 
 def filter_regions_by_length(regions, min_length):
@@ -175,3 +203,4 @@ def subtract_masks(minuend, subtrahend):
     mask[:lengths[1]] -= regions_to_indicator(subtrahend)
     regions = indicator_to_regions(mask == 1)
     return regions
+
