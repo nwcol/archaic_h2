@@ -35,6 +35,35 @@ def read_mask_positions(mask_fname, first_idx=1):
     return positions
 
 
+def read_chrom(mask_fname):
+
+    chroms = []
+    if ".gz" in mask_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(mask_fname, "rb") as file:
+        for line in file:
+            chrom, start, stop = line.decode().strip('\n').split('\t')
+            if start.isnumeric():
+                chroms.append(chrom)
+    chroms = np.array(chroms)
+    unique = np.unique(chroms)
+    if len(unique) != 1:
+        print("multiple chromosomes in .bed file")
+    return unique
+
+
+def check_chroms(mask_fnames):
+    # make sure all masks have the same chrom column, and return it if so
+    chroms = [read_chrom(fname) for fname in mask_fnames]
+    unique = np.unique(np.concatenate(chroms))
+    if len(unique) != 1:
+        print(f"multiple chromosomes in .bed files: {unique}")
+    ret = unique[0]
+    return ret
+
+
 """
 Saving masks
 """
@@ -63,8 +92,27 @@ Reading positions from .vcf files
 
 def read_vcf_positions(vcf_fname):
     # read the column of positions from a .vcf file
+    chrom_idx = 0
     pos_idx = 1
-    _positions = []
+    positions = []
+    if ".gz" in vcf_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(vcf_fname, "rb") as file:
+        for line in file:
+            if line.startswith(b'#'):
+                continue
+            positions.append(line.split(b'\t')[pos_idx])
+    chrom = line.split(b'\t')[chrom_idx].decode()
+    positions = np.array(positions).astype(np.int64)
+    return positions, chrom
+
+
+def read_vcf_positions_slow(vcf_fname):
+    # read the column of positions from a .vcf file. decodes everything first
+    pos_idx = 1
+    positions = []
     if ".gz" in vcf_fname:
         open_fxn = gzip.open
     else:
@@ -76,8 +124,8 @@ def read_vcf_positions(vcf_fname):
                 continue
             fields = line.strip('\n').split('\t')
             position = int(fields[pos_idx])
-            _positions.append(position)
-    positions = np.array(_positions)
+            positions.append(position)
+    positions = np.array(positions)
     return positions
  
 

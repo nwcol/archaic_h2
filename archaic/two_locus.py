@@ -1,8 +1,12 @@
+"""
 
-from datetime import datetime
+"""
+
+
 import gzip
 import numpy as np
 from archaic import one_locus
+from archaic import utils
 
 
 """
@@ -66,7 +70,7 @@ def map_function(r_vals):
 
 
 """
-Compute statistics
+Compute H2 statistics
 """
 
 
@@ -117,10 +121,10 @@ def count_site_pairs(map_vals, r_bins, positions=None, window=None,
             cum_counts += np.searchsorted(map_vals[j:], _bins)
             if i % 1e6 == 0:
                 if n_left_loci > 1e6 and verbose == 2:
-                    print(get_time(), f"locus {i} of {n_left_loci} loci")
+                    print(utils.get_time(), f"locus {i} of {n_left_loci} loci")
         pair_counts = np.diff(cum_counts)
     if verbose >= 1:
-        print(get_time(), f"loci at idx {l_start}:{l_stop}-{r_stop} parsed")
+        print(utils.get_time(), f"loci at idx {l_start}:{l_stop}-{r_stop} parsed")
     return pair_counts
 
 
@@ -185,7 +189,7 @@ def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
             locus_H2xy = precomputed_H2xy[select, i:j_max]
             cum_counts += locus_H2xy[edges]
     if verbose:
-        print(get_time(), f"H2xy parsed for {n_left_loci} loci")
+        print(utils.get_time(), f"H2xy parsed for {n_left_loci} loci")
     H2xy_counts = np.diff(cum_counts)
     return H2xy_counts
 
@@ -205,35 +209,69 @@ def get_two_chromosome_H2(site_counts, H_counts):
 
 
 """
-Measuring Var(S)
+Compute Var(S)
 """
 
 
 def get_var_S(genotypes, positions, vcf_positions, map_vals, loci):
-
-    n_left_loci = len(genotypes)
-
-    n_loci_sites = np.searchsorted(vcf_positions, loci)
-    midpoints = 0
-
-    for i, locus in enumerate(loci):
-
-        pass
-
-    return 0
+    # implement
+    return None
 
 
 """
-Utilities
+Parsing files
 """
 
 
-def n_choose_2(n):
+def parse_site_pairs(pos_map, pos, windows, bounds, r_bins, thresh=0):
+    # count the number of site pairs in recombination bins
+    site_pair_counts = np.zeros((len(windows), len(r_bins)), dtype=np.int64)
+    for i, window in enumerate(windows):
+        site_pair_counts[i] = count_site_pairs(
+            pos_map,
+            r_bins,
+            positions=pos,
+            window=window,
+            upper_bound=bounds[i],
+            bp_thresh=thresh,
+            vectorized=True,
+            verbose=1
+        )
+    return site_pair_counts
 
-    return int(n * (n - 1) * 0.5)
 
-
-def get_time():
-
-    return " [" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
-
+def parse_H2_counts(genotypes, vcf_map, pos, windows, bounds, r_bins, thresh=0):
+    # count one and two sample H2
+    # returns array of shape (n_samples + n_pairs, n_windows, n_bins)
+    n_samples = genotypes.shape[1]
+    n_pairs = utils.n_choose_2(n_samples)
+    n = n_samples + n_pairs
+    counts = np.zeros((n, len(windows), len(r_bins)), dtype=np.int64)
+    for i in range(n_samples):
+        for j, window in enumerate(windows):
+            counts[i, j] = count_H2(
+                genotypes[:, i],
+                vcf_map,
+                r_bins,
+                positions=pos,
+                window=window,
+                upper_bound=bounds[j],
+                bp_thresh=thresh,
+                verbose=0
+            )
+    print(utils.get_time(), f"one sample H2 parsed")
+    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_pairs)):
+        i += n_samples
+        for j, window in enumerate(windows):
+            counts[i, j] = count_H2xy(
+                genotypes[:, i_x],
+                genotypes[:, i_y],
+                vcf_map,
+                r_bins,
+                positions=pos,
+                upper_bound=bounds[j],
+                window=window,
+                verbose=False
+            )
+    print(utils.get_time(), f"two sample H2 parsed")
+    return counts

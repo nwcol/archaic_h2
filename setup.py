@@ -7,4 +7,11 @@ setup(
     author="Nick Collier",
     author_email="nwcollier@wisc.edu",
     packages=["archaic"],
+    entry_points={
+        "console_scripts": [
+            "make_exon_masks=archaic.workup.make_exon_masks:main",
+            "mask_from_vcf=archaic.workup.mask_from_vcf:main",
+            "make_mask=archaic.workup.make_mask:main"
+        ]
+    }
 )

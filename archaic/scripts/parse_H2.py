@@ -1,62 +1,38 @@
 
-"""
-Parse statistics from a chromosome. Chromosome representations are constructed
-from three input types; a .vcf defining variant sites, a .bed mask defining
-coverage, and a .txt map file defining the recombination landscape.
-"""
-
 import argparse
 import numpy as np
 import time
 from archaic import masks
 from archaic import one_locus
 from archaic import two_locus
+from archaic import utils
 
 
 def get_args():
-
+    # get args
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--vcf_fname", required=True)
     parser.add_argument("-m", "--mask_fname", required=True)
     parser.add_argument("-r", "--map_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
-    parser.add_argument("-n", "--chromosome_number", type=int)
     parser.add_argument("-w", "--window")
     parser.add_argument("-W", "--window_fname", default=None)
     parser.add_argument("-b", "--r_bins")
     parser.add_argument("-B", "--r_bin_fname", default=None)
-    parser.add_argument("-s", "--sample_names", default=None, nargs='*')
     parser.add_argument("-bp", "--bp_thresh", type=int, default=0)
-    parser.add_argument("-c", "--parse_site_counts", type=int, default=1)
-    parser.add_argument("-1l", "--parse_one_locus", type=int, default=1)
-    parser.add_argument("-2l", "--parse_two_locus", type=int, default=1)
-    parser.add_argument("-1s", "--parse_one_sample", type=int, default=1)
-    parser.add_argument("-2s", "--parse_two_sample", type=int, default=1)
     return parser.parse_args()
 
 
-def get_right_bounds(windows):
-
-    n_windows = len(windows)
-    upper = windows[-1, 1]
-    bounds = np.full(n_windows, upper)
-    for i in range(n_windows - 1):
-        if windows[i, 1] < windows[i+1, 0]:
-            bounds[:i + 1] = windows[i, 1]
-    return bounds
-
-
 def count_sites():
-
+    # count the number of sites in each window
     site_counts = np.zeros(n_windows, dtype=np.int64)
     for i, window in enumerate(windows):
         site_counts[i] = one_locus.count_sites(mask_positions, window)
-    kwargs["site_counts"] = site_counts
-    kwargs["n_sites"] = site_counts.sum()
+    return site_counts
 
 
 def count_site_pairs():
-
+    # count the number of site pairs in recombination bins
     site_pair_counts = np.zeros((n_windows, n_bins), dtype=np.int64)
     for i, window in enumerate(windows):
         site_pair_counts[i] = two_locus.count_site_pairs(
@@ -64,18 +40,17 @@ def count_site_pairs():
             r_bins,
             positions=mask_positions,
             window=window,
+            upper_bound=right_bound,
             bp_thresh=args.bp_thresh,
-            upper_bound=right_bounds[i],
             vectorized=True,
             verbose=1
         )
-    kwargs["site_pair_counts"] = site_pair_counts
-    kwargs["n_site_pairs"] = site_pair_counts.sum()
+    return site_pair_counts
 
 
 def get_H():
-
-    counts = np.zeros((n_samples, n_windows), dtype=np.int64)
+    # count one and two sample H
+    counts = np.zeros((n_rows, n_windows), dtype=np.int64)
     for i in range(n_samples):
         for j, window in enumerate(windows):
             counts[i, j] = one_locus.count_H(
@@ -83,14 +58,9 @@ def get_H():
                 positions=vcf_pos,
                 window=window
             )
-    kwargs["H_counts"] = counts
-    print(two_locus.get_time(), f"H parsed")
-
-
-def get_Hxy():
-
-    counts = np.zeros((n_sample_pairs, n_windows), dtype=np.float64)
+    print(utils.get_time(), f"H parsed")
     for i, (i_x, i_y) in enumerate(pair_indices):
+        i += n_samples
         for j, window in enumerate(windows):
             counts[i, j] = one_locus.count_Hxy(
                 genotypes[:, i_x],
@@ -98,13 +68,13 @@ def get_Hxy():
                 positions=vcf_pos,
                 window=window
             )
-    kwargs["Hxy_counts"] = counts
-    print(two_locus.get_time(), f"Hxy parsed")
+    print(utils.get_time(), f"Hxy parsed")
+    return counts
 
 
 def get_H2():
-
-    counts = np.zeros((n_samples, n_windows, n_bins), dtype=np.int64)
+    # count one and two sample H2
+    counts = np.zeros((n_rows, n_windows, n_bins), dtype=np.int64)
     for i in range(n_samples):
         for j, window in enumerate(windows):
             counts[i, j] = two_locus.count_H2(
@@ -113,18 +83,13 @@ def get_H2():
                 r_bins,
                 positions=vcf_pos,
                 window=window,
+                upper_bound=right_bound,
                 bp_thresh=args.bp_thresh,
-                upper_bound=right_bounds[j],
                 verbose=0
             )
-    kwargs["H2_counts"] = counts
-    print(two_locus.get_time(), f"H2 parsed")
-
-
-def get_H2xy():
-
-    counts = np.zeros((n_sample_pairs, n_windows, n_bins), dtype=np.float64)
+    print(utils.get_time(), f"H2 parsed")
     for i, (i_x, i_y) in enumerate(pair_indices):
+        i += n_samples
         for j, window in enumerate(windows):
             counts[i, j] = two_locus.count_H2xy(
                 genotypes[:, i_x],
@@ -132,21 +97,61 @@ def get_H2xy():
                 vcf_map,
                 r_bins,
                 positions=vcf_pos,
+                upper_bound=right_bound,
                 window=window,
-                upper_bound=right_bounds[j],
                 verbose=False
             )
-    kwargs["H2xy_counts"] = counts
-    print(two_locus.get_time(), f"H2xy parsed")
+    print(utils.get_time(), f"H2xy parsed")
+    return counts
 
 
-if __name__ == "__main__":
+def parse(
+    mask_fname,
+    vcf_fname,
+    map_fname,
+    windows,
+    bounds,
+    r_bins,
+    out_fname,
+):
+
     t0 = time.time()
-    args = get_args()
-    print(
-        two_locus.get_time(),
-        f"loading files for chromosome {args.chromosome_number}"
+    mask_regions = masks.read_mask_regions(mask_fname)
+    mask_pos = masks.read_mask_positions(mask_fname)
+    vcf_pos, samples, genotypes = one_locus.read_vcf_file(
+        vcf_fname, mask_regions=mask_regions
     )
+    mask_map = two_locus.get_map_vals(map_fname, mask_pos)
+    vcf_map = two_locus.get_map_vals(map_fname, vcf_pos)
+    sample_names = np.array(samples)
+    sample_pairs = one_locus.enumerate_pairs(samples)
+    pair_names = np.array([f"{x},{y}" for x, y in sample_pairs])
+    print(utils.get_time(), "files loaded")
+    sites = one_locus.parse_site_counts(mask_pos, windows)
+    H_counts = one_locus.parse_H_counts(genotypes, vcf_pos, windows)
+    site_pairs = two_locus.parse_site_pairs(
+        mask_map, mask_pos, windows, bounds, r_bins
+    )
+    H2_counts = two_locus.parse_H2_counts(
+        genotypes, vcf_map, vcf_pos, windows, bounds, r_bins
+    )
+    arrs = dict(
+        sample_names=sample_names,
+        sample_pairs=pair_names,
+        windows=windows,
+        r_bins=r_bins,
+        sites=sites,
+        H_counts=H_counts,
+        site_pairs=site_pairs,
+        H2_counts=H2_counts
+    )
+    np.savez(out_fname, **arrs)
+    t = np.round(time.time() - t0, 0)
+    print(utils.get_time(), f"chromosome parsed in\t{t} s")
+
+
+def main():
+    args = get_args()
     if args.window:
         windows = np.array(eval(args.window))
     elif args.window_fname:
@@ -155,28 +160,12 @@ if __name__ == "__main__":
         raise ValueError("you must provide windows!")
     if windows.ndim != 2:
         raise ValueError(f"windows must be dim2, but are dim{windows.ndim}")
-
-    if args.parse_two_locus:
-        if args.r_bins:
-            r_bins = np.array(eval(args.r_bins))
-        elif args.r_bin_fname:
-            r_bins = np.loadtxt(args.r_bin_fname)
-        else:
-            raise ValueError("you must provide r bins!")
-        n_bins = len(r_bins) - 1
+    if args.r_bins:
+        r_bins = np.array(eval(args.r_bins))
+    elif args.r_bin_fname:
+        r_bins = np.loadtxt(args.r_bin_fname)
     else:
-        r_bins = None
-        n_bins = 0
-
-    mask_regions = masks.read_mask_regions(args.mask_fname)
-    mask_positions = masks.regions_to_positions(mask_regions)
-    vcf_pos, vcf_sample_names, genotypes = one_locus.read_vcf_file(
-        args.vcf_fname, mask_regions=mask_regions
-    )
-    pos_map = two_locus.get_map_vals(args.map_fname, mask_positions)
-    vcf_map = two_locus.get_map_vals(args.map_fname, vcf_pos)
-    right_bounds = get_right_bounds(windows)
-
+        raise ValueError("you must provide r bins!")
     if np.any(args.sample_names):
         sample_names = []
         for name in args.sample_names:
@@ -186,44 +175,8 @@ if __name__ == "__main__":
                 raise ValueError(f"sample {name} is not in .vcf!")
     else:
         sample_names = vcf_sample_names
+    parse()
 
-    sample_arr = np.array(sample_names)
-    n_samples = len(sample_names)
 
-    sample_pairs = one_locus.enumerate_pairs(sample_names)
-    n_sample_pairs = len(sample_pairs)
-    pair_indices = one_locus.enumerate_indices(n_samples)
-    sample_pair_arr = np.array([f"{x},{y}" for x, y in sample_pairs])
-
-    n_windows = len(windows)
-    chrom_arr = np.full(n_windows, args.chromosome_number)
-    kwargs = {
-        "sample_names": sample_arr,
-        "sample_pairs": sample_pair_arr,
-        "r_bins": r_bins,
-        "chroms": chrom_arr,
-        "windows": windows
-    }
-    print(
-        two_locus.get_time(),
-        f"files loaded for chromosome {args.chromosome_number}"
-    )
-    if args.parse_site_counts and args.parse_one_locus:
-        count_sites()
-    if args.parse_site_counts and args.parse_two_locus:
-        count_site_pairs()
-    if args.parse_one_locus and args.parse_one_sample:
-        get_H()
-    if args.parse_one_locus and args.parse_two_sample:
-        get_Hxy()
-    if args.parse_two_locus and args.parse_one_sample:
-        get_H2()
-    if args.parse_two_locus and args.parse_two_sample:
-        get_H2xy()
-    np.savez(args.out_fname, **kwargs)
-    t = np.round(time.time() - t0, 0)
-    time_now = time.strftime("%H:%M:%S", time.localtime())
-    print(
-        two_locus.get_time(),
-        f"chromosome {args.chromosome_number} parsed in\t{t} s"
-    )
+if __name__ == "__main__":
+    main()

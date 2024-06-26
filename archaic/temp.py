@@ -3,12 +3,45 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-from util import one_locus
-from util import two_locus
+from archaic import plots
 
 
 plt.rcParams['figure.dpi'] = 100
 matplotlib.use('Qt5Agg')
+
+
+"""
+Recombination etc
+"""
+
+
+def E_recombinations(r, t, t_gen=30):
+    # expected number of recombinations
+    E_rec = (t / t_gen) * r
+    return E_rec
+
+
+def E_time_to_recombination(r, t_gen=30):
+    # expected time to a single recombination
+    E_t = t_gen * 1 / r
+    return E_t
+
+
+def plot_recomb(times, t_gen=30):
+
+    r = np.logspace(-6, -2, 100)
+    fig, ax = plt.subplots(figsize=(6, 5), layout="constrained")
+    ax.grid(alpha=0.2)
+    ax.set_ylabel("E[recombinations]")
+    ax.set_xlabel("r")
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    colors = plots.get_gnu_cmap(len(times))
+    for i, t in enumerate(times):
+        gens = t / t_gen
+        exp_recombs = gens * r
+        plt.plot(r, exp_recombs, color=colors[i], label=t)
+    ax.legend()
 
 
 """

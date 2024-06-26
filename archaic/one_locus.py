@@ -1,6 +1,11 @@
+"""
+Functions for computing one-locus statistics.
+"""
+
 
 import gzip
 import numpy as np
+from archaic import utils
 
 
 """
@@ -12,7 +17,6 @@ def read_vcf_file(vcf_fname, mask_regions=None):
 
     pos_idx = 1
     first_sample_idx = 9
-
     if np.any(mask_regions):
         # assume 0 indexed
         starts = mask_regions[:, 0]
@@ -98,7 +102,7 @@ def get_alt_counts(genotypes):
 
 
 """
-Compute statistics
+Compute H statistics
 """
 
 
@@ -145,10 +149,6 @@ def get_site_Hxy(genotypes_x, genotypes_y):
     """
     Compute the probabilities that, sampling one allele from x and one from y,
     they are distinct, at each site.
-
-    :param genotypes_x:
-    :param genotypes_y:
-    :return:
     """
     site_Hxy = (
             np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)
@@ -178,12 +178,6 @@ def count_approx_Hxy(genotypes_x, genotypes_y, positions=None, window=None):
     """
     Approximate in that it handles all alternate alleles alike and will treat
     sites heterozygous for two different alternate alleles as homozygous
-
-    :param genotypes_x:
-    :param genotypes_y:
-    :param positions:
-    :param window:
-    :return:
     """
     if np.any(window):
         if np.any(positions):
@@ -202,6 +196,64 @@ def count_approx_Hxy(genotypes_x, genotypes_y, positions=None, window=None):
         (2 - alt_counts_x) * alt_counts_y + (2 - alt_counts_y) * alt_counts_x
     ) / 4
     return Hxy
+
+
+"""
+Computing SFS statistics
+"""
+
+
+def two_sample_sfs_matrix(alts):
+    # for two samples. i on rows j on cols
+    arr = np.zeros((3, 3))
+    for i in range(3):
+        for j in range(3):
+            arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
+    arr[0, 0] = 0
+    return arr
+
+
+"""
+Parsing files
+"""
+
+
+def parse_site_counts(positions, windows):
+    # count the number of sites in each window
+    # returns array of shape (n_windows)
+    site_counts = np.zeros(len(windows), dtype=np.int64)
+    for i, window in enumerate(windows):
+        site_counts[i] = count_sites(positions, window)
+    print(utils.get_time(), "site counts parsed")
+    return site_counts
+
+
+def parse_H_counts(genotypes, positions, windows):
+    # count one and two sample H
+    # returns array of shape (n_samples + n_pairs, n_windows)
+    n_samples = genotypes.shape[1]
+    n_pairs = utils.n_choose_2(n_samples)
+    n = n_samples + n_pairs
+    counts = np.zeros((n, len(windows)), dtype=np.int64)
+    for i in range(n_samples):
+        for j, window in enumerate(windows):
+            counts[i, j] = count_H(
+                genotypes[:, i],
+                positions=positions,
+                window=window
+            )
+    print(utils.get_time(), "one sample H counts parsed")
+    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_pairs)):
+        i += n_samples
+        for j, window in enumerate(windows):
+            counts[i, j] = count_Hxy(
+                genotypes[:, i_x],
+                genotypes[:, i_y],
+                positions=positions,
+                window=window
+            )
+    print(utils.get_time(), "two sample H counts parsed")
+    return counts
 
 
 """

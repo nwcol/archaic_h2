@@ -156,7 +156,7 @@ def objective_fxn(
             graph,
             data,
             r,
-            u=u,
+            u,
             num_method=num_method,
             use_H=use_H,
             use_H2=use_H2

@@ -1,7 +1,7 @@
+"""
+Various utilities that are widely used
+"""
 
-"""
-Random utilities that are widely used
-"""
 
 from datetime import datetime
 import numpy as np
@@ -38,6 +38,21 @@ def get_pair_idxs(n):
         for j in np.arange(i + 1, n):
             pairs.append((i, j))
     return pairs
+
+
+"""
+Combinatorics
+"""
+
+
+def n_choose_2(n):
+
+    return int(n * (n - 1) * 0.5)
+
+
+def n_choose_m(n, m):
+    # implement
+    return None
 
 
 """

@@ -118,7 +118,6 @@ def plot_H_err(ax, H, H_err, names, color, label=None, title=None):
         if i >= 1:
             label = None
         ax.errorbar(i, H, yerr=H_err[i], color=color, fmt='.', label=label)
-    ax.set_ylim(0, )
     ax.set_xticks(np.arange(len(names)), names)
     ax.grid(alpha=0.2)
     if title:

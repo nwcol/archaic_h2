@@ -1,9 +1,4 @@
 
-"""
-Bootstrap H2 (in its respective recombination distance bins) and H, then save
-the output distributions,
-"""
-
 import argparse
 import numpy as np
 
@@ -16,10 +11,10 @@ unique_fields = [
 
 
 def get_args():
-
+    # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument("in_fname")
-    parser.add_argument("out_fname")
+    parser.add_argument("-i", "--in_fnames", nargs='*', required=True)
+    parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-b", "--n_resamplings", type=int, default=1_000)
     parser.add_argument("-n", '--sample_size', type=int, default=None)
     return parser.parse_args()
@@ -41,34 +36,59 @@ def bootstrap(site_pairs, het_arr, n_resamplings, sample_size=None):
 
 def main():
 
-    archive = np.load(args.in_fname)
-    r_bins = archive["r_bins"]
+    in_files = [np.load(x) for x in args.in_fnames]
+    sites = np.concatenate([x["sites"] for x in in_files], axis=0)
+    H_counts = np.concatenate([x["H_counts"] for x in in_files], axis=1)
+
+    """
+    H_counts = np.concatenate(
+        [np.concatenate([x["H_counts"] for x in in_files], axis=1),
+         np.concatenate([x["Hxy_counts"] for x in in_files], axis=1),
+         ], axis=0
+    )
+    H2_counts = np.concatenate(
+        [np.concatenate([x["H2_counts"] for x in in_files], axis=1),
+         np.concatenate([x["H2xy_counts"] for x in in_files], axis=1),
+         ], axis=0
+    )
+    """
+    site_pairs = np.concatenate([x["site_pairs"] for x in in_files], axis=0)
+    H2_counts = np.concatenate([x["H2_counts"] for x in in_files], axis=1)
+    r_bins = in_files[0]["r_bins"]
     n_bins = len(r_bins) - 1
-    H_norm = archive["site_counts"]
-    H2_norm = archive["site_pair_counts"]
-    het_pair_counts = np.concatenate(
-        [archive["H2_counts"], archive["H2xy_counts"]], axis=0
+    sample_names = in_files[0]["sample_names"]
+    pair_names = in_files[0]["sample_pairs"]
+    n_rows = len(sample_names) + len(pair_names)
+    kwargs = dict(
+        sample_names=sample_names,
+        pair_names=pair_names,
+        r_bins=r_bins
     )
-    het_counts = np.concatenate(
-        [archive["H_counts"], archive["Hxy_counts"]], axis=0
-    )
-    kwargs = {field: archive[field] for field in unique_fields}
     kwargs["n_bins"] = len(r_bins) - 1
-    for i in range(n_bins):
-        boot_dist = bootstrap(
-            H2_norm[:, i], het_pair_counts[:, :, i],
-            n_resamplings=args.n_resamplings, sample_size=args.sample_size
-        )
-        kwargs[f"H2_bin{i}_dist"] = boot_dist
-        kwargs[f"H2_bin{i}_mean"] = boot_dist.mean(0)
-        kwargs[f"H2_bin{i}_cov"] = np.cov(boot_dist, rowvar=False)
-    boot_dist = bootstrap(
-        H_norm, het_counts,
-        n_resamplings=args.n_resamplings, sample_size=args.sample_size
+    # bootstrap H
+    H_dist = bootstrap(
+        sites,
+        H_counts,
+        n_resamplings=args.n_resamplings,
+        sample_size=args.sample_size
     )
-    kwargs[f"H_dist"] = boot_dist
-    kwargs[f"H_mean"] = boot_dist.mean(0)
-    kwargs[f"H_cov"] = np.cov(boot_dist, rowvar=False)
+    kwargs["H_dist"] = H_dist
+    kwargs["H_mean"] = H_dist.mean(0)
+    kwargs["H_cov"] = np.zeros((n_rows, n_rows))
+    kwargs["H_cov"][:, :] = np.cov(H_dist, rowvar=False)
+    # bootstrap H2
+    kwargs["H2_dist"] = np.zeros((n_bins, args.n_resamplings, n_rows))
+    kwargs["H2_cov"] = np.zeros((n_bins, n_rows, n_rows))
+    for i in range(n_bins):
+        H2_dist = bootstrap(
+            site_pairs[:, i],
+            H2_counts[:, :, i],
+            n_resamplings=args.n_resamplings,
+            sample_size=args.sample_size
+        )
+        kwargs["H2_dist"][i, :, :] = H2_dist
+        kwargs["H2_cov"][i, :, :] = np.cov(H2_dist, rowvar=False)
+    kwargs["H2_mean"] = kwargs["H2_dist"].mean(1)
     np.savez(args.out_fname, **kwargs)
     return 0
 
