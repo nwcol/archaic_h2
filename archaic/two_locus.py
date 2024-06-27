@@ -223,9 +223,10 @@ Parsing files
 """
 
 
-def parse_site_pairs(pos_map, pos, windows, bounds, r_bins, thresh=0):
+def parse_pair_counts(pos_map, pos, windows, bounds, r_bins, thresh=0):
     # count the number of site pairs in recombination bins
-    site_pair_counts = np.zeros((len(windows), len(r_bins)), dtype=np.int64)
+    b = len(r_bins) - 1
+    site_pair_counts = np.zeros((len(windows), b), dtype=np.int64)
     for i, window in enumerate(windows):
         site_pair_counts[i] = count_site_pairs(
             pos_map,
@@ -246,7 +247,8 @@ def parse_H2_counts(genotypes, vcf_map, pos, windows, bounds, r_bins, thresh=0):
     n_samples = genotypes.shape[1]
     n_pairs = utils.n_choose_2(n_samples)
     n = n_samples + n_pairs
-    counts = np.zeros((n, len(windows), len(r_bins)), dtype=np.int64)
+    b = len(r_bins) - 1
+    counts = np.zeros((n, len(windows), b), dtype=np.int64)
     for i in range(n_samples):
         for j, window in enumerate(windows):
             counts[i, j] = count_H2(
@@ -260,7 +262,7 @@ def parse_H2_counts(genotypes, vcf_map, pos, windows, bounds, r_bins, thresh=0):
                 verbose=0
             )
     print(utils.get_time(), f"one sample H2 parsed")
-    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_pairs)):
+    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_samples)):
         i += n_samples
         for j, window in enumerate(windows):
             counts[i, j] = count_H2xy(

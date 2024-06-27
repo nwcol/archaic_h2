@@ -1,7 +1,7 @@
-
 """
 For conducting mass inference on a remote server. Outputs a .yaml graph file
 """
+
 
 import argparse
 import demes
@@ -15,7 +15,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cluster_id", default="0")
     parser.add_argument("--process_id", default="0")
-    parser.add_argument("-d", "--boot_fname", required=True)  
+    parser.add_argument("-d", "--boot_fname", required=True)
     parser.add_argument("-g", "--graph_fname", required=True)
     parser.add_argument("-p", "--param_fname", required=True)
     parser.add_argument("-o", "--out_fstem", required=True)
@@ -30,14 +30,14 @@ def get_args():
 
 
 def get_out_fname():
-    # get the output filename 
+    # get the output filename
     fname = f"{args.out_fstem}_{args.cluster_id}_{args.process_id}.yaml"
     return fname
 
 
 def get_init_fname():
     # get a filename for the permuted graph
-    fname = f"{args.out_fstem}_{args.cluster_id}_{args.process_id}_init.yaml" 
+    fname = f"{args.out_fstem}_{args.cluster_id}_{args.process_id}_init.yaml"
     return fname
 
 
@@ -84,6 +84,13 @@ def permute_graph():
 
 def main():
     #
+    args = get_args()
+    if args.permute_graph:
+        init_fname = get_init_fname()
+        permute_graph()
+    else:
+        init_fname = args.graph_fname
+    out_fname = get_out_fname()
     sample_names = inference.scan_names(args.graph_fname, args.boot_fname)
     print(sample_names)
     r_bins, data = inference.read_data(args.boot_fname, sample_names)
@@ -108,11 +115,4 @@ def main():
 
 
 if __name__ == "__main__":
-    args = get_args()
-    if args.permute_graph:
-        init_fname = get_init_fname()
-        permute_graph()
-    else:
-        init_fname = args.graph_fname
-    out_fname = get_out_fname()
     main()

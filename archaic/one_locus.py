@@ -243,7 +243,7 @@ def parse_H_counts(genotypes, positions, windows):
                 window=window
             )
     print(utils.get_time(), "one sample H counts parsed")
-    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_pairs)):
+    for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_samples)):
         i += n_samples
         for j, window in enumerate(windows):
             counts[i, j] = count_Hxy(

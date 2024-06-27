@@ -1,4 +1,3 @@
-
 """
 Functions for computing approx composite likelihoods and inferring demographies
 """
@@ -7,8 +6,6 @@ import demes
 import demesdraw
 import numpy as np
 import scipy
-import matplotlib.pyplot as plt
-from matplotlib import cm
 import moments
 import moments.Demes.Inference as minf
 import time
@@ -351,112 +348,6 @@ def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
 
 
 """
-Plotting results of optimization
-"""
-
-
-def plot(graph, data, r_bins, u=1.35e-8, approx_method="simpsons", ci=1.96,
-         two_sample=True, plot_demog=True, log_scale=False, use_H=True):
-    # it's expected that the data tuple has H in it
-    one_sample_cm = cm.gnuplot
-    two_sample_cm = cm.terrain
-    samples, pairs, means, covs = data
-    n_samples = len(samples)
-    n_pairs = len(pairs)
-    # retrieve empirical statistics and confidences
-    H2 = np.array(means[:-1])
-    H = means[-1]
-    idx = np.arange(n_samples + n_pairs)
-    stds = np.sqrt(np.array([cov[idx, idx] for cov in covs]))
-    H_err = stds[-1] * ci
-    H2_err = stds[:-1] * ci
-    # compute expected statistics and log likelihood
-    r = get_r(r_bins, method="midpoint")
-    _r = get_r(r_bins, method=approx_method)
-    E_H_stats = get_moments_stats(
-        graph, samples, pairs, r, u=u, approx_method="midpoint"
-    )
-    E_H2 = E_H_stats[:-1]
-    E_H = E_H_stats[-1]
-    if use_H:
-        _data = (samples, pairs, means, np.linalg.inv(covs))
-    else:
-        _data = (samples, pairs, means[:-1], np.linalg.inv(covs[:-1]))
-    log_lik = eval_log_lik(
-        graph, _data, _r, u=u, approx_method=approx_method, use_H=use_H
-    )
-    colors = list(one_sample_cm(np.linspace(0, 0.95, n_samples)))
-    if plot_demog:
-        fig, axs = plt.subplot_mosaic(
-            [[0, 1], [2, 2]], figsize=(10, 8), layout="constrained"
-        )
-        ax0 = axs[0]
-        ax1 = axs[1]
-        ax2 = axs[2]
-        color_map = {name: colors[i] for i, name in enumerate(samples)}
-        plot_graph(ax0, graph, color_map)
-    else:
-        fig, (ax1, ax2) = plt.subplots(
-            1, 2, figsize=(12, 6), layout="constrained", width_ratios=[1.5, 1]
-        )
-    if two_sample:
-        colors += list(two_sample_cm(np.linspace(0, 0.90, n_pairs)))
-        samples += pairs
-    plot_H(ax1, H, H_err, E_H, samples, colors)
-    plot_H2(ax2, r, H2, H2_err, E_H2, samples, colors)
-    fig.legend(fontsize=10, loc='center left', bbox_to_anchor=(1, 0.5))
-    if log_scale:
-        ax2.set_yscale("log")
-    else:
-        ax2.set_ylim(0, )
-    fig.suptitle(f"log lik: {log_lik:.2e}")
-
-
-def plot_H2(ax, r, H2, H2_err, E_H2, names, colors):
-
-    for i, name in enumerate(names):
-        if type(name) == str:
-            style = "solid"
-        else:
-            style = "dotted"
-            name = f"{name[0]}-{name[1]}"
-        ax.errorbar(
-            r, H2[:, i], yerr=H2_err[:, i], color=colors[i], fmt=".",
-            label=name, capsize=0
-        )
-        ax.plot(r, E_H2[:, i], color=colors[i], linestyle=style)
-    ax.set_xscale("log")
-    ax.set_ylabel("$H_2$")
-    ax.set_xlabel("r")
-    ax.grid(alpha=0.2)
-    return ax
-
-
-def plot_H(ax, H, H_err, E_H, names, colors):
-
-    abbrev_names = []
-    for i, name in enumerate(names):
-        if type(name) == str:
-            name = name[:3]
-        else:
-            name = f"{name[0][:3]}-{name[1][:3]}"
-        abbrev_names.append(name)
-        ax.errorbar(i, H[i], yerr=H_err[i], color=colors[i], fmt='.')
-        ax.scatter(i, E_H[i], color=colors[i], marker='+')
-    ax.set_ylim(0, )
-    ax.set_ylabel("$H$")
-    ax.set_xticks(np.arange(len(names)), abbrev_names)
-    ax.grid(alpha=0.2)
-    return ax
-
-
-def plot_graph(ax, graph, color_map):
-
-    demesdraw.tubes(graph, ax=ax, colours=color_map)
-    return ax
-
-
-"""
 Loading and setting up bootstrap statistics
 """
 
@@ -531,6 +422,45 @@ def _read_data(file_name, samples, get_H=True):
         means += [archive["H_mean"][idx]]
         covs += [archive["H_cov"][mesh_idx]]
     return r_bins, (samples, pairs, np.array(means), np.array(covs))
+
+
+"""
+Inference with the SFS
+"""
+
+
+def sfs_infer(
+    data_fname,
+    graph_fname,
+    params_fname,
+    out_fname,
+    u,
+    L,
+    names,
+    method="fmin",
+    max_iter=1_000,
+    verbosity=0,
+):
+    #
+    archive = np.load(data_fname)
+    sample_names = archive["sample_names"]
+    idx = utils.get_pairs(sample_names).index(tuple(names))
+    sfs = archive["sfs"][idx]
+    data = moments.Spectrum(sfs, pop_ids=names)
+    uL = u * L
+    fit = minf.optimize(
+        graph_fname,
+        params_fname,
+        data,
+        maxiter=max_iter,
+        uL=uL,
+        output=out_fname,
+        verbose=verbosity,
+        method=method,
+        overwrite=True
+    )
+    print(fit)
+    return 0
 
 
 """

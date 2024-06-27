@@ -31,7 +31,6 @@ def generic_coalescent(graph_fname, out_fname, samples, L, n=1, r=1e-8,
         discrete_genome=True
     )
     mts = msprime.sim_mutations(ts, rate=u)
-    mts.write_vcf(
-        out_fname, individual_names=samples, contig_id=str(contig_id)
-    )
+    with open(out_fname, 'w') as file:
+        mts.write_vcf(file, individual_names=samples, contig_id=str(contig_id))
     return 0

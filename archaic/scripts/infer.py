@@ -26,6 +26,7 @@ def get_args():
 
 def main():
     #
+    args = get_args()
     sample_names = inference.scan_names(args.graph_fname, args.boot_fname)
     print(sample_names)
     r_bins, data = inference.read_data(args.boot_fname, sample_names)
@@ -49,5 +50,4 @@ def main():
 
 
 if __name__ == "__main__":
-    args = get_args()
     main()

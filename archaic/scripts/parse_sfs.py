@@ -1,7 +1,7 @@
-
 """
 Each individual is treated as a population
 """
+
 
 import argparse
 import numpy as np
@@ -17,38 +17,34 @@ def get_args():
     return parser.parse_args()
 
 
-def get_two_sample_SFS(alts):
-    # for two samples. i on rows j on cols
-    arr = np.zeros((3, 3))
-    for i in range(3):
-        for j in range(3):
-            arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
-    arr[0, 0] = 0
-    return arr
-
-
-def main():
-    # genotype arr has shape L_vcfs, n_samples, 2 
+def parse(in_fnames, out_fname):
+    #
+    sample_names = None
     genotypes = []
-    for fname in args.in_fnames:
+    for fname in in_fnames:
         _, sample_names, gt = one_locus.read_vcf_file(fname)
         genotypes.append(gt)
     genotypes = np.concatenate(genotypes, axis=0)
     alts = genotypes.sum(2)
     n_samples = len(sample_names)
+    sfs_arrs = []
+    for i, j in utils.get_pair_idxs(n_samples):
+        sfs_arrs.append(one_locus.two_sample_sfs_matrix(alts[:, [i, j]]))
+    sfs_arr = np.stack(sfs_arrs)
     kwargs = dict(
         sample_names=sample_names,
-        pair_names=utils.get_pair_names(sample_names)
+        pair_names=utils.get_pair_names(sample_names),
+        sfs=sfs_arr
     )
-    SFS_arr = []
-    for i, j in utils.get_pair_idxs(n_samples):
-        SFS_arr.append(get_two_sample_SFS(alts[:, [i, j]]))
-    kwargs["sfs_arr"] = np.concatenate(SFS_arr)
-    np.savez(args.out_fname, **kwargs)
+    np.savez(out_fname, **kwargs)
+
+
+def main():
+    #
+    args = get_args()
+    parse(args.in_fnames, args.out_fname)
     return 0
 
 
 if __name__ == "__main__":
-    args = get_args()
     main()
-    
