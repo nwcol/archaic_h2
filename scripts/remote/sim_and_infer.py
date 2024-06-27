@@ -5,7 +5,6 @@
 import argparse
 import demes
 import numpy as np
-import moments.Demes.Inference as minf
 from archaic import inference
 from archaic import coalescent
 from archaic import masks
@@ -29,6 +28,7 @@ def get_args():
     parser.add_argument("-s", "--sample_names", nargs='*', required=True)
     parser.add_argument("-v", "--verbosity", type=int, default=0)
     parser.add_argument("--opt_routine", default="fmin")
+    parser.add_argument("--permute_graph", type=int, default=1)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
     parser.add_argument("-r", "--r", type=float, default=1e-8)
     return parser.parse_args()
@@ -97,9 +97,14 @@ def main():
     parse_sfs.parse(vcf_fnames, "temp/sfs.npz")
     #
     h2_fname, sfs_fname = get_out_fnames(args)
+    if args.permute_graph:
+        graph_fname = "temp/permuted_graph.yaml"
+        inference.permute_graph(args.graph_fname, args.param_fname, graph_fname)
+    else:
+        graph_fname = args.graph_fname
     r_bins, data = inference.read_data("temp/h2.npz", args.sample_names)
     h2_graph, etc = inference.optimize(
-        args.graph_fname,
+        graph_fname,
         args.param_fname,
         data,
         r_bins,
@@ -116,7 +121,7 @@ def main():
     demes.dump(h2_graph, h2_fname)
     sfs_fit = inference.sfs_infer(
         "temp/sfs.npz",
-        args.graph_fname,
+        graph_fname,
         args.param_fname,
         sfs_fname,
         args.u,

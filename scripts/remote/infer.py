@@ -20,7 +20,7 @@ def get_args():
     parser.add_argument("-p", "--param_fname", required=True)
     parser.add_argument("-o", "--out_fstem", required=True)
     parser.add_argument("-m", "--max_iter", required=True, type=int)
-    parser.add_argument("--permute_graph", type=int, default=1)
+    parser.add_argument("--permute_graph", type=int, default=0)
     parser.add_argument("-v", "--verbosity", type=int, default=0)
     parser.add_argument("-r", "--opt_routine", default="fmin")
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
@@ -52,7 +52,6 @@ def log_uniform(lower, upper):
 
 def permute_graph():
     # uniformly and randomly pick parameter values
-    graph = demes.load(args.graph_fname)
     builder = minf._get_demes_dict(args.graph_fname)
     param_dict = minf._get_params_dict(args.param_fname)
     param_names, params0, lower_bounds, upper_bounds = \
@@ -64,6 +63,7 @@ def permute_graph():
     below1 = np.where(lower_bounds < 1)[0]
     n = len(params0)
     satisfied = False
+    params = None
     while not satisfied:
         params = np.zeros(n)
         params[above1] = np.random.uniform(
@@ -84,12 +84,6 @@ def permute_graph():
 
 def main():
     #
-    args = get_args()
-    if args.permute_graph:
-        init_fname = get_init_fname()
-        permute_graph()
-    else:
-        init_fname = args.graph_fname
     out_fname = get_out_fname()
     sample_names = inference.scan_names(args.graph_fname, args.boot_fname)
     print(sample_names)
@@ -115,4 +109,10 @@ def main():
 
 
 if __name__ == "__main__":
+    args = get_args()
+    if args.permute_graph:
+        init_fname = get_init_fname()
+        permute_graph()
+    else:
+        init_fname = args.graph_fname
     main()

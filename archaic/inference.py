@@ -464,6 +464,52 @@ def sfs_infer(
 
 
 """
+Graph permutation
+"""
+
+
+def log_uniform(lower, upper):
+    # sample parameters log-uniformly
+    log_lower = np.log10(lower)
+    log_upper = np.log10(upper)
+    log_draws = np.random.uniform(log_lower, log_upper)
+    draws = 10 ** log_draws
+    return draws
+
+
+def permute_graph(graph_fname, param_fname, out_fname):
+    # uniformly and randomly pick parameter values
+    builder = minf._get_demes_dict(graph_fname)
+    param_dict = minf._get_params_dict(param_fname)
+    param_names, params0, lower_bounds, upper_bounds = \
+        minf._set_up_params_and_bounds(param_dict, builder)
+    if np.any(np.isinf(upper_bounds)):
+        raise ValueError("all upper bounds must be specified!")
+    constraints = minf._set_up_constraints(param_dict, param_names)
+    above1 = np.where(lower_bounds >= 1)[0]
+    below1 = np.where(lower_bounds < 1)[0]
+    n = len(params0)
+    satisfied = False
+    params = None
+    while not satisfied:
+        params = np.zeros(n)
+        params[above1] = np.random.uniform(
+            lower_bounds[above1], upper_bounds[above1]
+        )
+        params[below1] = log_uniform(
+            lower_bounds[below1], upper_bounds[below1]
+        )
+        if constraints:
+            if np.all(constraints(params) > 0):
+                satisfied = True
+        else:
+            satisfied = True
+    builder = minf._update_builder(builder, param_dict, params)
+    graph = demes.Graph.fromdict(builder)
+    demes.dump(graph, out_fname)
+
+
+"""
 Other statistical functions
 """
 
