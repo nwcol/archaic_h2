@@ -2,6 +2,7 @@
 
 """
 
+
 import argparse
 import demes
 import msprime
@@ -9,8 +10,7 @@ import numpy as np
 from archaic import inference
 from archaic import masks
 from archaic import two_locus
-from parse import parse_H2, bootstrap, parse_SFS
-
+from archaic.parsing import parse_H2, bootstrap_H2, parse_SFS
 
 
 def get_args():
@@ -63,6 +63,8 @@ def make_map(L, r):
 
 def sim(graph_fname, out_fname, samples, L, n=1, r=1e-8, u=1.35e-8, contig=0):
 
+    def increment1(x):
+        return [_ + 1 for _ in x]
     demography = msprime.Demography.from_demes(demes.load(graph_fname))
     config = {s: n for s in samples}
     ts = msprime.sim_ancestry(
@@ -78,7 +80,8 @@ def sim(graph_fname, out_fname, samples, L, n=1, r=1e-8, u=1.35e-8, contig=0):
         mts.write_vcf(
             file,
             individual_names=samples,
-            contig_id=str(contig)
+            contig_id=str(contig),
+            position_transform=increment1
         )
     return 0
 
@@ -116,7 +119,7 @@ def main():
             r_bins,
             npz_fname,
         )
-    bootstrap(npz_fnames, "temp/h2.npz")
+    bootstrap_H2(npz_fnames, "temp/h2.npz")
     parse_SFS(vcf_fnames, "temp/sfs.npz")
     #
     init_fname, h2_fname, sfs_fname = get_out_fnames(args)

@@ -84,7 +84,10 @@ def count_site_pairs(
     upper_bound=None,
     verbose=2
 ):
-
+    # check whether there are actually any sites
+    if len(map_vals) == 0:
+        return np.zeros(len(r_bins) - 1)
+    # to use a distance threshold, we need positions
     if bp_thresh:
         if not np.any(positions):
             raise ValueError("You must provide positions to use bp_thresh!")
