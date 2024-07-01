@@ -9,17 +9,17 @@ executable = sim_and_infer.sh
 
 
 #
-arguments = --cluster_id $(Cluster) --process_id $(Process) \
-            -n 500 -L 1e6 -u 1.35e-8 -v 50 -m 500 \
-            -g graph.yaml -p params.yaml -o trial
-
+arguments = --cluster_id $(Cluster) --process_id $(Process) --permute_graph 1 \
+            -n 500 -L 1e6 -v 50 -m 500 -u 1.35e-8 -r 1e-8 \
+            -s X Y -g graph.yaml -p params.yaml -o trial
+#
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
 
 #
-transfer_input_files = infer.py, stats.npz, graph.yaml, params.yaml
+transfer_input_files = parse.py, sim_and_infer.py, IM_graph.yaml, IM_params_mT.yaml
 #
 
 

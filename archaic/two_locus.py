@@ -74,9 +74,16 @@ Compute H2 statistics
 """
 
 
-def count_site_pairs(map_vals, r_bins, positions=None, window=None,
-                     vectorized=False, bp_thresh=0, upper_bound=None,
-                     verbose=2):
+def count_site_pairs(
+    map_vals,
+    r_bins,
+    positions=None,
+    window=None,
+    vectorized=False,
+    bp_thresh=0,
+    upper_bound=None,
+    verbose=2
+):
 
     if bp_thresh:
         if not np.any(positions):
@@ -128,8 +135,17 @@ def count_site_pairs(map_vals, r_bins, positions=None, window=None,
     return pair_counts
 
 
-def count_H2(genotypes, map_vals, r_bins, positions=None, window=None,
-             vectorized=False, bp_thresh=0, upper_bound=None, verbose=1):
+def count_H2(
+    genotypes,
+    map_vals,
+    r_bins,
+    positions=None,
+    window=None,
+    vectorized=False,
+    bp_thresh=0,
+    upper_bound=None,
+    verbose=1
+):
 
     het_idx = one_locus.get_het_idx(genotypes)
     het_map_vals = map_vals[het_idx]
@@ -138,15 +154,29 @@ def count_H2(genotypes, map_vals, r_bins, positions=None, window=None,
     else:
         het_positions = None
     H2_counts = count_site_pairs(
-        het_map_vals, r_bins, positions=het_positions, window=window,
-        vectorized=vectorized, bp_thresh=bp_thresh, upper_bound=upper_bound,
+        het_map_vals,
+        r_bins,
+        positions=het_positions,
+        window=window,
+        vectorized=vectorized,
+        bp_thresh=bp_thresh,
+        upper_bound=upper_bound,
         verbose=verbose
     )
     return H2_counts
 
 
-def count_H2xy(genotypes_x, genotypes_y, map_vals, r_bins, positions=None,
-               window=None, bp_thresh=0, upper_bound=None, verbose=True):
+def count_H2xy(
+    genotypes_x,
+    genotypes_y,
+    map_vals,
+    r_bins,
+    positions=None,
+    window=None,
+    bp_thresh=0,
+    upper_bound=None,
+    verbose=True
+):
     # unphased, of course
     if bp_thresh:
         if not np.any(positions):

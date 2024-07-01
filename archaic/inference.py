@@ -510,6 +510,23 @@ def permute_graph(graph_fname, param_fname, out_fname):
 
 
 """
+Parse parameters from large number of graphs
+"""
+
+
+def parse_graph_params(params_fname, graph_fnames):
+    #
+    params = minf._get_params_dict(params_fname)
+    names = None
+    arr = []
+    for fname in graph_fnames:
+        g = minf._get_demes_dict(fname)
+        names, vals, _, __, = minf._set_up_params_and_bounds(params, g)
+        arr.append(vals)
+    return names, np.array(arr)
+
+
+"""
 Other statistical functions
 """
 

@@ -4,14 +4,13 @@
 
 import argparse
 import demes
+import msprime
 import numpy as np
 from archaic import inference
-from archaic import coalescent
 from archaic import masks
 from archaic import two_locus
-from archaic.scripts import parse_H2
-from archaic.scripts import parse_sfs
-from archaic.scripts import bootstrap_H2
+from parse import parse_H2, bootstrap, parse_SFS
+
 
 
 def get_args():
@@ -35,14 +34,15 @@ def get_args():
 
 
 def get_out_fnames(args):
-    # get the output filename 
+    # get the output filenames
+    init_fname = f"init_graph_{args.cluster_id}_{args.process_id}.yaml"
     h2_fname = f"h2_graph_{args.cluster_id}_{args.process_id}.yaml"
     sfs_fname = f"sfs_graph_{args.cluster_id}_{args.process_id}.yaml"
-    return h2_fname, sfs_fname
+    return init_fname, h2_fname, sfs_fname
 
 
 def make_mask(L):
-
+    #
     regions = np.array([[0, L]], dtype=np.int64)
     mask_fname = f"temp/mask{int(L / 1e6)}Mb.bed"
     chrom_num = "chr0"
@@ -51,7 +51,7 @@ def make_mask(L):
 
 
 def make_map(L, r):
-
+    #
     cM = two_locus.map_function(r * L)
     map_fname = f"temp/map{int(L / 1e6)}Mb.txt"
     with open(map_fname, 'w') as file:
@@ -59,6 +59,28 @@ def make_map(L, r):
         file.write("1\t0\t0\n")
         file.write(f"{int(L)}\t0\t{cM}")
     return map_fname
+
+
+def sim(graph_fname, out_fname, samples, L, n=1, r=1e-8, u=1.35e-8, contig=0):
+
+    demography = msprime.Demography.from_demes(demes.load(graph_fname))
+    config = {s: n for s in samples}
+    ts = msprime.sim_ancestry(
+        samples=config,
+        ploidy=2,
+        demography=demography,
+        sequence_length=L,
+        recombination_rate=r,
+        discrete_genome=True
+    )
+    mts = msprime.sim_mutations(ts, rate=u)
+    with open(out_fname, 'w') as file:
+        mts.write_vcf(
+            file,
+            individual_names=samples,
+            contig_id=str(contig)
+        )
+    return 0
 
 
 def main():
@@ -72,11 +94,12 @@ def main():
     vcf_fnames = []
     npz_fnames = []
     for i in range(args.n_windows):
+        print(i)
         vcf_fname = f"temp/win{i}.vcf"
         vcf_fnames.append(vcf_fname)
         npz_fname = f"temp/win{i}.npz"
         npz_fnames.append(npz_fname)
-        coalescent.generic_coalescent(
+        sim(
             args.graph_fname,
             vcf_fname,
             args.sample_names,
@@ -84,7 +107,7 @@ def main():
             r=args.r,
             u=args.u
         )
-        parse_H2.parse(
+        parse_H2(
             mask_fname,
             vcf_fname,
             map_fname,
@@ -93,12 +116,12 @@ def main():
             r_bins,
             npz_fname,
         )
-    bootstrap_H2.bootstrap(npz_fnames, "temp/h2.npz")
-    parse_sfs.parse(vcf_fnames, "temp/sfs.npz")
+    bootstrap(npz_fnames, "temp/h2.npz")
+    parse_SFS(vcf_fnames, "temp/sfs.npz")
     #
-    h2_fname, sfs_fname = get_out_fnames(args)
+    init_fname, h2_fname, sfs_fname = get_out_fnames(args)
     if args.permute_graph:
-        graph_fname = "temp/permuted_graph.yaml"
+        graph_fname = init_fname
         inference.permute_graph(args.graph_fname, args.param_fname, graph_fname)
     else:
         graph_fname = args.graph_fname
@@ -116,7 +139,7 @@ def main():
         opt_method="fmin"
     )
     h2_graph.metadata = dict(
-        fopt=- etc[0], iters=etc[1], funcalls=etc[2], flag=etc[3]
+        fopt=-etc[0], iters=etc[1], funcalls=etc[2], flag=etc[3]
     )
     demes.dump(h2_graph, h2_fname)
     sfs_fit = inference.sfs_infer(
@@ -131,6 +154,9 @@ def main():
         max_iter=1_000,
         verbosity=args.verbosity
     )
+    _graph = demes.load(sfs_fname)
+    _graph.metadata = dict(opt=str(sfs_fit))
+    demes.dump(_graph, sfs_fname)
     print(sfs_fit)
     return 0
 
