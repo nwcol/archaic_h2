@@ -2,8 +2,8 @@
 Write a mask file recording the positions covered in a .vcf file
 """
 
+
 import argparse
-import numpy as np
 from archaic import masks
 from archaic import utils
 
@@ -22,8 +22,8 @@ def main():
     print(utils.get_time(), f"parsing mask from {args.vcf_fname}")
     positions, chrom_num = masks.read_vcf_positions(args.vcf_fname)
     regions = masks.positions_to_regions(positions)
-    masks.save_mask_regions(regions, args.out_fname, chrom_num)
-    print(utils.get_time(), f"mask parsed from {args.vcf_fname}")
+    masks.write_regions(regions, args.out_fname, chrom_num)
+    print(utils.get_time(), f"mask written at {args.out_fname}")
     return 0
 
 

@@ -1,8 +1,8 @@
-
 """
 For a given population in a complex graph, write a one-population graph with
 approximately similar coalescent rates
 """
+
 
 import argparse
 import demes

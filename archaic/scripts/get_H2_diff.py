@@ -1,7 +1,7 @@
-
 """
 Form (g1 - g2) / g1
 """
+
 
 import argparse
 import demes

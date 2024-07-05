@@ -1,13 +1,75 @@
+"""
+mostly exploratory
+"""
 
 import demes
 import matplotlib.pyplot as plt
 import matplotlib
+import msprime
 import numpy as np
+import scipy
+from archaic import plotting
 
 
-plt.rcParams['figure.dpi'] = 100
-matplotlib.use('Qt5Agg')
+"""
+Coalescent rates
+"""
 
+
+def get_coalescent_rate(graph, t, sample_name, n=2):
+
+    demography = msprime.Demography.from_demes(graph)
+    debugger = demography.debug()
+    rates, probs = debugger.coalescence_rate_trajectory(t, {sample_name: n})
+    return rates
+
+
+"""
+Recombination 
+"""
+
+
+def E_recombinations(r, t, t_gen=30):
+    # expected number of recombinations
+    E_rec = (t / t_gen) * r
+    return E_rec
+
+
+def E_time_to_recombination(r, t_gen=30):
+    # expected time to a single recombination
+    E_t = t_gen * 1 / r
+    return E_t
+
+
+def plot_recomb(times, t_gen=30):
+
+    r = np.logspace(-6, -2, 100)
+    fig, ax = plt.subplots(figsize=(6, 5), layout="constrained")
+    ax.grid(alpha=0.2)
+    ax.set_ylabel("E[recombinations]")
+    ax.set_xlabel("r")
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    colors = plotting.get_gnu_cmap(len(times))
+    for i, t in enumerate(times):
+        gens = t / t_gen
+        exp_recombs = gens * r
+        plt.plot(r, exp_recombs, color=colors[i], label=t)
+    ax.legend()
+
+
+"""
+phase-type distributions
+"""
+
+
+def phase_solver(alpha, T, i=20):
+
+    p = len(alpha)
+    t = - T @ np.ones(p)
+    Ti = np.linalg.matrix_power(T, i)
+    i_fac = scipy.special.gamma(i + 1)
+    return lambda s: s ** i / i_fac * alpha @ Ti @ t
 
 
 """
@@ -109,23 +171,6 @@ def two_sample_SMC(rho):
     return np.array(x_vec), np.array(T_vec)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def __get_expected_TxTy(x, T, rho, rho_bins):
     #
 
@@ -154,45 +199,8 @@ def __get_expected_TxTy(x, T, rho, rho_bins):
     return TxTy, bin_norms
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
-H2
+Equilibrium expectation of H2
 """
 
 
@@ -211,57 +219,6 @@ def compute_eq_H2(Ne, mu, r):
     return H2
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def get_deme(graph, deme_name):
-
-    deme_names = [deme.name for deme in graph.demes]
-    idx = deme_names.index(deme_name)
-    return graph.demes[idx]
-
-
-def get_ancestral_deme(graph, deme_name):
-
-
-
-    return 0
-
-
-def get_Ne_trajectory(graph, deme_name):
-
-    focus_deme = get_deme(graph, deme_name)
-    _focus_deme = focus_deme
-    ancestral_demes = []
-    ur_deme = None
-    while not ur_deme:
-        ancestral_deme = get_deme(graph, _focus_deme.ancestors[0])
-        ancestral_demes.append(ancestral_deme)
-        if len(ancestral_deme.ancestors) == 0:
-            ur_deme = ancestral_deme
-        else:
-            _focus_deme = ancestral_deme
-
-
-def estimate_H(graph, deme_name, mu=1.35e-8):
-    # not robust to branched scenarios! Or much complexity at all
-
-    return 0
+if __name__ == "__main__":
+    plt.rcParams['figure.dpi'] = 100
+    matplotlib.use('Qt5Agg')

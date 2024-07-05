@@ -6,16 +6,19 @@ Functions for computing one-locus statistics.
 import gzip
 import numpy as np
 from archaic import utils
+from archaic import masks
 
 
 """
-Read files
+Reading .vcf files
 """
 
 
 def read_vcf_file(vcf_fname, mask_regions=None):
 
     pos_idx = 1
+    ref_idx = 3
+    alt_idx = 4
     first_sample_idx = 9
     if np.any(mask_regions):
         # assume 0 indexed
@@ -25,6 +28,8 @@ def read_vcf_file(vcf_fname, mask_regions=None):
     else:
         in_mask = lambda x: True
     pos = []
+    refs = []
+    alts = []
     gts = []
     sample_names = read_vcf_sample_names(vcf_fname)
     n_samples = len(sample_names)
@@ -50,9 +55,13 @@ def read_vcf_file(vcf_fname, mask_regions=None):
                         gt = [int(x) for x in fields[i].split('|')]
                     line_gts.append(gt)
                 gts.append(line_gts)
+                refs.append(fields[ref_idx])
+                alts.append(fields[alt_idx])
     positions = np.array(pos)
+    refs = np.array(refs)
+    alts = np.array(alts)
     genotypes = np.array(gts)
-    return positions, sample_names, genotypes
+    return positions, refs, alts, sample_names, genotypes
 
 
 def read_vcf_sample_names(vcf_fname):
@@ -74,7 +83,7 @@ def read_vcf_sample_names(vcf_fname):
 
 
 """
-Manipulate vectors
+Manipulating vectors
 """
 
 
@@ -199,22 +208,7 @@ def count_approx_Hxy(genotypes_x, genotypes_y, positions=None, window=None):
 
 
 """
-Computing SFS statistics
-"""
-
-
-def two_sample_sfs_matrix(alts):
-    # for two samples. i on rows j on cols
-    arr = np.zeros((3, 3))
-    for i in range(3):
-        for j in range(3):
-            arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
-    arr[0, 0] = 0
-    return arr
-
-
-"""
-Parsing files
+Parsing H from .vcf files
 """
 
 
@@ -280,3 +274,106 @@ def enumerate_indices(n):
         for j in np.arange(i + 1, n):
             pairs.append((i, j))
     return pairs
+
+
+"""
+Loading genotypes from .fa or .fasta files
+"""
+
+
+def load_fasta_fmt(fname, simplify=True):
+    # expects one sequence per file. returns an array of characters
+    if 'gz' in fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    lines = []
+    header = None
+    with open_fxn(fname, 'rb') as file:
+        for i, line in enumerate(file):
+            line = line.decode().rstrip('\n')
+            if '>' in line:
+                header = line
+            else:
+                lines.append(line)
+    gts = np.array(list(''.join(lines)))
+    return gts, header
+
+
+def simplify_gts(gts):
+    #
+    symbol_map = {
+        'N': '.',
+        '-': '.',
+        'a': '.',
+        'g': '.',
+        't': '.',
+        'c': '.'
+    }
+    for symbol in symbol_map:
+        gts[gts == symbol] = symbol_map[symbol]
+
+
+def get_gt_mask(gts):
+    #
+    indicator = gts != '.'
+    regions = masks.indicator_to_regions(indicator)
+    return regions
+
+
+"""
+Computing SFS statistics
+"""
+
+
+def parse_SFS(samples, gt_pos, gts, refs, alts, ancs):
+    # we assume that each sample represents a distinct population
+    n = len(samples)
+    SFS = np.zeros(tuple([3] * n))
+    _ancs = ancs[gt_pos - 1]
+    for i, gt in enumerate(gts):
+        if len(alts[i]) == 1:
+            pol_gt = polarize(gt, refs[i], alts[i], _ancs[i])
+            derived_sums = pol_gt.sum(1)
+            SFS[tuple(derived_sums)] += 1
+        else:
+            print('triallelic')
+    return SFS
+
+
+def polarize(gts, ref, alt, anc):
+    # out: 0 ancestral 1 derived
+    print(anc, ref, alt)
+    if anc != ref and anc != alt:
+        print(
+            f'ancestral gt {anc} mismatches ref {ref} and alt {alt}!'
+        )
+        return np.zeros(gts.shape, dtype=int)
+    if ref == anc:
+        polarized_gts = gts
+    elif alt == anc:
+        polarized_gts = 1 - gts
+    else:
+        polarized_gts = None
+    return polarized_gts
+
+
+
+
+
+
+
+
+
+
+
+def two_sample_sfs_matrix(alts):
+    # for two samples. i on rows j on cols
+    arr = np.zeros((3, 3))
+    for i in range(3):
+        for j in range(3):
+            arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
+    arr[0, 0] = 0
+    return arr
+
+

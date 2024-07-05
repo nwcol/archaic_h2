@@ -221,3 +221,27 @@ def _plot_H2_err(ax, r, H2, names, colors, fmts=None, y_errs=None, log_scale=Fal
         ax.set_title(title)
     return ax
 
+
+"""
+Generic plotting functions
+"""
+
+
+def plot_distribution(
+    bins,
+    data,
+    ax,
+    color="black",
+    label=None
+):
+
+    distribution = np.histogram(data, bins=bins)[0]
+    distribution = distribution / distribution.sum()
+    x = bins[1:]
+    ax.plot(x, distribution, color=color, label=label)
+    ax.set_ylabel("freq")
+    ax.set_xlim(bins[0], bins[-1])
+    ax.grid(alpha=0.2)
+    ax.legend(fontsize=8)
+    return ax
+

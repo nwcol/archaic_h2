@@ -184,13 +184,13 @@ def end_printout(fopt, iters, funcalls, warnflag, t0):
 
 
 def eval_log_lik(
-        graph,
-        data,
-        r,
-        u,
-        num_method="simpsons",
-        use_H=True,
-        use_H2=True
+    graph,
+    data,
+    r,
+    u,
+    num_method="simpsons",
+    use_H=True,
+    use_H2=True
 ):
 
     samples, pairs, H, H_cov, H2, H2_cov = data
@@ -297,57 +297,6 @@ def approximate_H2(arr, method="simpsons"):
 
 
 """
-Least squares optimization
-"""
-
-
-def LS_objective_fxn(
-        params,
-        builder,
-        data,
-        options,
-        r_bins,
-        u,
-        lower_bound=None,
-        upper_bound=None,
-        constraints=None,
-        approx_method="simpsons",
-        verbose=True,
-        use_H=True
-):
-
-    s = None
-    global counter
-    counter += 1
-    if lower_bound is not None and np.any(params < lower_bound):
-        s = out_of_bounds_val
-    elif upper_bound is not None and np.any(params > upper_bound):
-        s = out_of_bounds_val
-    elif constraints is not None and np.any(constraints(params) <= 0):
-        s = out_of_bounds_val
-    else:
-        builder = minf._update_builder(builder, options, params)
-        graph = demes.Graph.fromdict(builder)
-        s = eval_LS(
-            graph, data, r_bins, u=u, approx_method=approx_method
-        )
-    if verbose > 0 and counter % verbose == 0:
-        printout(counter, s, params)
-    return s
-
-
-def eval_LS(graph, data, r_bins, u=1.35e-8, approx_method="simpsons",
-            use_H=True):
-
-    sample_demes, H2, inv_cov = data
-    E_H2 = get_ld_stats(
-        graph, sample_demes, r_bins, u=u, approx_method="right", get_H=use_H
-    )
-    s = np.sum(np.square(H2 - E_H2))
-    return s
-
-
-"""
 Loading and setting up bootstrap statistics
 """
 
@@ -402,26 +351,6 @@ def read_data(fname, sample_names):
     H2 = archive["H2_mean"][:, idx]
     H2_cov = np.array([x[mesh_idx] for x in archive["H2_cov"]])
     return r_bins, (sample_names, pairs, H, H_cov, H2, H2_cov)
-
-
-def _read_data(file_name, samples, get_H=True):
-    # read bootstrap statistics from a .npz archive.
-    archive = np.load(file_name)
-    r_bins = archive["r_bins"]
-    pairs = utils.get_pairs(samples)
-    all_names = list(archive["sample_names"]) + list(archive["sample_pairs"])
-    idx = np.array(
-        [all_names.index(sample) for sample in samples]
-        + [all_names.index(f"{x},{y}") for x, y in pairs]
-    )
-    n_bins = archive["n_bins"]
-    means = [archive[f"H2_bin{i}_mean"][idx] for i in range(n_bins)]
-    mesh_idx = np.ix_(idx, idx)
-    covs = [archive[f"H2_bin{i}_cov"][mesh_idx] for i in range(n_bins)]
-    if get_H:
-        means += [archive["H_mean"][idx]]
-        covs += [archive["H_cov"][mesh_idx]]
-    return r_bins, (samples, pairs, np.array(means), np.array(covs))
 
 
 """

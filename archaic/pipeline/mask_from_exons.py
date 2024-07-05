@@ -39,7 +39,7 @@ def main():
         regions = masks.add_region_flank(regions, args.flank_bp)
     else:
         regions = masks.simplify_regions(regions)
-    masks.save_mask_regions(regions, args.out_fname, args.chrom_num)
+    masks.write_regions(regions, args.out_fname, args.chrom_num)
     return 0
 
 

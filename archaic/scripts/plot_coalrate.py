@@ -5,7 +5,7 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import msprime
 import numpy as np
-from archaic import plots
+from archaic import plotting
 
 
 def get_args():

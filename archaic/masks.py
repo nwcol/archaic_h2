@@ -69,7 +69,7 @@ Saving masks
 """
 
 
-def save_mask_regions(regions, out_fname, chr_n, write_header=True):
+def write_regions(regions, out_fname, chrom_num, write_header=True):
 
     if ".gz" in out_fname:
         open_fxn = gzip.open
@@ -80,7 +80,7 @@ def save_mask_regions(regions, out_fname, chr_n, write_header=True):
             header = "chrom\tchromStart\tchromEnd\n".encode()
             file.write(header)
         for start, stop in regions:
-            line = f"{chr_n}\t{start}\t{stop}\n".encode()
+            line = f"{chrom_num}\t{start}\t{stop}\n".encode()
             file.write(line)
     return 0
 
@@ -109,34 +109,13 @@ def read_vcf_positions(vcf_fname):
     return positions, chrom
 
 
-def read_vcf_positions_slow(vcf_fname):
-    # read the column of positions from a .vcf file. decodes everything first
-    pos_idx = 1
-    positions = []
-    if ".gz" in vcf_fname:
-        open_fxn = gzip.open
-    else:
-        open_fxn = open
-    with open_fxn(vcf_fname, "rb") as file:
-        for line_b in file:
-            line = line_b.decode()
-            if line.startswith('#'):
-                continue
-            fields = line.strip('\n').split('\t')
-            position = int(fields[pos_idx])
-            positions.append(position)
-    positions = np.array(positions)
-    return positions
- 
-
 """
 Transformations between region, position, and indicator arrays
 """
 
 
 def positions_to_indicator(positions, first_idx=1):
-    # positions assumed to be 1-indexed. bool mask is 0-indexed.
-    # might more properly be called an indicator array?
+    # positions are 1-indexed, indicator is 0-indexed.
     size = positions.max() - first_idx + 1
     indicator = np.zeros(size)
     indicator[positions - first_idx] = 1
@@ -195,7 +174,7 @@ def simplify_regions(regions):
 
 def add_region_flank(regions, flank):
 
-    flanks = np.repeat([[-flank, flank]], len(regions), axis=0)
+    flanks = np.repeat(np.array([[-flank, flank]]), len(regions), axis=0)
     flanked = regions + flanks
     flanked[flanked < 0] = 0
     simplified  = simplify_regions(flanked)
@@ -225,8 +204,8 @@ def count_overlaps(*region_list):
     return overlaps
 
 
-def get_mask_intersect(*region_list):
-
+def intersect_masks(*region_list):
+    # take the intersection of regions
     n = len(region_list)
     overlaps = count_overlaps(*region_list)
     indicator = overlaps == n
@@ -234,8 +213,8 @@ def get_mask_intersect(*region_list):
     return regions
 
 
-def get_mask_union(*region_list):
-
+def add_masks(*region_list):
+    # take the union of regions
     overlaps = count_overlaps(*region_list)
     indicator = overlaps > 0
     regions = indicator_to_regions(indicator)
@@ -243,7 +222,7 @@ def get_mask_union(*region_list):
 
 
 def subtract_masks(minuend, subtrahend):
-
+    # remove regions in subtrahend from minuend
     lengths = [minuend[-1, 1], subtrahend[-1, 1]]
     max_length = max(lengths)
     mask = np.zeros(max_length)
@@ -251,4 +230,3 @@ def subtract_masks(minuend, subtrahend):
     mask[:lengths[1]] -= regions_to_indicator(subtrahend)
     regions = indicator_to_regions(mask == 1)
     return regions
-

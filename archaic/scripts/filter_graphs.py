@@ -7,7 +7,7 @@ def get_args():
     # get args
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--thresh", required=True, type=int)
-    parser.add_argument("-f", "--fnames", nargs='*')
+    parser.add_argument("-g", "--graph_fnames", nargs='*')
     parser.add_argument("-o", "--out_path", required=True)
     return parser.parse_args()
 
@@ -15,7 +15,7 @@ def get_args():
 def main():
 
     out_path = args.out_path.rstrip('/')
-    for fname in args.fnames:
+    for fname in args.graph_fnames:
         graph = demes.load(fname)
         fopt = int(graph.metadata["fopt"])
         if fopt > args.thresh:

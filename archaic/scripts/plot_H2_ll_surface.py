@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import moments.Demes.Inference as minf
 import numpy as np
-from archaic import plots
+from archaic import plotting
 from archaic import inference
 
 

@@ -106,7 +106,22 @@ SFS
 """
 
 
-def parse_SFS(in_fnames, out_fname):
+def parse_SFS(
+    mask_fname,
+    vcf_fname,
+    fasta_fname,
+    out_fname
+):
+    regions = masks.read_mask_regions(mask_fname)
+    vcf_pos, refs, alts, samples, gts = \
+        one_locus.read_vcf_file(vcf_fname, regions)
+    ancestral_gts, header = one_locus.load_fasta_fmt(fasta_fname, simplify=False)
+    SFS = one_locus.parse_SFS(samples, vcf_pos, gts, refs, alts, ancestral_gts)
+    # save
+
+
+
+def parse_two_sample_SFS(in_fnames, out_fname):
     # parse two-sample SFS from .vcf and write SFS arrays to an .npz archive
     sample_names = None
     genotypes = []
@@ -126,3 +141,14 @@ def parse_SFS(in_fnames, out_fname):
         sfs=sfs_arr
     )
     np.savez(out_fname, **kwargs)
+
+
+
+
+
+
+
+
+
+
+

@@ -1,7 +1,7 @@
-
 """
 Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
 """
+
 
 import argparse
 import demes
@@ -10,7 +10,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 import scipy
 from archaic import inference
-from archaic import plots
+from archaic import plotting
 from archaic import utils
 
 
@@ -78,7 +78,7 @@ def main():
         n_cols = args.n_cols
     shape = (n_rows, n_cols)
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * 3.5, n_rows * 2.5), layout="constrained"
+        n_rows, n_cols, figsize=(n_cols * 3, n_rows * 2), layout="constrained"
     )
     if n_rows == 1:
         axs = axs[np.newaxis, :]
@@ -91,15 +91,15 @@ def main():
     n_boots = len(args.boot_fnames)
     n_graphs = len(args.graph_fnames)
     n_archives = len(args.archive_fnames)
-    b_colors = plots.get_terrain_cmap(n_boots)
-    colors = plots.get_gnu_cmap(n_graphs + n_archives)
+    b_colors = plotting.get_terrain_cmap(n_boots)
+    colors = plotting.get_gnu_cmap(n_graphs + n_archives)
     for k, fname in enumerate(args.boot_fnames):
         r_bins, data = inference.read_data(fname, sample_names)
         __r = inference.get_r(r_bins, method="midpoint")
         _, __, H, cov_H, H2, cov_H2 = data
         H_err, H2_err = get_ci(cov_H, cov_H2, args.alpha)
         label = fname.replace(".npz", "")
-        plots.plot_error_points(
+        plotting.plot_error_points(
             axs, H, H_err, H2, H2_err, r, abbrev_names, abbrev_pairs,
             b_colors[k], args.log_y, label=label
         )
@@ -116,7 +116,7 @@ def main():
             lik = inference.eval_log_lik(graph, data, _r, args.u)
             print(lik)
             label += f": LL = {np.round(lik, 0)}"
-        plots.plot_curves(
+        plotting.plot_curves(
             axs, E_H, E_H2, r, abbrev_names, abbrev_pairs, colors[k],
             args.log_y, label=label
         )
@@ -126,7 +126,7 @@ def main():
         H = archive["H"]
         H2 = archive["H2"]
         label = fname.replace(".npz", "")
-        plots.plot_curves(
+        plotting.plot_curves(
             axs, H, H2, __r, abbrev_names, abbrev_pairs, colors[k + n_graphs],
             args.log_y, label=label
         )

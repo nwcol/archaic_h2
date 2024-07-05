@@ -26,7 +26,6 @@ def get_args():
     parser.add_argument("-m", "--max_iter", required=True, type=int)
     parser.add_argument("-s", "--sample_names", nargs='*', required=True)
     parser.add_argument("-v", "--verbosity", type=int, default=0)
-    parser.add_argument("--opt_routine", default="fmin")
     parser.add_argument("--permute_graph", type=int, default=1)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
     parser.add_argument("-r", "--r", type=float, default=1e-8)
@@ -46,7 +45,7 @@ def make_mask(L):
     regions = np.array([[0, L]], dtype=np.int64)
     mask_fname = f"temp/mask{int(L / 1e6)}Mb.bed"
     chrom_num = "chr0"
-    masks.save_mask_regions(regions, mask_fname, chrom_num)
+    masks.write_regions(regions, mask_fname, chrom_num)
     return mask_fname
 
 
@@ -64,7 +63,7 @@ def make_map(L, r):
 def sim(graph_fname, out_fname, samples, L, n=1, r=1e-8, u=1.35e-8, contig=0):
 
     def increment1(x):
-        return [_ + 1 for _ in x]
+        return [_ + 1 for _ in x] 
     demography = msprime.Demography.from_demes(demes.load(graph_fname))
     config = {s: n for s in samples}
     ts = msprime.sim_ancestry(

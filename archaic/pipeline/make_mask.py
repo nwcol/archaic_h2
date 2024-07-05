@@ -29,7 +29,7 @@ def main():
         pos_isec = masks.subtract_masks(pos_isec, neg_union)
     if args.min_size > 0:
         pos_isec = masks.filter_regions_by_length(pos_isec, args.min_size)
-    masks.save_mask_regions(regions, args.out_fname, chrom_num)
+    masks.write_regions(regions, args.out_fname, chrom_num)
     return 0
 
 
