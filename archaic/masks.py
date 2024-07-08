@@ -1,4 +1,3 @@
-
 """
 Utilities for handling and editing genetic masks
 """
@@ -158,6 +157,11 @@ def positions_to_regions(positions, first_idx=1):
     indicator = positions_to_indicator(positions, first_idx=first_idx)
     regions = indicator_to_regions(indicator)
     return regions
+
+
+def get_n_sites(regions):
+
+    return np.count_nonzero(regions_to_indicator(regions))
 
 
 """

@@ -35,7 +35,7 @@ def parse_H2(
     mask_map = two_locus.get_map_vals(map_fname, mask_pos)
     vcf_map = two_locus.get_map_vals(map_fname, vcf_pos)
     sample_names = np.array(samples)
-    sample_pairs = one_locus.enumerate_pairs(samples)
+    sample_pairs = utils.get_pairs(samples)
     pair_names = np.array([f"{x},{y}" for x, y in sample_pairs])
     print(utils.get_time(), "files loaded")
     site_counts = one_locus.parse_site_counts(mask_pos, windows)
@@ -112,17 +112,37 @@ def parse_SFS(
     fasta_fname,
     out_fname
 ):
-    regions = masks.read_mask_regions(mask_fname)
-    vcf_pos, refs, alts, samples, gts = \
-        one_locus.read_vcf_file(vcf_fname, regions)
-    ancestral_gts, header = one_locus.load_fasta_fmt(fasta_fname, simplify=False)
-    SFS = one_locus.parse_SFS(samples, vcf_pos, gts, refs, alts, ancestral_gts)
-    # save
 
+    regions = masks.read_mask_regions(mask_fname)
+    vcf_positions, refs, alts, samples, genotypes = \
+        one_locus.read_vcf_file(vcf_fname, mask_regions=regions)
+    ancestral_alleles, header = \
+        one_locus.load_fasta_fmt(fasta_fname)
+    one_locus.simplify_ancestral_alleles(ancestral_alleles)
+    print(utils.get_time(), "files loaded")
+    SFS = one_locus.parse_SFS(
+        samples,
+        genotypes,
+        vcf_positions,
+        refs,
+        alts,
+        ancestral_alleles
+    )
+    n_sites = masks.get_n_sites(regions)
+    # save
+    arrs = dict(
+        n_sites=n_sites,
+        samples=samples,
+        SFS=SFS
+    )
+    np.savez(out_fname, **arrs)
+    print(utils.get_time(), f"SFS written at {out_fname}")
 
 
 def parse_two_sample_SFS(in_fnames, out_fname):
     # parse two-sample SFS from .vcf and write SFS arrays to an .npz archive
+    # this is an older function and less generalized. also it assumes that all
+    # alternate alleles are derived [suitable only for simulations]
     sample_names = None
     genotypes = []
     for fname in in_fnames:
@@ -141,14 +161,3 @@ def parse_two_sample_SFS(in_fnames, out_fname):
         sfs=sfs_arr
     )
     np.savez(out_fname, **kwargs)
-
-
-
-
-
-
-
-
-
-
-

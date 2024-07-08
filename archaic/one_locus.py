@@ -15,7 +15,9 @@ Reading .vcf files
 
 
 def read_vcf_file(vcf_fname, mask_regions=None):
-
+    # read a .vcf or .vcf.gz file and optionally apply a mask to its sites
+    # returns vectors of positions, refs, alts, a list of samples, and an
+    # array of genotypes with shape (n sites, n samples, 2)
     pos_idx = 1
     ref_idx = 3
     alt_idx = 4
@@ -31,8 +33,8 @@ def read_vcf_file(vcf_fname, mask_regions=None):
     refs = []
     alts = []
     gts = []
-    sample_names = read_vcf_sample_names(vcf_fname)
-    n_samples = len(sample_names)
+    samples = read_vcf_sample_names(vcf_fname)
+    n_samples = len(samples)
     if ".gz" in vcf_fname:
         open_fxn = gzip.open
     else:
@@ -61,13 +63,12 @@ def read_vcf_file(vcf_fname, mask_regions=None):
     refs = np.array(refs)
     alts = np.array(alts)
     genotypes = np.array(gts)
-    return positions, refs, alts, sample_names, genotypes
+    return positions, refs, alts, samples, genotypes
 
 
 def read_vcf_sample_names(vcf_fname):
-
+    # read the sample IDs specified in a .vcf or .vcf.gz file header
     first_sample_idx = 9
-
     if ".gz" in vcf_fname:
         open_fxn = gzip.open
     else:
@@ -155,10 +156,8 @@ def count_H(genotypes, positions=None, window=None):
 
 
 def get_site_Hxy(genotypes_x, genotypes_y):
-    """
-    Compute the probabilities that, sampling one allele from x and one from y,
-    they are distinct, at each site.
-    """
+    # Compute the probabilities that, sampling one allele from x and one from
+    # y, they are distinct, for each site.
     site_Hxy = (
             np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)
             + np.sum(genotypes_x[:, 1][:, np.newaxis] != genotypes_y, axis=1)
@@ -232,9 +231,7 @@ def parse_H_counts(genotypes, positions, windows):
     for i in range(n_samples):
         for j, window in enumerate(windows):
             counts[i, j] = count_H(
-                genotypes[:, i],
-                positions=positions,
-                window=window
+                genotypes[:, i], positions=positions,  window=window
             )
     print(utils.get_time(), "one sample H counts parsed")
     for i, (i_x, i_y) in enumerate(utils.get_pair_idxs(n_samples)):
@@ -251,37 +248,11 @@ def parse_H_counts(genotypes, positions, windows):
 
 
 """
-Utilities
-"""
-
-
-def enumerate_pairs(items):
-
-    n = len(items)
-    pairs = []
-    for i in np.arange(n):
-        for j in np.arange(i + 1, n):
-            pair = [items[i], items[j]]
-            pair.sort()
-            pairs.append((pair[0], pair[1]))
-    return pairs
-
-
-def enumerate_indices(n):
-
-    pairs = []
-    for i in np.arange(n):
-        for j in np.arange(i + 1, n):
-            pairs.append((i, j))
-    return pairs
-
-
-"""
 Loading genotypes from .fa or .fasta files
 """
 
 
-def load_fasta_fmt(fname, simplify=True):
+def load_fasta_fmt(fname):
     # expects one sequence per file. returns an array of characters
     if 'gz' in fname:
         open_fxn = gzip.open
@@ -296,27 +267,27 @@ def load_fasta_fmt(fname, simplify=True):
                 header = line
             else:
                 lines.append(line)
-    gts = np.array(list(''.join(lines)))
-    return gts, header
+    genotypes = np.array(list(''.join(lines)))
+    return genotypes, header
 
 
-def simplify_gts(gts):
+def simplify_ancestral_alleles(genotypes):
     #
     symbol_map = {
         'N': '.',
         '-': '.',
-        'a': '.',
-        'g': '.',
-        't': '.',
-        'c': '.'
+        'a': 'A',
+        'g': 'G',
+        't': 'T',
+        'c': 'C'
     }
     for symbol in symbol_map:
-        gts[gts == symbol] = symbol_map[symbol]
+        genotypes[genotypes == symbol] = symbol_map[symbol]
 
 
-def get_gt_mask(gts):
+def get_genotype_mask(genotypes):
     #
-    indicator = gts != '.'
+    indicator = genotypes != '.'
     regions = masks.indicator_to_regions(indicator)
     return regions
 
@@ -326,45 +297,45 @@ Computing SFS statistics
 """
 
 
-def parse_SFS(samples, gt_pos, gts, refs, alts, ancs):
-    # we assume that each sample represents a distinct population
+def parse_SFS(
+    samples,
+    genotypes,
+    genotype_positions,
+    refs,
+    alts,
+    ancestral_alleles
+):
+    # exclude triallelic sites
+    bi_mask = np.array([',' not in x for x in alts])
+    masked_ancestral = ancestral_alleles[genotype_positions[bi_mask] - 1]
+    n_excl = len(alts) - bi_mask.sum()
+    print(utils.get_time(), f"{n_excl} triallelic sites excluded")
+    polarized_genotypes, mask = polarize_genotypes(
+        genotypes[bi_mask], refs[bi_mask], alts[bi_mask], masked_ancestral
+    )
+    _n_excl = bi_mask.sum() - np.sum(mask)
+    print(utils.get_time(), f"{_n_excl} non-matching sites excluded")
+    derived_counts = polarized_genotypes[mask].sum(2)
     n = len(samples)
-    SFS = np.zeros(tuple([3] * n))
-    _ancs = ancs[gt_pos - 1]
-    for i, gt in enumerate(gts):
-        if len(alts[i]) == 1:
-            pol_gt = polarize(gt, refs[i], alts[i], _ancs[i])
-            derived_sums = pol_gt.sum(1)
-            SFS[tuple(derived_sums)] += 1
-        else:
-            print('triallelic')
+    SFS = np.zeros(tuple([3] * n), dtype=np.int64)
+    for counts in derived_counts:
+        SFS[tuple(counts)] += 1
     return SFS
 
 
-def polarize(gts, ref, alt, anc):
-    # out: 0 ancestral 1 derived
-    print(anc, ref, alt)
-    if anc != ref and anc != alt:
-        print(
-            f'ancestral gt {anc} mismatches ref {ref} and alt {alt}!'
-        )
-        return np.zeros(gts.shape, dtype=int)
-    if ref == anc:
-        polarized_gts = gts
-    elif alt == anc:
-        polarized_gts = 1 - gts
-    else:
-        polarized_gts = None
-    return polarized_gts
-
-
-
-
-
-
-
-
-
+def polarize_genotypes(genotypes, refs, alts, ancestral_alleles):
+    # polarize an array of genotypes so that 0 is ancestral, 1 derived
+    # also returns a boolean mask that excludes sites where neither ref nor
+    # alt is ancestral
+    # triallelic sites aren't allowed and must be masked out before using
+    # this function
+    ref_matches = refs == ancestral_alleles
+    alt_matches = alts == ancestral_alleles
+    mask = ref_matches + alt_matches
+    polarized_gts = np.zeros(genotypes.shape, dtype=np.int32)
+    polarized_gts[ref_matches][genotypes[ref_matches] > 0] = 1
+    polarized_gts[alt_matches] = 1 - genotypes[alt_matches]
+    return polarized_gts, mask
 
 
 def two_sample_sfs_matrix(alts):
@@ -375,5 +346,3 @@ def two_sample_sfs_matrix(alts):
             arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
     arr[0, 0] = 0
     return arr
-
-

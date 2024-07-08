@@ -1,11 +1,10 @@
+"""
+
+"""
+
 
 import argparse
 import numpy as np
-import time
-from archaic import masks
-from archaic import one_locus
-from archaic import two_locus
-from archaic import utils
 from archaic import parsing
 
 

@@ -134,7 +134,10 @@ def count_site_pairs(
                     print(utils.get_time(), f"locus {i} of {n_left_loci} loci")
         pair_counts = np.diff(cum_counts)
     if verbose >= 1:
-        print(utils.get_time(), f"loci at idx {l_start}:{l_stop}-{r_stop} parsed")
+        print(
+            utils.get_time(),
+            f"loci at idx {l_start}:{l_stop}-{r_stop} parsed"
+        )
     return pair_counts
 
 
@@ -234,7 +237,7 @@ def get_two_chromosome_H2(site_counts, H_counts):
         raise ValueError("length mismatch")
     n_pairs = int(n * (n - 1) / 2)
     H2 = np.zeros(n_pairs)
-    for i, (j, k) in enumerate(one_locus.enumerate_indices(n)):
+    for i, (j, k) in enumerate(utils.get_pair_idxs(n)):
         site_pair_count = site_counts[j] * site_counts[k]
         H2_count = H_counts[j] * H_counts[k]
         H2[i] = H2_count / site_pair_count

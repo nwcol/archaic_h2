@@ -2,8 +2,8 @@
 Functions for computing approx composite likelihoods and inferring demographies
 """
 
+
 import demes
-import demesdraw
 import numpy as np
 import scipy
 import moments
@@ -14,20 +14,22 @@ from archaic import utils
 
 out_of_bounds_val = 1e10
 counter = 0
+opt_methods = ["fmin", "BFGS", "LBFGSB"]
+num_methods = ["left_bound", "right_bound", "midpoint", "simpsons"]
 
 
-def optimize(
-        graph_fname,
-        params_fname,
-        data,
-        r_bins,
-        max_iter=1_000,
-        opt_method="fmin",
-        num_method="simpsons",
-        u=1.35e-8,
-        verbosity=1,
-        use_H=True,
-        use_H2=True
+def optimize_with_H2(
+    graph_fname,
+    params_fname,
+    data,
+    r_bins,
+    max_iter=1_000,
+    opt_method="fmin",
+    num_method="simpsons",
+    u=1.35e-8,
+    verbosity=1,
+    use_H=True,
+    use_H2=True
 ):
     # the optimization function
     t0 = time.time()
@@ -57,7 +59,6 @@ def optimize(
         use_H,
         use_H2
     )
-    opt_methods = ["fmin", "BFGS", "LBFGSB", "LS"]
     if opt_method not in opt_methods:
         raise ValueError(f"method: {opt_method} is not in {opt_methods}")
     if opt_method == "fmin":
@@ -71,7 +72,7 @@ def optimize(
             full_output=True,
             retall=True
         )
-        xopt, fopt, iters, funcalls, warnflag, allvecs = out
+        xopt, fopt, iters, funcalls, warnflag, _ = out
     elif opt_method == "BFGS":
         out = scipy.optimize.minimize(
             objective_fxn,
@@ -98,17 +99,6 @@ def optimize(
         iters = out.nit
         funcalls = out.nfev
         warnflag = out.status
-    elif opt_method == "LS":
-        out = scipy.optimize.fmin(
-            LS_objective_fxn,
-            params_0,
-            args=opt_args,
-            disp=True,
-            maxiter=max_iter,
-            maxfun=max_iter,
-            full_output=True,
-        )
-        xopt, fopt, iters, funcalls, warnflag = out
     else:
         return 1
     builder = minf._update_builder(builder, options, xopt)
@@ -116,7 +106,13 @@ def optimize(
     global counter
     counter = 0
     end_printout(fopt, iters, funcalls, warnflag, t0)
-    return graph, (fopt, iters, funcalls, warnflag, t0)
+    opt_info = dict(
+        fopt=fopt,
+        iters=iters,
+        funcalls=funcalls,
+        warnflag=warnflag
+    )
+    return graph, opt_info
 
 
 def objective_fxn(
@@ -202,9 +198,8 @@ def eval_log_lik(
         lik += normal_log_lik(E_H, H_cov, H)
     if use_H2:
         n = len(E_H2)
-        lik += sum(
-            [normal_log_lik(E_H2[i], H2_cov[i], H2[i]) for i in range(n)]
-        )
+        for i in range(n):
+            lik += normal_log_lik(E_H2[i], H2_cov[i], H2[i])
     return lik
 
 
@@ -247,14 +242,6 @@ def get_H_stats(graph, samples, pairs, r, u, num_method="simpsons"):
 """
 Numerical approximations
 """
-
-
-num_methods = [
-    "left_bound",
-    "right_bound",
-    "midpoint",
-    "simpsons"
-]
 
 
 def get_r(r_bins, method="simpsons"):
@@ -313,27 +300,6 @@ def scan_names(graph_fname, boot_fname):
     return names
 
 
-def rename_data_samples(data, name_map):
-    # name map of form old: new
-    _names, _pairs, means, covs = data
-    names = []
-    pairs = []
-    for _name in _names:
-        if _name in name_map:
-            names.append(name_map[_name])
-        else:
-            names.append(_name)
-    for _pair in _pairs:
-        pair = []
-        for _name in _pair:
-            if _name not in names:
-                pair.append(name_map[_name])
-            else:
-                pair.append(_name)
-        pairs.append(tuple(pair))
-    return names, pairs, means, covs
-
-
 def read_data(fname, sample_names):
 
     archive = np.load(fname)
@@ -358,7 +324,7 @@ Inference with the SFS
 """
 
 
-def sfs_infer(
+def optimize_with_SFS(
     data_fname,
     graph_fname,
     params_fname,
@@ -453,23 +419,3 @@ def parse_graph_params(params_fname, graph_fnames):
         names, vals, _, __, = minf._set_up_params_and_bounds(params, g)
         arr.append(vals)
     return names, np.array(arr)
-
-
-"""
-Other statistical functions
-"""
-
-
-def permutation_test(A, B, n_resamplings):
-
-    mean_A = A.mean()
-    mean_B = B.mean()
-    difference = mean_B - mean_A
-    pooled = np.concatenate([A, B])
-    n_A = len(A)
-    differences = np.zeros(n_resamplings)
-    for i in np.arange(n_resamplings):
-        samples = np.random.choice(pooled, size=n_A, replace=False)
-        differences[i] = mean_B - samples.mean()
-    p = np.count_nonzero(differences >= difference) / n_resamplings
-    return p
