@@ -12,7 +12,7 @@ setup(
             "make_exon_masks=archaic.pipeline.make_exon_masks:main",
             "mask_from_vcf=archaic.pipeline.mask_from_vcf:main",
             "make_mask=archaic.pipeline.make_mask:main",
-            "infer=archaic.scripts.infer:main",
+            "H2infer=archaic.scripts.H2infer:main",
             "parse_H2=archaic.scripts.parse_H2:main",
             "bootstrap_H2=archaic.scripts.bootstrap_H2:main",
         ]
