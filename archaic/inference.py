@@ -14,8 +14,8 @@ from archaic import utils
 
 out_of_bounds_val = 1e10
 counter = 0
-opt_methods = ["fmin", "BFGS", "LBFGSB"]
-num_methods = ["left_bound", "right_bound", "midpoint", "simpsons"]
+opt_methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
+num_methods = [ "Simpsons", "midpoint"]
 
 
 def optimize_with_H2(
@@ -23,15 +23,15 @@ def optimize_with_H2(
     params_fname,
     data,
     r_bins,
-    max_iter=1_000,
-    opt_method="fmin",
-    num_method="simpsons",
+    max_iters=1_000,
+    opt_method='NelderMead',
+    num_method="Simpsons",
     u=1.35e-8,
     verbosity=1,
     use_H=True,
     use_H2=True
 ):
-    # the optimization function
+    #
     t0 = time.time()
     samples, pairs, H, H_cov, H2, H2_cov = data
     data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
@@ -60,56 +60,63 @@ def optimize_with_H2(
         use_H2
     )
     if opt_method not in opt_methods:
-        raise ValueError(f"method: {opt_method} is not in {opt_methods}")
-    if opt_method == "fmin":
-        out = scipy.optimize.fmin(
+        raise ValueError(f'method: {opt_method} is not in {opt_methods}')
+    if opt_method == 'NelderMead':
+        opt = scipy.optimize.fmin(
             objective_fxn,
             params_0,
             args=opt_args,
-            disp=True,
-            maxiter=max_iter,
-            maxfun=max_iter,
-            full_output=True,
-            retall=True
+            maxiter=max_iters,
+            full_output=True
         )
-        xopt, fopt, iters, funcalls, warnflag, _ = out
-    elif opt_method == "BFGS":
-        out = scipy.optimize.minimize(
+        xopt, fopt, iters, func_calls, warnflag = opt
+    elif opt_method == 'BFGS':
+        opt = scipy.optimize.fmin_bfgs(
             objective_fxn,
             params_0,
             args=opt_args,
-            method="BFGS",
-            options={"maxiter": max_iter}
+            maxiter=max_iters,
+            full_output=True
         )
-        xopt = out.x
-        fopt = out.fun
-        iters = out.nit
-        funcalls = out.nfev
-        warnflag = out.status
-    elif opt_method == "LBFGSB":
-        out = scipy.optimize.minimize(
+        xopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag = opt
+        iters = None
+    elif opt_method == 'LBFGSB':
+        opt = scipy.optimize.fmin_l_bfgs_b(
             objective_fxn,
             params_0,
             args=opt_args,
-            method="L-BFGS-B",
-            options={"maxiter": max_iter}
+            maxiter=max_iters
         )
-        xopt = out.x
-        fopt = out.fun
-        iters = out.nit
-        funcalls = out.nfev
-        warnflag = out.status
+        xopt, fopt, d = opt
+        func_calls = d['funcalls']
+        warnflag = d['warnflag']
+        iters = d['nit']
+    elif opt_method == 'Powell':
+        opt = scipy.optimize.fmin_powell(
+            objective_fxn,
+            params_0,
+            args=opt_args,
+            maxiter=max_iters,
+            full_output=True
+        )
+        xopt, fopt, direc, iters, func_calls, warnflag = opt
     else:
         return 1
     builder = minf._update_builder(builder, options, xopt)
     graph = demes.Graph.fromdict(builder)
     global counter
     counter = 0
-    end_printout(fopt, iters, funcalls, warnflag, t0)
+    end_printout(
+        t0,
+        fopt=fopt,
+        iters=iters,
+        func_calls=func_calls,
+        warnflag=warnflag
+    )
     opt_info = dict(
         fopt=fopt,
         iters=iters,
-        funcalls=funcalls,
+        func_calls=func_calls,
         warnflag=warnflag
     )
     return graph, opt_info
@@ -125,7 +132,7 @@ def objective_fxn(
         lower_bound=None,
         upper_bound=None,
         constraints=None,
-        num_method="simpsons",
+        num_method="Simpsons",
         verbosity=1,
         use_H=True,
         use_H2=True
@@ -133,7 +140,6 @@ def objective_fxn(
 
     global counter
     counter += 1
-    # bounds and constraints checks
     if lower_bound is not None and np.any(params < lower_bound):
         log_lik = -out_of_bounds_val
     elif upper_bound is not None and np.any(params > upper_bound):
@@ -141,10 +147,8 @@ def objective_fxn(
     elif constraints is not None and np.any(constraints(params) <= 0):
         log_lik = -out_of_bounds_val
     else:
-        # update builder and build graph
         builder = minf._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
-        # evaluate likelihood!
         log_lik = eval_log_lik(
             graph,
             data,
@@ -162,21 +166,19 @@ def objective_fxn(
 def printout(i, log_lik, params, mode='g'):
     # used to print parameter names and parameter values
     if mode == 'g':
-        param_str = "array([%s])" % (", ".join(["%- 10g" % v for v in params]))
+        param_str = ', '.join(['%- 10g' % v for v in params])
     elif mode == 's':
-        param_str = "array([%s])" % (", ".join(["%- 10s" % v for v in params]))
+        param_str = ', '.join(['%- 10s' % v for v in params])
     else:
-        param_str = ""
-    print(utils.get_time(), "%-8i, %-8g, %s" % (i, log_lik, param_str))
+        param_str = ''
+    print(utils.get_time(), '%-8i, %-8g, %s' % (i, log_lik, param_str))
 
 
-def end_printout(fopt, iters, funcalls, warnflag, t0):
+def end_printout(t0, **kwargs):
 
-    print(f"fopt:\t{fopt}")
-    print(f"iterations:\t{iters}")
-    print(f"fxn calls:\t{funcalls}")
-    print(f"flags:\t{warnflag}")
-    print(f"s elapsed:\t{time.time() - t0}")
+    for key in kwargs:
+        print(f'{key}:\t{kwargs[key]}')
+    print(f'time elapsed:\t{np.round(time.time() - t0, 2)} s')
 
 
 def eval_log_lik(
@@ -184,7 +186,7 @@ def eval_log_lik(
     data,
     r,
     u,
-    num_method="simpsons",
+    num_method="Simpsons",
     use_H=True,
     use_H2=True
 ):
@@ -214,14 +216,10 @@ Getting expected statistics using moments.LD
 """
 
 
-def get_H_stats(graph, samples, pairs, r, u, num_method="simpsons"):
-
+def get_H_stats(graph, samples, pairs, r, u, num_method="Simpsons"):
+    # E_H has shape (n_samples), E_H2 has shape (n_bins, n_samples)
     ld_stats = moments.LD.LDstats.from_demes(
-        graph,
-        sampled_demes=samples,
-        theta=None,
-        r=r,
-        u=u
+        graph, sampled_demes=samples, theta=None, r=r, u=u
     )
     n = len(samples)
     idx_pairs = utils.get_pair_idxs(n)
@@ -244,43 +242,39 @@ Numerical approximations
 """
 
 
-def get_r(r_bins, method="simpsons"):
-    # get values of r as required by approximation method
+def get_r(r_bins, method='Simpsons'):
+    #
     if method not in num_methods:
-        raise ValueError(f"{method} is not in methods: {num_methods}")
-    if method == "left":
-        r = r_bins[:-1]
-    elif method == "right":
-        r = r_bins[1:]
-    elif method == "midpoint":
+        raise ValueError(f'{method} is not in methods: {num_methods}')
+    elif method == 'midpoint':
         r = r_bins[:-1] + np.diff(r_bins) / 2
-    elif method == "simpsons":
-        midpoints = r_bins[:-1] + np.diff(r_bins) / 2
-        r = np.sort(np.concatenate([r_bins, midpoints]))
+    elif method == 'Simpsons':
+        n = len(r_bins)
+        r = np.zeros(n * 2 - 1)
+        r[np.arange(n) * 2] = r_bins
+        r[np.arange(n - 1) * 2 + 1] = r_bins[:-1] + np.diff(r_bins) / 2
     else:
         r = None
     return r
 
 
-def approximate_H2(arr, method="simpsons"):
-
+def approximate_H2(arr, method='Simpsons'):
+    #
     if method not in num_methods:
-        raise ValueError(f"{method} is not in methods: {num_methods}")
-    if method == "left":
-        out = arr
-    elif method == "right":
-        out = arr
-    elif method == "midpoint":
-        out = arr
-    elif method == "simpsons":
-        n_rows = len(arr)
-        n_bins = (n_rows - 1) // 2
-        out = np.zeros((n_bins, arr.shape[1]))
-        for i in range(n_bins):
-            out[i] = 1 / 6 * (arr[i * 2] + 4 * arr[i * 2 + 1] + arr[i * 2 + 2])
+        raise ValueError(f'{method} is not in methods: {num_methods}')
+    elif method == 'midpoint':
+        H2 = arr
+    elif method == 'Simpsons':
+        n = len(arr)
+        b = (n - 1) // 2
+        H2 = (
+            1/6 * arr[np.arange(b) * 2]
+            + 4/6 * arr[np.arange(b) * 2 + 1]
+            + 1/6 * arr[np.arange(b) * 2 + 2]
+        )
     else:
-        out = None
-    return out
+        H2 = None
+    return H2
 
 
 """
