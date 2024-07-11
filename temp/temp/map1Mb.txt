@@ -1,3 +1,0 @@
-Position(bp)	Rate(cM/Mb)	Map(cM)
-1	0	0
-1000000	0	1.0101353658759733
