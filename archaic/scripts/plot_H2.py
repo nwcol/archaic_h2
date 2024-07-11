@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
     parser.add_argument("-H", "--use_H", type=int, default=1)
     parser.add_argument("-H2", "--use_H2", type=int, default=1)
-    parser.add_argument("-m", "--num_method", default="simpsons")
+    parser.add_argument("-m", "--num_method", default="Simpsons")
     parser.add_argument("-alpha", "--alpha", type=float, default=0.05)
     parser.add_argument("-s", "--sample_names", nargs='*', default=[])
     parser.add_argument("-ly", "--log_y", type=int, default=0)

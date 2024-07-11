@@ -1,0 +1,19 @@
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: fmin, fopt: 710.4360860560348, iters: null, func_calls: 5, warnflag: null}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 76270.44855683717, start_size: 18341.624951876638}
+- name: X
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 1899.1469822332347}
+- name: Y
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 12798.56799026499}
+migrations:
+- demes: [X, Y]
+  rate: 0.0007545380756557436

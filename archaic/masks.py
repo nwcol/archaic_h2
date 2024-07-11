@@ -8,6 +8,39 @@ import gzip
 
 
 """
+A new class
+"""
+
+
+class Mask(np.ndarray):
+
+    def __new__(cls, regions):
+        #
+        regions = np.asanyarray(regions)
+
+        return regions
+
+    @classmethod
+    def read(cls, mask_fname):
+        #
+        regions = read_mask_regions(mask_fname)
+        return cls(regions)
+
+    @property
+    def boolean(self):
+        #
+        boolean_mask = np.zeros(self.max(), dtype=bool)
+        for start, stop in self:
+            boolean_mask[start:stop] = True
+        return boolean_mask
+
+    @property
+    def n_sites(self):
+        #
+        return self.boolean.sum()
+
+
+"""
 Reading .bed and .bed.gz files
 """
 
@@ -24,7 +57,7 @@ def read_mask_regions(mask_fname):
             _, start, stop = line.decode().strip('\n').split('\t')
             if start.isnumeric():
                 regions.append([int(start), int(stop)])
-    return np.array(regions)
+    return np.array(regions, dtype=np.int64)
 
 
 def read_mask_positions(mask_fname, first_idx=1):
@@ -68,7 +101,7 @@ Saving masks
 """
 
 
-def write_regions(regions, out_fname, chrom_num, write_header=True):
+def write_regions(regions, out_fname, chrom_num, write_header=False):
 
     if ".gz" in out_fname:
         open_fxn = gzip.open
@@ -76,10 +109,10 @@ def write_regions(regions, out_fname, chrom_num, write_header=True):
         open_fxn = open
     with open_fxn(out_fname, "wb") as file:
         if write_header:
-            header = "chrom\tchromStart\tchromEnd\n".encode()
+            header = b'#chrom\tchromStart\tchromEnd\n'
             file.write(header)
         for start, stop in regions:
-            line = f"{chrom_num}\t{start}\t{stop}\n".encode()
+            line = f'{chrom_num}\t{start}\t{stop}\n'.encode()
             file.write(line)
     return 0
 
@@ -103,9 +136,9 @@ def read_vcf_positions(vcf_fname):
             if line.startswith(b'#'):
                 continue
             positions.append(line.split(b'\t')[pos_idx])
-    chrom = line.split(b'\t')[chrom_idx].decode()
+    chrom_num = line.split(b'\t')[chrom_idx].decode()
     positions = np.array(positions).astype(np.int64)
-    return positions, chrom
+    return positions, chrom_num
 
 
 """
@@ -160,7 +193,7 @@ def positions_to_regions(positions, first_idx=1):
 
 
 def get_n_sites(regions):
-
+    #
     return np.count_nonzero(regions_to_indicator(regions))
 
 

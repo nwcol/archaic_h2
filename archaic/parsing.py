@@ -1,5 +1,5 @@
 """
-Exposes parse functions to other python scripts on the cluster.
+Exposes parse functions
 """
 
 
@@ -106,37 +106,39 @@ SFS
 """
 
 
-def parse_SFS(
-    mask_fname,
-    vcf_fname,
-    fasta_fname,
-    out_fname
-):
-
-    regions = masks.read_mask_regions(mask_fname)
-    vcf_positions, refs, alts, samples, genotypes = \
-        one_locus.read_vcf_file(vcf_fname, mask_regions=regions)
-    ancestral_alleles, header = \
-        one_locus.load_fasta_fmt(fasta_fname)
-    one_locus.simplify_ancestral_alleles(ancestral_alleles)
-    print(utils.get_time(), "files loaded")
-    SFS = one_locus.parse_SFS(
-        samples,
-        genotypes,
-        vcf_positions,
-        refs,
-        alts,
-        ancestral_alleles
-    )
-    n_sites = masks.get_n_sites(regions)
-    # save
+def parse_SFS(mask_fnames, vcf_fnames, out_fname, ref_as_ancestral=False):
+    # takes many input files. assumes .vcfs are already masked!
+    n_sites = 0
+    for mask_fname in mask_fnames:
+        mask = masks.read_mask_regions(mask_fname)
+        _n_sites = masks.get_n_sites(mask)
+        n_sites += _n_sites
+        print(
+            utils.get_time(),
+            f'{_n_sites} positions parsed from {mask_fname}'
+        )
+    samples = one_locus.read_vcf_sample_names(vcf_fnames[0])
+    n = len(samples)
+    SFS = np.zeros([3] * n, dtype=np.int64)
+    for vcf_fname in vcf_fnames:
+        variants = one_locus.Variants(vcf_fname)
+        _SFS, _samples = one_locus.parse_SFS(
+            variants, ref_as_ancestral=ref_as_ancestral
+        )
+        if not np.all(_samples == samples):
+            raise ValueError(f'sample mismatch: {samples}, {_samples}')
+        SFS += _SFS
+        print(
+            utils.get_time(),
+            f'{_SFS.sum()} variants parsed to SFS on chrom {variants.chrom}'
+        )
     arrs = dict(
-        n_sites=n_sites,
         samples=samples,
+        n_sites=n_sites,
         SFS=SFS
     )
     np.savez(out_fname, **arrs)
-    print(utils.get_time(), f"SFS written at {out_fname}")
+
 
 
 def parse_two_sample_SFS(in_fnames, out_fname):

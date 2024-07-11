@@ -1,21 +1,11 @@
 
-primary goals
+goals for package rewrite (please make this the last one. write imperishable code):
 
-for getting pipeline hammered out for publication:
-- script to make masks from vcfs
-- exon masks and flank
-- verify mask files
-- script to intersect and build restrictive masks
-
-
-for getting CHTC running:
-
-- edit parse script
-- decide on final formats for output/bootstrap npzs
-- edit bootstrap script
-- edit infer scripts
-- rebuild stats, bootstrap
-- nice plotting fxns
+write mask class? necessary?
+decide how to organize parse scripts within
+object to represent H2? implications for saving
+consider the difference between functions that operate on files and on arrays (etc) more carefully and remove redundancy while maximizing usefulness
+printing progress and summaries to stdout is highly useful
 
 
 

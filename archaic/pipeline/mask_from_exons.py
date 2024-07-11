@@ -1,4 +1,3 @@
-
 """
 From a .tsv file with columns
 
@@ -11,6 +10,7 @@ add a flank of given length to each exonic region.
 import argparse
 import numpy as np
 from archaic import masks
+from archaic import utils
 
 
 def get_args():
@@ -40,6 +40,11 @@ def main():
     else:
         regions = masks.simplify_regions(regions)
     masks.write_regions(regions, args.out_fname, args.chrom_num)
+    n_sites = masks.get_n_sites(regions)
+    print(
+        utils.get_time(),
+        f'exon mask for chrom {args.chrom_num} written; {n_sites} sites'
+    )
     return 0
 
 

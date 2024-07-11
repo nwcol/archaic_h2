@@ -1,0 +1,20 @@
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: NelderMead, fopt: -29353.36989836089, iters: 5, func_calls: 11,
+    warnflag: 2}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 74817.67810813553, start_size: 16507.46245668897}
+- name: X
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 1956.1213917002315}
+- name: Y
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 13182.525029972945}
+migrations:
+- demes: [X, Y]
+  rate: 0.000777174217925416

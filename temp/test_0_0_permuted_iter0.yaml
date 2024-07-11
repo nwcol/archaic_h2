@@ -1,0 +1,17 @@
+time_units: years
+generation_time: 30
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 72638.52243508302, start_size: 18341.624951876638}
+- name: X
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 1899.1469822332347}
+- name: Y
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 12798.56799026499}
+migrations:
+- demes: [X, Y]
+  rate: 0.0007545380756557436

@@ -232,6 +232,7 @@ def count_H2xy(
 
 def get_two_chromosome_H2(site_counts, H_counts):
     # all in one r-bin; 0.5. iterates over all pairs. returns H2, not a count
+    # worth a rewrite
     n = len(site_counts)
     if len(H_counts) != n:
         raise ValueError("length mismatch")
@@ -242,16 +243,6 @@ def get_two_chromosome_H2(site_counts, H_counts):
         H2_count = H_counts[j] * H_counts[k]
         H2[i] = H2_count / site_pair_count
     return H2
-
-
-"""
-Compute Var(S)
-"""
-
-
-def get_var_S(genotypes, positions, vcf_positions, map_vals, loci):
-    # implement
-    return None
 
 
 """

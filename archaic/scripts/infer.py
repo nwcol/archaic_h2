@@ -11,19 +11,19 @@ from archaic import utils
 def get_args():
     # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--boot_fname", required=True)  
-    parser.add_argument("-g", "--graph_fname", required=True)
-    parser.add_argument("-p", "--params_fname", required=True)
-    parser.add_argument("-o", "--out_prefix", required=True)
-    parser.add_argument("-max", "--max_iters", nargs='*', type=int, default=[1000])
-    parser.add_argument("-v", "--verbosity", type=int, default=1)
-    parser.add_argument("-opt", "--opt_methods", nargs='*', default=["NelderMead"])
-    parser.add_argument("-u", "--u", type=float, default=1.35e-8)
-    parser.add_argument("-H", "--use_H", type=int, default=1)
-    parser.add_argument("-H2", "--use_H2", type=int, default=1)
+    parser.add_argument('-d', '--boot_fname', required=True)  
+    parser.add_argument('-g', '--graph_fname', required=True)
+    parser.add_argument('-p', '--params_fname', required=True)
+    parser.add_argument('-o', '--out_prefix', required=True)
+    parser.add_argument('-max', '--max_iters', nargs='*', type=int, default=[1000])
+    parser.add_argument('-v', '--verbosity', type=int, default=1)
+    parser.add_argument('-opt', '--opt_methods', nargs='*', default=['NelderMead'])
+    parser.add_argument('-u', '--u', type=float, default=1.35e-8)
+    parser.add_argument('-H', '--use_H', type=int, default=1)
+    parser.add_argument('-H2', '--use_H2', type=int, default=1)
     parser.add_argument('--permute_graph', type=int, default=0)
-    parser.add_argument("--cluster_id", default='')
-    parser.add_argument("--process_id", default='')
+    parser.add_argument('--cluster_id', default='')
+    parser.add_argument('--process_id', default='')
     return parser.parse_args()
 
 
@@ -59,7 +59,7 @@ def main():
     else:
         graph_fname = args.graph_fname
     for i, opt_method in enumerate(args.opt_methods):
-        graph, opt_info = inference.optimize_with_H2(
+        graph, opt_info = inference.optimize(
             graph_fname,
             args.params_fname,
             data,
@@ -71,7 +71,7 @@ def main():
             use_H2=args.use_H2,
             opt_method=opt_method
         )
-        graph.metadata["opt_info"] = opt_info
+        graph.metadata['opt_info'] = opt_info
         out_fname = get_graph_fname(
             args.out_prefix,
             args.cluster_id,
@@ -83,5 +83,5 @@ def main():
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

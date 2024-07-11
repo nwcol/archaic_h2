@@ -30,7 +30,7 @@ def main():
     if len(args.samples) > 0:
         samples = args.samples
     else:
-        samples = [d for d in graph.demes if d.end_time == 0]
+        samples = [d.name for d in graph.demes if d.end_time == 0]
     config = {s: 1 for s in samples}
     ts = msprime.sim_ancestry(
         samples=config,

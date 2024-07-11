@@ -18,7 +18,44 @@ opt_methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
 num_methods = [ "Simpsons", "midpoint"]
 
 
-def optimize_with_H2(
+"""
+Computing H2 log likelihood on a graph
+"""
+
+
+def compute_graph_log_lik(
+    graph_fname,
+    data_fname,
+    u=1.35e-8,
+    num_method='Simpsons',
+    use_H=True,
+    use_H2=True
+):
+    #
+    samples = scan_names(graph_fname, data_fname)
+    r_bins, data = read_data(data_fname, samples)
+    samples, pairs, H, H_cov, H2, H2_cov = data
+    data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
+    r = get_r(r_bins, num_method)
+    graph = demes.load(graph_fname)
+    ll = eval_log_lik(
+        graph,
+        data,
+        r,
+        u,
+        num_method=num_method,
+        use_H=use_H,
+        use_H2=use_H2
+    )
+    return ll
+
+
+"""
+Graph optimization -- inference
+"""
+
+
+def optimize(
     graph_fname,
     params_fname,
     data,
@@ -85,7 +122,8 @@ def optimize_with_H2(
             objective_fxn,
             params_0,
             args=opt_args,
-            maxiter=max_iters
+            maxiter=max_iters,
+            approx_grad=True
         )
         xopt, fopt, d = opt
         func_calls = d['funcalls']
@@ -114,7 +152,8 @@ def optimize_with_H2(
         warnflag=warnflag
     )
     opt_info = dict(
-        fopt=fopt,
+        method=opt_method,
+        fopt=-fopt,
         iters=iters,
         func_calls=func_calls,
         warnflag=warnflag
@@ -178,7 +217,7 @@ def end_printout(t0, **kwargs):
 
     for key in kwargs:
         print(f'{key}:\t{kwargs[key]}')
-    print(f'time elapsed:\t{np.round(time.time() - t0, 2)} s')
+    print(f'time elapsed:\t{np.round(time.time() - t0, 2)} s\n')
 
 
 def eval_log_lik(
@@ -311,6 +350,45 @@ def read_data(fname, sample_names):
     H2 = archive["H2_mean"][:, idx]
     H2_cov = np.array([x[mesh_idx] for x in archive["H2_cov"]])
     return r_bins, (sample_names, pairs, H, H_cov, H2, H2_cov)
+
+
+class TwoLocusH:
+
+    def __init__(self, H, H2, cov_H, cov_H2, r_bins, ids):
+        #
+        self.H = np.asanyarray(H)
+        self.H2 = np.asanyarray(H2)
+        self.cov_H = np.asanyarray(cov_H)
+        self.inv_cov_H = np.linalg.inv(self.cov_H)
+        self.cov_H2 = np.asanyarray(cov_H2)
+        self.inv_cov_H2 = np.linalg.inv(self.cov_H2)
+        self.r_bins = np.asanyarray(r_bins)
+        self.ids = np.asanyarray(ids)
+
+    @classmethod
+    def from_file(cls, fname, samples=None):
+        # load H2, H stats and covariances from a .npz archive
+        file = np.load(fname)
+        if not samples:
+            samples = file['sample_names']
+        names = file['sample_names'].tolist() + file['pair_names'].tolist()
+        _names = np.concatenate([samples, utils.get_pair_names(samples)])
+        idx = np.array([names.index(name) for name in _names])
+        H = file['H_mean'][idx]
+        _idx = np.ix_(idx, idx)
+        cov_H = file['H_cov'][_idx]
+        H2 = file['H2_mean'][:, idx]
+        __idx = np.ix_(np.arange(len(file['H2_cov'])), idx, idx)
+        cov_H2 = file['H2_cov'][__idx]
+        return cls(H, H2, cov_H, cov_H2, file['r_bins'], _names)
+
+    def subset(self):
+
+
+        return 0
+
+
+
 
 
 """

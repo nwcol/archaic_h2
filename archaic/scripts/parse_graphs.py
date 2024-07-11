@@ -28,9 +28,9 @@ def main():
     value_arr = []
     for fname in args.graph_fnames:
         g = minf._get_demes_dict(fname)
+        print(fname)
         names, vals, _, __, = minf._set_up_params_and_bounds(params, g)
         value_arr.append(vals)
-
     value_arr = np.array(value_arr)
     mins = np.min(value_arr, axis=0)
     maxs = np.max(value_arr, axis=0)

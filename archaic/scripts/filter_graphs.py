@@ -13,12 +13,13 @@ def get_args():
 
 
 def main():
-
+    #
+    args = get_args()
     out_path = args.out_path.rstrip('/')
     for fname in args.graph_fnames:
         graph = demes.load(fname)
-        fopt = int(graph.metadata["fopt"])
-        if fopt > args.thresh:
+        fopt = int(graph.metadata['opt_info']["fopt"])
+        if fopt < args.thresh:
             print(fname, '\t', fopt)
             basename = fname.split('/')[-1]
             out_fname = f"{out_path}/{basename}"
@@ -27,6 +28,4 @@ def main():
 
 
 if __name__ == "__main__":
-    args = get_args()
     main()
-
