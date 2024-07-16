@@ -6,7 +6,8 @@ decide how to organize parse scripts within
 object to represent H2? implications for saving
 consider the difference between functions that operate on files and on arrays (etc) more carefully and remove redundancy while maximizing usefulness
 printing progress and summaries to stdout is highly useful
-
+there is a lot of redundancy in the scripts. reduce it
+figure out how to import from scripts package on the cluster? whats the difficulty
 
 
 

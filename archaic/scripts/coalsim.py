@@ -7,6 +7,7 @@ import argparse
 import demes
 import msprime
 import numpy as np
+from archaic import utils
 
 
 def get_args():
@@ -24,6 +25,8 @@ def get_args():
 
 def main():
     #
+    def increment1(x):
+        return [_ + 1 for _ in x]
     args = get_args()
     graph = demes.load(args.graph_fname)
     demog = msprime.Demography.from_demes(graph)
@@ -43,8 +46,15 @@ def main():
     mts = msprime.sim_mutations(ts, rate=args.u)
     with open(args.out_fname, 'w') as file:
         mts.write_vcf(
-            file, individual_names=samples, contig_id=args.contig
+            file,
+            individual_names=samples,
+            contig_id=str(args.contig),
+            position_transform=increment1
         )
+    print(
+        utils.get_time(),
+        f'{int(args.L)} sites simulated and saved at {args.out_fname}'
+    )
     return 0
 
 

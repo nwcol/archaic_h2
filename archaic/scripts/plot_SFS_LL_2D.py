@@ -1,7 +1,7 @@
-
 """
 Params file must contain two unconstrained parameters with lower, upper bound
 """
+
 
 import argparse
 import demes
@@ -23,13 +23,14 @@ def get_args():
     parser.add_argument("-n", "--n_points", type=int, default=25)
     parser.add_argument("-l", "--n_levels", type=int, default=50)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
+    parser.add_argument('--title', default=None)
     parser.add_argument("-L", "--L", type=float, required=True)
     return parser.parse_args()
 
 
-def get_ll(graph, data, deme1, deme2, u, L):
+def get_ll(graph, data, config, u, L):
 
-    sfs = moments.Demes.SFS(graph, samples={deme1: 2, deme2: 2}, u=u)
+    sfs = moments.Demes.SFS(graph, samples=config, u=u)
     # get total SFS over genome
     sfs *= L
     # Poisson likelihood
@@ -56,16 +57,25 @@ def main():
     y_bounds = np.linspace(lower_bounds[1], upper_bounds[1], n + 1)
     x = x_bounds[:-1] + (x_bounds[1:] - x_bounds[:-1]) / 2
     y = y_bounds[:-1] + (y_bounds[1:] - y_bounds[:-1]) / 2
-    sample_names = inference.scan_names(args.graph_fname, args.data_fname)
-    deme1 = sample_names[0]
-    deme2 = sample_names[1]
-    sfs = np.load(args.data_fname)["sfs_arr"]
-    data = moments.Spectrum(sfs)
+
+    SFS_file = np.load(args.data_fname)
+    pop_ids = list(SFS_file['samples'])
+    data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
+    deme_names = [d.name for d in demes.load(args.graph_fname).demes]
+    marg_idx = []
+    samples = []
+    for i, pop_id in enumerate(pop_ids):
+        if pop_id in deme_names:
+            samples.append(pop_id)
+        else:
+            marg_idx.append(i)
+    data = data.marginalize(marg_idx)
+    config = {s: 2 for s in samples}
     Z = np.zeros((n, n))
     for i in range(n):
         for j in range(n):
             graph = update_graph(builder, options, [x[i], y[j]])
-            Z[j, i] = get_ll(graph, data, deme1, deme2, args.u, args.L)
+            Z[j, i] = get_ll(graph, data, config, args.u, args.L)
             print(x[i], y[j], Z[j, i])
     levels = - np.logspace(np.log10(-Z.min()), np.log10(-Z.max()), args.n_levels)
     fig, ax = plt.subplots(figsize=(9, 7), layout="constrained")
@@ -77,6 +87,8 @@ def main():
     ax.scatter(x0, y0, marker='x', color="black")
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
+    if args.title:
+        ax.set_title(args.title)
     plt.savefig(args.out_fname, dpi=200)
     return 0
 

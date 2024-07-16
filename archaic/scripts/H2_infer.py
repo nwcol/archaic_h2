@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument('-g', '--graph_fname', required=True)
     parser.add_argument('-p', '--params_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
-    parser.add_argument('-max', '--max_iters', nargs='*', type=int, default=[1000])
+    parser.add_argument('-max', '--max_iter', nargs='*', type=int, default=[1000])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('-opt', '--opt_methods', nargs='*', default=['NelderMead'])
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
@@ -43,7 +43,7 @@ def main():
     args = get_args()
     sample_names = inference.scan_names(args.graph_fname, args.boot_fname)
     print(utils.get_time(), f'running inference for demes {sample_names}')
-    if len(args.opt_methods) != len(args.max_iters):
+    if len(args.opt_methods) != len(args.max_iter):
         raise ValueError('')
     r_bins, data = inference.read_data(args.boot_fname, sample_names)
     if args.permute_graph:
@@ -64,7 +64,7 @@ def main():
             args.params_fname,
             data,
             r_bins,
-            args.max_iters[i],
+            args.max_iter[i],
             verbosity=args.verbosity,
             u=args.u,
             use_H=args.use_H,

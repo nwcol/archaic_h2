@@ -235,7 +235,7 @@ def main():
         print(''.join(lines), f'fopt: {LL}\n')
         opt_info = dict(
             method=opt_methods[opt_method],
-            fopt=LL,
+            fopt=-LL,
             iters=None,
             func_calls=func_calls,
             warnflag=None

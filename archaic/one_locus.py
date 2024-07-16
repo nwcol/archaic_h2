@@ -14,8 +14,8 @@ Experimental class for reading .vcf.gz files
 """
 
 
-class Variants:
-    # loads a .vcf file
+class VariantFile:
+    # loads a .vcf file and holds its contents in memory
 
     chrom_idx = 0
     pos_idx = 1
@@ -28,6 +28,7 @@ class Variants:
     sample_0_idx = 9
 
     def __init__(self, vcf_fname, mask_regions=None):
+        #
         if ".gz" in vcf_fname:
             open_fxn = gzip.open
         else:
@@ -444,59 +445,3 @@ def parse_SFS(variants, ref_as_ancestral=False):
         f'{n_mismatch} sites lacking ancestral allele'
     )
     return SFS, samples
-
-
-"""
-The first SFS function I wrote- it did not work properly.
-"""
-
-
-def ___parse_SFS(
-    samples,
-    genotypes,
-    genotype_positions,
-    refs,
-    alts,
-    ancestral_alleles
-):
-    # exclude triallelic sites
-    bi_mask = np.array([',' not in x for x in alts])
-    masked_ancestral = ancestral_alleles[genotype_positions[bi_mask] - 1]
-    n_excl = len(alts) - bi_mask.sum()
-    print(utils.get_time(), f"{n_excl} triallelic sites excluded")
-    polarized_genotypes, mask = polarize_genotypes(
-        genotypes[bi_mask], refs[bi_mask], alts[bi_mask], masked_ancestral
-    )
-    _n_excl = bi_mask.sum() - np.sum(mask)
-    print(utils.get_time(), f"{_n_excl} non-matching sites excluded")
-    derived_counts = polarized_genotypes[mask].sum(2)
-    n = len(samples)
-    SFS = np.zeros(tuple([3] * n), dtype=np.int64)
-    for counts in derived_counts:
-        SFS[tuple(counts)] += 1
-    return SFS
-
-
-def polarize_genotypes(genotypes, refs, alts, ancestral_alleles):
-    # polarize an array of genotypes so that 0 is ancestral, 1 derived
-    # also returns a boolean mask that excludes sites where neither ref nor
-    # alt is ancestral
-    # triallelic sites aren't allowed and must be masked out before using
-    # this function
-    ref_matches = refs == ancestral_alleles
-    alt_matches = alts == ancestral_alleles
-    mask = ref_matches + alt_matches
-    polarized_gts = np.zeros(genotypes.shape, dtype=np.int32)
-    polarized_gts[ref_matches][genotypes[ref_matches] > 0] = 1
-    polarized_gts[alt_matches] = 1 - genotypes[alt_matches]
-    return polarized_gts, mask
-
-
-def two_sample_sfs_matrix(alts):
-    # for two samples. i on rows j on cols
-    arr = np.zeros((3, 3))
-    for i in range(3):
-        for j in range(3):
-            arr[i, j] = np.count_nonzero(np.all(alts == [i, j], axis=1))
-    arr[0, 0] = 0
-    return arr

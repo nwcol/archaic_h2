@@ -14,30 +14,150 @@ A new class
 
 class Mask(np.ndarray):
 
-    def __new__(cls, regions):
+    def __new__(
+        cls,
+        regions,
+        dtype=np.int64,
+        chrom_num=None
+    ):
         #
-        regions = np.asanyarray(regions)
+        arr = np.asanyarray(regions, dtype=dtype).view(cls)
+        arr.chrom_num = chrom_num
 
-        return regions
+        # array must have ndim 2
+        if arr.ndim != 2:
+            raise ValueError(
+                'regions must have regions.ndim == 2'
+            )
+
+        # array must have arr.shape[1] = 2
+        if arr.shape[1] != 2:
+            raise ValueError(
+                'regions must have regions.shape[1] == 2'
+            )
+        return arr
+
+    def __array_finalize__(self, obj):
+
+        if obj is None:
+            return
+        np.ndarray.__array_finalize__(self, obj)
+        self.chrom_num = getattr(obj, 'chrom_num', None)
 
     @classmethod
-    def read(cls, mask_fname):
+    def from_bed_file(cls, fname):
         #
-        regions = read_mask_regions(mask_fname)
-        return cls(regions)
+        regions = []
+        if ".gz" in fname:
+            open_func = gzip.open
+        else:
+            open_func = open
+        with open_func(fname, "rb") as file:
+            for line in file:
+                chrom, start, stop = line.decode().strip('\n').split('\t')
+                if start.isnumeric():
+                    regions.append([int(start), int(stop)])
+        regions = np.array(regions, dtype=np.int64)
+        chrom_num = int(chrom.lstrip('chr'))
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_vcf_file(cls, fname):
+        #
+        chrom_idx = 0
+        pos_idx = 1
+        positions = []
+        if ".gz" in fname:
+            open_func = gzip.open
+        else:
+            open_func = open
+        with open_func(fname, "rb") as file:
+            for line in file:
+                if line.startswith(b'#'):
+                    continue
+                positions.append(line.split(b'\t')[pos_idx])
+        chrom_num = line.split(b'\t')[chrom_idx].decode()
+        positions = np.array(positions).astype(np.int64)
+        regions = cls.positions_to_regions(positions)
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_boolean(cls, boolean_mask, chrom_num=None):
+        #
+        regions = cls.boolean_to_regions(boolean_mask)
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_positions(cls, positions, chrom_num=None):
+        #
+        regions = cls.positions_to_regions(positions)
+        return cls(regions, chrom_num=chrom_num)
 
     @property
     def boolean(self):
-        #
+        # 0-indexed
         boolean_mask = np.zeros(self.max(), dtype=bool)
         for start, stop in self:
             boolean_mask[start:stop] = True
         return boolean_mask
 
     @property
+    def positions(self):
+        # 1-indexed
+        return np.nonzero(self.boolean)[0] + 1
+
+    @property
     def n_sites(self):
         #
         return self.boolean.sum()
+
+    @classmethod
+    def positions_to_regions(cls, positions):
+        #
+        return cls.boolean_to_regions(cls.positions_to_boolean(positions))
+
+    @staticmethod
+    def boolean_to_regions(boolean):
+        #
+        _boolean = np.concatenate([np.array([0]), boolean, np.array([0])])
+        jumps = np.diff(_boolean)
+        regions = np.stack(
+            [np.where(jumps == 1)[0], np.where(jumps == -1)[0]], axis=1
+        )
+        return regions
+
+    @staticmethod
+    def positions_to_boolean(positions):
+        #
+        boolean_mask = np.zeros(positions.max(), dtype=bool)
+        boolean_mask[positions - 1] = True
+        return boolean_mask
+
+    def write_bed_file(self, fname, write_header=False, chrom_num=None):
+        #
+        if chrom_num is None:
+            if self.chrom_num is None:
+                chrom_num = b'chr0'
+            else:
+                chrom_num = ('chr' + str(self.chrom_num)).encode()
+        if ".gz" in fname:
+            open_fxn = gzip.open
+        else:
+            open_fxn = open
+        with open_fxn(fname, "wb") as file:
+            if write_header:
+                header = b'#chrom\tchromStart\tchromEnd\n'
+                file.write(header)
+            for start, stop in self:
+                line = f'{chrom_num}\t{start}\t{stop}\n'.encode()
+                file.write(line)
+        return 0
+
+
+class TwoLocusMask(np.ndarray):
+
+    def __new__(cls, regions):
+        pass
 
 
 """

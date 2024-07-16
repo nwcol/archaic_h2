@@ -17,6 +17,8 @@ def get_args():
     parser.add_argument("-g", "--real_graph_fname", required=True)
     parser.add_argument("-g1", "--graph_fnames1", nargs='*', required=True)
     parser.add_argument("-g2", "--graph_fnames2", nargs='*', required=True)
+    parser.add_argument("-label1", '--label1', default=None)
+    parser.add_argument("-label2", '--label2', default=None)
     parser.add_argument("-px", "--param_x", required=True)
     parser.add_argument("-py", "--param_y", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
@@ -47,12 +49,20 @@ def plot(args):
     idx_x = names.index(args.param_x)
     idx_y = names.index(args.param_y)
     fig, ax = plt.subplots(figsize=(5.5, 5), layout="constrained")
+    if args.label1:
+        label = args.label1
+    else:
+        label = args.graph_fnames1[0].split('/')[0]
     ax.scatter(params1[:, idx_x], params1[:, idx_y], color=color1, marker='x',
-               label=args.graph_fnames1[0].split('/')[0])
+               label=label)
+    if args.label2:
+        label = args.label2
+    else:
+        label = args.graph_fnames2[0].split('/')[0]
     ax.scatter(params2[:, idx_x], params2[:, idx_y], color=color2, marker='x',
-               label=args.graph_fnames2[0].split('/')[0])
-    #ax.set_xlim(lower[idx_x], upper[idx_x])
-    #ax.set_ylim(lower[idx_y], upper[idx_y])
+               label=label)
+    ax.set_xlim(lower[idx_x], upper[idx_x])
+    ax.set_ylim(lower[idx_y], upper[idx_y])
     ax.set_xlabel(args.param_x)
     ax.set_ylabel(args.param_y)
     ax.grid(alpha=0.2)

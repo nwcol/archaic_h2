@@ -61,7 +61,6 @@ def main():
                 sample_names = list(np.load(args.boot_fnames[0])["sample_names"])
     pairs = utils.get_pairs(sample_names)
     pair_names = utils.get_pair_names(sample_names)
-
     abbrev_names = [name[:3] for name in sample_names]
     abbrev_pairs = [f"{x[:3]}-{y[:3]}" for x, y in pairs]
     n_samples = len(sample_names)
@@ -118,7 +117,7 @@ def main():
             print(lik)
             label += f": LL = {np.round(lik, 0)}"
         plotting.plot_curves(
-            axs, E_H, E_H2, r, samples, pairs, colors[k],
+            axs, E_H, E_H2, r, abbrev_names, abbrev_pairs, colors[k],
             args.log_y, label=label
         )
     for k, fname in enumerate(args.archive_fnames):

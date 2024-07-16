@@ -69,7 +69,7 @@ def plot_curves(axs, H, H2, r, sample_names, pair_names, color, log_scale,
     for i in range(len(pair_names)):
         idx = np.unravel_index(i + offset, shape)
         title = f"$H_{{2,xy}}$:{pair_names[i]}"
-        plot_H2(axs[idx], r, H2[:, i], color, log_scale=log_scale, title=title)
+        plot_H2(axs[idx], r, H2[:, i + n], color, log_scale=log_scale, title=title)
     return 0
 
 
@@ -91,7 +91,7 @@ def plot_error_points(axs, H, H_err, H2, H2_err, r, sample_names, pair_names,
     for i in range(len(pair_names)):
         idx = np.unravel_index(i + offset, shape)
         title = f"$H_{{2,xy}}$:{pair_names[i]}"
-        plot_H2_err(axs[idx], r, H2[:, i], H2_err[:, i], color, log_scale=log_scale, title=title)
+        plot_H2_err(axs[idx], r, H2[:, i + n], H2_err[:, i + n], color, log_scale=log_scale, title=title)
     return 0
 
 

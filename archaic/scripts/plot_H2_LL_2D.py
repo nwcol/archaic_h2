@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("-n", "--n_points", type=int, default=25)
     parser.add_argument("-l", "--n_levels", type=int, default=50)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
+    parser.add_argument('--title', default=None)
     return parser.parse_args()
 
 
@@ -43,7 +44,7 @@ def main():
     r_bins, data = inference.read_data(args.data_fname, sample_names)
     samples, pairs, H, H_cov, H2, H2_cov = data
     data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
-    r = inference.get_r(r_bins, method="simpsons")
+    r = inference.get_r(r_bins, method="Simpsons")
     #
     Z = np.zeros((n, n))
     for i in range(n):
@@ -62,7 +63,8 @@ def main():
     norm = matplotlib.colors.BoundaryNorm(levels, ncolors=cmap.N)
     im = ax.pcolormesh(x, y, Z, cmap=cmap, norm=norm)
     fig.colorbar(im, ax=ax)
-
+    if args.title:
+        ax.set_title(args.title)
     x0, y0 = params_0
     ax.scatter(x0, y0, marker='x', color="black")
     ax.set_ylabel(ylabel)

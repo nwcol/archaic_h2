@@ -6,6 +6,7 @@ and .vcf files. .vcf files must have 'AA' field in INFO
 
 import argparse
 from archaic import parsing
+from archaic import utils
 
 
 def get_args():
@@ -21,8 +22,14 @@ def get_args():
 def main():
     #
     args = get_args()
+    # a hack. works when all .vcfs have the samek mask length though
+    if len(args.mask_fnames) == 1 and len(args.vcf_fnames) > 1:
+        mask_fnames = [args.mask_fnames[0]] * len(args.vcf_fnames)
+        print(utils.get_time(), "using same mask for all .vcfs...")
+    else:
+        mask_fnames = args.mask_fnames
     parsing.parse_SFS(
-        args.mask_fnames,
+        mask_fnames,
         args.vcf_fnames,
         args.out_fname,
         ref_as_ancestral=args.ref_as_ancestral
