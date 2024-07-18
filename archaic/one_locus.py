@@ -13,8 +13,10 @@ from archaic import masks
 Experimental class for reading .vcf.gz files
 """
 
+# rename to VariantFile later
 
-class VariantFile:
+
+class Variants:
     # loads a .vcf file and holds its contents in memory
 
     chrom_idx = 0
@@ -23,11 +25,11 @@ class VariantFile:
     alt_idx = 4
     qual_idx = 5
     filter_idx = 6
-    info_idx =7
+    info_idx = 7
     format_idx = 8
     sample_0_idx = 9
 
-    def __init__(self, vcf_fname, mask_regions=None):
+    def __init__(self, vcf_fname, mask=None):
         #
         if ".gz" in vcf_fname:
             open_fxn = gzip.open
@@ -47,11 +49,11 @@ class VariantFile:
         _positions = np.array(
             [line.split(b'\t')[self.pos_idx] for line in lines], dtype=np.int64
         )
-        if np.any(mask_regions):
-            mask_indicator = masks.regions_to_indicator(mask_regions)
+        if mask is not None:
+            boolean_mask = mask.boolean
             bool_mask = np.zeros(len(lines), dtype=bool)
-            in_mask = _positions <= len(mask_indicator)
-            bool_mask[in_mask] = mask_indicator[_positions[in_mask] - 1] == 1
+            in_mask = _positions <= len(boolean_mask)
+            bool_mask[in_mask] = boolean_mask[_positions[in_mask] - 1] == 1
         else:
             bool_mask = np.full(len(lines), True)
         self.lines = lines[bool_mask]
@@ -62,8 +64,8 @@ class VariantFile:
         return len(self.lines)
 
     @property
-    def samples(self):
-        # shape (len(samples))
+    def sample_ids(self):
+        # shape (len(sample_ids))
         return np.array(self.header.decode().split('\t')[self.sample_0_idx:])
 
     @property
@@ -120,7 +122,7 @@ class VariantFile:
         return np.array(ancestral_alleles, dtype=np.str_)
 
     @property
-    def chrom(self):
+    def chrom_num(self):
         #
         return self.lines[0].split(b'\t')[self.chrom_idx].decode()
 
@@ -133,6 +135,16 @@ class VariantFile:
         else:
             info_dict = {}
         return info_dict
+
+    def access_info(self, field):
+        #
+
+        return 0
+
+    def access_format(self, field):
+        #
+
+        return 0
 
 
 """
@@ -204,11 +216,6 @@ Manipulating vectors
 """
 
 
-def get_window_bounds(window, positions):
-
-    return np.searchsorted(positions, window)
-
-
 def slice_window(positions, window, *args):
 
     start, stop = get_window_bounds(window, positions)
@@ -230,6 +237,10 @@ def get_alt_counts(genotypes):
 """
 Compute H statistics
 """
+
+def get_window_bounds(window, positions):
+
+    return np.searchsorted(positions, window)
 
 
 def count_sites(positions, window=None):
@@ -364,6 +375,73 @@ def parse_H_counts(genotypes, positions, windows):
 
 
 """
+New
+"""
+
+
+def get_one_sample_H(genotypes, genotype_positions, windows):
+    # returns counts
+    site_H = genotypes[:, 0] != genotypes[:, 1]
+    H = np.zeros(len(windows))
+    for i, window in enumerate(windows):
+        lower, upper = np.searchsorted(genotype_positions, window)
+        H[i] = site_H[lower:upper].sum()
+    return H
+
+
+def get_two_sample_H(genotypes_x, genotypes_y, genotype_positions, windows):
+    #
+    site_H = get_site_two_sample_H(genotypes_x, genotypes_y)
+    H = np.zeros(len(windows))
+    for i, window in enumerate(windows):
+        lower, upper = np.searchsorted(genotype_positions, window)
+        H[i] = site_H[lower:upper].sum()
+    return H
+
+
+def get_site_two_sample_H(genotypes_x, genotypes_y):
+    # compute probabilities of sampling a distinct allele from x and y at each
+    site_two_sample_H = (
+        np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)
+        + np.sum(genotypes_x[:, 1][:, np.newaxis] != genotypes_y, axis=1)
+    ) / 4
+    return site_two_sample_H
+
+
+def compute_H(
+    genotypes,
+    genotype_positions,
+    mask_positions,
+    windows=None,
+    sample_mask=None,
+):
+    #
+    if windows is None:
+        windows = np.array([[mask_positions[0], mask_positions[-1] + 1]])
+    if sample_mask is not None:
+        genotypes = genotypes[:, sample_mask]
+    n_sites = np.diff(np.searchsorted(mask_positions, windows))[:, 0]
+    n_samples = genotypes.shape[1]
+    idxs = [(i, j) for i in range(n_samples) for j in np.arange(i, n_samples)]
+    H = np.zeros((len(windows), len(idxs)))
+    for k, (i, j) in enumerate(idxs):
+        if i == j:
+            H[:, k] = get_one_sample_H(
+                genotypes[:, i], genotype_positions, windows
+            )
+        else:
+            H[:, k] = get_two_sample_H(
+                genotypes[:, i], genotypes[:, j], genotype_positions, windows
+            )
+    print(
+        utils.get_time(),
+        f'H parsed for {n_samples} samples '
+        f'at {n_sites} sites in {len(windows)} windows'
+    )
+    return n_sites, H
+
+
+"""
 Loading genotypes from .fa or .fasta files
 """
 
@@ -405,7 +483,7 @@ Computing SFS statistics
 
 def parse_SFS(variants, ref_as_ancestral=False):
     # variants needs the ancestral allele field in info
-    # ref_is_ancestral=True is for simulated data which lacks INFO AA
+    # ref_is_ancestral=True is for simulated data which lacks INFO=AA
     genotypes = variants.genotypes
     refs = variants.refs
     alts = variants.alts
@@ -413,8 +491,8 @@ def parse_SFS(variants, ref_as_ancestral=False):
         ancs = refs
     else:
         ancs = variants.ancestral_alleles
-    samples = variants.samples
-    n = len(samples)
+    sample_ids = variants.sample_ids
+    n = len(sample_ids)
     SFS = np.zeros([3] * n, dtype=np.int64)
     n_triallelic = 0
     n_mismatch = 0
@@ -444,4 +522,4 @@ def parse_SFS(variants, ref_as_ancestral=False):
         f'{n_triallelic} multiallelic sites, '
         f'{n_mismatch} sites lacking ancestral allele'
     )
-    return SFS, samples
+    return SFS, sample_ids

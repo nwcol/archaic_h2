@@ -10,44 +10,12 @@ import moments
 import moments.Demes.Inference as minf
 import time
 from archaic import utils
+from archaic.spectra import H2Spectrum
 
 
 out_of_bounds_val = 1e10
 counter = 0
 opt_methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
-num_methods = [ "Simpsons", "midpoint"]
-
-
-"""
-Computing H2 log likelihood on a graph
-"""
-
-
-def compute_graph_log_lik(
-    graph_fname,
-    data_fname,
-    u=1.35e-8,
-    num_method='Simpsons',
-    use_H=True,
-    use_H2=True
-):
-    #
-    samples = scan_names(graph_fname, data_fname)
-    r_bins, data = read_data(data_fname, samples)
-    samples, pairs, H, H_cov, H2, H2_cov = data
-    data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
-    r = get_r(r_bins, num_method)
-    graph = demes.load(graph_fname)
-    ll = eval_log_lik(
-        graph,
-        data,
-        r,
-        u,
-        num_method=num_method,
-        use_H=use_H,
-        use_H2=use_H2
-    )
-    return ll
 
 
 """
@@ -55,74 +23,66 @@ Graph optimization -- inference
 """
 
 
-def optimize(
+def optimize_H2(
     graph_fname,
     params_fname,
     data,
-    r_bins,
-    max_iters=1_000,
+    max_iter=500,
     opt_method='NelderMead',
-    num_method="Simpsons",
     u=1.35e-8,
     verbosity=1,
-    use_H=True,
-    use_H2=True
+    use_H=True
 ):
     #
     t0 = time.time()
-    samples, pairs, H, H_cov, H2, H2_cov = data
-    data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
+    if not use_H and data.has_H:
+        data = data.remove_H
     builder = minf._get_demes_dict(graph_fname)
     options = minf._get_params_dict(params_fname)
     param_names, params_0, lower_bounds, upper_bounds = \
         minf._set_up_params_and_bounds(options, builder)
     constraints = minf._set_up_constraints(options, param_names)
-    r = get_r(r_bins, method=num_method)
     if verbosity > 0:
-        lik0 = eval_log_lik(demes.load(graph_fname), data, r, u=u)
+        ll_0 = compute_graph_file_ll_H2(graph_fname, data, u)
         printout(0, 0, param_names, mode='s')
-        printout(0, lik0, params_0)
+        printout(0, ll_0, params_0)
     opt_args = (
         builder,
-        data,
         options,
-        r,
+        data,
         u,
         lower_bounds,
         upper_bounds,
         constraints,
-        num_method,
         verbosity,
-        use_H,
-        use_H2
     )
     if opt_method not in opt_methods:
         raise ValueError(f'method: {opt_method} is not in {opt_methods}')
     if opt_method == 'NelderMead':
         opt = scipy.optimize.fmin(
-            objective_fxn,
+            objective_H2,
             params_0,
             args=opt_args,
-            maxiter=max_iters,
+            maxiter=max_iter,
             full_output=True
         )
         xopt, fopt, iters, func_calls, warnflag = opt
     elif opt_method == 'BFGS':
         opt = scipy.optimize.fmin_bfgs(
-            objective_fxn,
+            objective_H2,
             params_0,
             args=opt_args,
-            maxiter=max_iters,
+            maxiter=max_iter,
             full_output=True
         )
         xopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag = opt
         iters = None
     elif opt_method == 'LBFGSB':
         opt = scipy.optimize.fmin_l_bfgs_b(
-            objective_fxn,
+            objective_H2,
             params_0,
             args=opt_args,
-            maxiter=max_iters,
+            maxiter=max_iter,
             approx_grad=True
         )
         xopt, fopt, d = opt
@@ -131,10 +91,10 @@ def optimize(
         iters = d['nit']
     elif opt_method == 'Powell':
         opt = scipy.optimize.fmin_powell(
-            objective_fxn,
+            objective_H2,
             params_0,
             args=opt_args,
-            maxiter=max_iters,
+            maxiter=max_iter,
             full_output=True
         )
         xopt, fopt, direc, iters, func_calls, warnflag = opt
@@ -161,45 +121,54 @@ def optimize(
     return graph, opt_info
 
 
-def objective_fxn(
-        params,
-        builder,
-        data,
-        options,
-        r,
-        u,
-        lower_bound=None,
-        upper_bound=None,
-        constraints=None,
-        num_method="Simpsons",
-        verbosity=1,
-        use_H=True,
-        use_H2=True
+def objective_H2(
+    params,
+    builder,
+    options,
+    data,
+    u,
+    lower_bounds=None,
+    upper_bounds=None,
+    constraints=None,
+    verbosity=1
 ):
-
+    # objective function for optimization with H2
     global counter
     counter += 1
-    if lower_bound is not None and np.any(params < lower_bound):
-        log_lik = -out_of_bounds_val
-    elif upper_bound is not None and np.any(params > upper_bound):
-        log_lik = -out_of_bounds_val
+    if lower_bounds is not None and np.any(params < lower_bounds):
+        ll = -out_of_bounds_val
+    elif upper_bounds is not None and np.any(params > upper_bounds):
+        ll = -out_of_bounds_val
     elif constraints is not None and np.any(constraints(params) <= 0):
-        log_lik = -out_of_bounds_val
+        ll = -out_of_bounds_val
     else:
         builder = minf._update_builder(builder, options, params)
         graph = demes.Graph.fromdict(builder)
-        log_lik = eval_log_lik(
-            graph,
-            data,
-            r,
-            u,
-            num_method=num_method,
-            use_H=use_H,
-            use_H2=use_H2
-        )
+        graph_data = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
+        ll = compute_ll_H2(graph_data, data)
     if verbosity > 0 and counter % verbosity == 0:
-        printout(counter, log_lik, params)
-    return -log_lik
+        printout(counter, ll, params)
+    return -ll
+
+
+def compute_ll_H2(model, data):
+    # takes two H2Spectrum arguments
+    ll = 0
+    for i in range(data.n_bins):
+        x = data.data[i]
+        mu = model.data[i]
+        inv_cov = data.inv_covs[i]
+        ll += - (x - mu) @ inv_cov @ (x - mu)
+    return ll
+
+
+def compute_graph_file_ll_H2(graph_fname, data, u):
+    #
+    graph_data_0 = H2Spectrum.from_graph_file(
+        graph_fname, data.sample_ids, data.r, u
+    )
+    ll = compute_ll_H2(graph_data_0, data)
+    return ll
 
 
 def printout(i, log_lik, params, mode='g'):
@@ -214,106 +183,9 @@ def printout(i, log_lik, params, mode='g'):
 
 
 def end_printout(t0, **kwargs):
-
     for key in kwargs:
         print(f'{key}:\t{kwargs[key]}')
     print(f'time elapsed:\t{np.round(time.time() - t0, 2)} s\n')
-
-
-def eval_log_lik(
-    graph,
-    data,
-    r,
-    u,
-    num_method="Simpsons",
-    use_H=True,
-    use_H2=True
-):
-
-    samples, pairs, H, H_cov, H2, H2_cov = data
-    E_H, E_H2 = get_H_stats(
-        graph, samples, pairs, r, u, num_method=num_method
-    )
-    lik = 0
-    if use_H:
-        lik += normal_log_lik(E_H, H_cov, H)
-    if use_H2:
-        n = len(E_H2)
-        for i in range(n):
-            lik += normal_log_lik(E_H2[i], H2_cov[i], H2[i])
-    return lik
-
-
-def normal_log_lik(mu, inv_cov, x):
-    # requires that the covariance matrix is already inverted
-    log_lik = - (x - mu) @ inv_cov @ (x - mu)
-    return log_lik
-
-
-"""
-Getting expected statistics using moments.LD
-"""
-
-
-def get_H_stats(graph, samples, pairs, r, u, num_method="Simpsons"):
-    # E_H has shape (n_samples), E_H2 has shape (n_bins, n_samples)
-    ld_stats = moments.LD.LDstats.from_demes(
-        graph, sampled_demes=samples, theta=None, r=r, u=u
-    )
-    n = len(samples)
-    idx_pairs = utils.get_pair_idxs(n)
-    E_H = np.array(
-        [ld_stats.H(pops=[i])[0] for i in range(n)] +
-        [ld_stats.H(pops=pair)[1] for pair in idx_pairs]
-    )
-    E_H2 = np.array(
-        [ld_stats.H2(sample, phased=True) for sample in samples] +
-        [ld_stats.H2(x, y, phased=False) for x, y in pairs]
-    ).T
-    E_H2 = approximate_H2(E_H2, method=num_method)
-    if E_H2.ndim == 1:
-        E_H2 = E_H2[:, np.newaxis]
-    return E_H, E_H2
-
-
-"""
-Numerical approximations
-"""
-
-
-def get_r(r_bins, method='Simpsons'):
-    #
-    if method not in num_methods:
-        raise ValueError(f'{method} is not in methods: {num_methods}')
-    elif method == 'midpoint':
-        r = r_bins[:-1] + np.diff(r_bins) / 2
-    elif method == 'Simpsons':
-        n = len(r_bins)
-        r = np.zeros(n * 2 - 1)
-        r[np.arange(n) * 2] = r_bins
-        r[np.arange(n - 1) * 2 + 1] = r_bins[:-1] + np.diff(r_bins) / 2
-    else:
-        r = None
-    return r
-
-
-def approximate_H2(arr, method='Simpsons'):
-    #
-    if method not in num_methods:
-        raise ValueError(f'{method} is not in methods: {num_methods}')
-    elif method == 'midpoint':
-        H2 = arr
-    elif method == 'Simpsons':
-        n = len(arr)
-        b = (n - 1) // 2
-        H2 = (
-            1/6 * arr[np.arange(b) * 2]
-            + 4/6 * arr[np.arange(b) * 2 + 1]
-            + 1/6 * arr[np.arange(b) * 2 + 2]
-        )
-    else:
-        H2 = None
-    return H2
 
 
 """
@@ -350,45 +222,6 @@ def read_data(fname, sample_names):
     H2 = archive["H2_mean"][:, idx]
     H2_cov = np.array([x[mesh_idx] for x in archive["H2_cov"]])
     return r_bins, (sample_names, pairs, H, H_cov, H2, H2_cov)
-
-
-class TwoLocusH:
-
-    def __init__(self, H, H2, cov_H, cov_H2, r_bins, ids):
-        #
-        self.H = np.asanyarray(H)
-        self.H2 = np.asanyarray(H2)
-        self.cov_H = np.asanyarray(cov_H)
-        self.inv_cov_H = np.linalg.inv(self.cov_H)
-        self.cov_H2 = np.asanyarray(cov_H2)
-        self.inv_cov_H2 = np.linalg.inv(self.cov_H2)
-        self.r_bins = np.asanyarray(r_bins)
-        self.ids = np.asanyarray(ids)
-
-    @classmethod
-    def from_file(cls, fname, samples=None):
-        # load H2, H stats and covariances from a .npz archive
-        file = np.load(fname)
-        if not samples:
-            samples = file['sample_names']
-        names = file['sample_names'].tolist() + file['pair_names'].tolist()
-        _names = np.concatenate([samples, utils.get_pair_names(samples)])
-        idx = np.array([names.index(name) for name in _names])
-        H = file['H_mean'][idx]
-        _idx = np.ix_(idx, idx)
-        cov_H = file['H_cov'][_idx]
-        H2 = file['H2_mean'][:, idx]
-        __idx = np.ix_(np.arange(len(file['H2_cov'])), idx, idx)
-        cov_H2 = file['H2_cov'][__idx]
-        return cls(H, H2, cov_H, cov_H2, file['r_bins'], _names)
-
-    def subset(self):
-
-
-        return 0
-
-
-
 
 
 """
@@ -428,6 +261,176 @@ def optimize_with_SFS(
     )
     print(fit)
     return 0
+
+
+"""
+Confidence intervals
+"""
+
+
+def compute_confidence():
+
+
+    return 0
+
+
+"""
+Super-composite inference with H2 and the SFS
+"""
+
+
+def optimize_super_composite(
+    graph_fname,
+    params_fname,
+    H2_data,
+    SFS_data,
+    L,
+    max_iter=500,
+    opt_method='NelderMead',
+    u=1.35e-8,
+    verbosity=1
+):
+    #
+    t0 = time.time()
+
+    sample_config = {sample: 2 for sample in SFS_data.pop_ids}
+
+    builder = minf._get_demes_dict(graph_fname)
+    options = minf._get_params_dict(params_fname)
+    param_names, params_0, lower_bounds, upper_bounds = \
+        minf._set_up_params_and_bounds(options, builder)
+    constraints = minf._set_up_constraints(options, param_names)
+
+    if verbosity > 0:
+        graph = demes.load(graph_fname)
+        H2_model = H2Spectrum.from_graph(
+            graph, H2_data.sample_ids, H2_data.r, u
+        )
+        SFS_model = moments.Demes.SFS(graph, samples=sample_config, u=u) * L
+        lik0 = compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model)
+        printout(0, 0, param_names, mode='s')
+        printout(0, lik0, params_0)
+
+    opt_args = (
+        builder,
+        options,
+        H2_data,
+        SFS_data,
+        sample_config,
+        u,
+        L,
+        lower_bounds,
+        upper_bounds,
+        constraints,
+        verbosity,
+    )
+
+    if opt_method not in opt_methods:
+        raise ValueError(f'method: {opt_method} is not in {opt_methods}')
+    if opt_method == 'NelderMead':
+        opt = scipy.optimize.fmin(
+            objective_composite,
+            params_0,
+            args=opt_args,
+            maxiter=max_iter,
+            full_output=True
+        )
+        xopt, fopt, iters, func_calls, warnflag = opt
+    elif opt_method == 'BFGS':
+        opt = scipy.optimize.fmin_bfgs(
+            objective_composite,
+            params_0,
+            args=opt_args,
+            maxiter=max_iter,
+            full_output=True
+        )
+        xopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag = opt
+        iters = None
+    elif opt_method == 'LBFGSB':
+        opt = scipy.optimize.fmin_l_bfgs_b(
+            objective_composite,
+            params_0,
+            args=opt_args,
+            maxiter=max_iter,
+            approx_grad=True
+        )
+        xopt, fopt, d = opt
+        func_calls = d['funcalls']
+        warnflag = d['warnflag']
+        iters = d['nit']
+    elif opt_method == 'Powell':
+        opt = scipy.optimize.fmin_powell(
+            objective_composite,
+            params_0,
+            args=opt_args,
+            maxiter=max_iter,
+            full_output=True
+        )
+        xopt, fopt, direc, iters, func_calls, warnflag = opt
+    else:
+        return 1
+    builder = minf._update_builder(builder, options, xopt)
+    graph = demes.Graph.fromdict(builder)
+    global counter
+    counter = 0
+    end_printout(
+        t0,
+        fopt=fopt,
+        iters=iters,
+        func_calls=func_calls,
+        warnflag=warnflag
+    )
+    opt_info = dict(
+        method=opt_method,
+        fopt=-fopt,
+        iters=iters,
+        func_calls=func_calls,
+        warnflag=warnflag
+    )
+    return graph, opt_info
+
+
+def objective_composite(
+    params,
+    builder,
+    options,
+    H2_data,
+    SFS_data,
+    sample_config,
+    u,
+    L,
+    lower_bound=None,
+    upper_bound=None,
+    constraints=None,
+    verbosity=1,
+):
+    global counter
+    counter += 1
+    if lower_bound is not None and np.any(params < lower_bound):
+        ll = -out_of_bounds_val
+    elif upper_bound is not None and np.any(params > upper_bound):
+        ll = -out_of_bounds_val
+    elif constraints is not None and np.any(constraints(params) <= 0):
+        ll = -out_of_bounds_val
+    else:
+        builder = minf._update_builder(builder, options, params)
+        graph = demes.Graph.fromdict(builder)
+        H2_model = H2Spectrum.from_graph(
+            graph, H2_data.sample_ids, H2_data.r, u
+        )
+        SFS_model = moments.Demes.SFS(graph, samples=sample_config, u=u) * L
+        ll = compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model)
+    if verbosity > 0 and counter % verbosity == 0:
+        printout(counter, ll, params)
+    return -ll
+
+
+def compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model):
+    #
+    ll_H2 = compute_ll_H2(H2_model, H2_data)
+    ll_SFS = moments.Inference.ll(SFS_model, SFS_data)
+    ll = ll_H2 + ll_SFS
+    return ll
 
 
 """

@@ -31,33 +31,31 @@ def main():
     elif args.window_fname:
         windows = np.loadtxt(args.window_fname)
     else:
-        print("using single window")
-        windows = np.array([[0, np.inf]])
+        print("using default single window")
+        windows = None
     if windows.ndim != 2:
         raise ValueError(f"windows must be dim2, but are dim{windows.ndim}")
-    ###
     if windows.shape[1] == 3:
         bounds = windows[:, 2]
         windows = windows[:, :2]
     else:
-        bounds = np.repeat(windows[-1, 1], len(windows))
-    ###
+        bounds = None
     if args.r_bins:
         r_bins = np.array(eval(args.r_bins))
     elif args.r_bin_fname:
         r_bins = np.loadtxt(args.r_bin_fname)
     else:
-        print("using default r bins")
         r_bins = np.logspace(-6, -2, 17)
-    parsing.parse_H2(
+        print(f'using default r bins {r_bins}')
+    dic = parsing.parse_H2(
         args.mask_fname,
         args.vcf_fname,
         args.map_fname,
         windows,
         bounds,
-        r_bins,
-        args.out_fname,
+        r_bins
     )
+    np.savez(args.out_fname, **dic)
     return 0
 
 

@@ -6,6 +6,114 @@ from archaic import utils
 
 
 """
+Plotting H2
+"""
+
+
+def plot_H2_spectra(*args, n_cols=5):
+    # they all have to be the same shape
+    colors = ['black', 'blue', 'red']
+    spectrum = args[0]
+    n_axs = spectrum.n
+    n_rows = int(np.ceil(n_axs / n_cols))
+    fig, axs = plt.subplots(
+        n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2),
+        layout="constrained"
+    )
+    axs = axs.flat
+    for ax in axs[n_axs:]:
+        ax.remove()
+    for i, spectrum in enumerate(args):
+        plot_H2_spectrum(spectrum, color=colors[i], axs=axs)
+
+
+def plot_H2_spectrum(spectrum, color=None, axs=None, n_cols=5):
+    #
+    if color is None:
+        color = 'black'
+    if axs is None:
+        n_axs = spectrum.n
+        n_rows = int(np.ceil(n_axs / n_cols))
+        fig, axs = plt.subplots(
+            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2),
+            layout="constrained"
+        )
+        axs = axs.flat
+        for ax in axs[n_axs:]:
+            ax.remove()
+    x = spectrum.r_bins[:-1] + np.diff(spectrum.r_bins)
+    for i, _id in enumerate(spectrum.ids):
+        if spectrum.covs is not None:
+            if spectrum.has_H:
+                var = spectrum.covs[:-1, i, i]
+            else:
+                var = spectrum.covs[:, i, i]
+            y_err = np.sqrt(var) * 1.96
+        else:
+            y_err = None
+        ax = axs[i]
+        if spectrum.has_H:
+            data = spectrum.data[:-1, i]
+        else:
+            data = spectrum.data[:, i]
+        plot_single_H2(ax, x, data, color, y_err=y_err, title=_id)
+    return 0
+
+
+def plot_single_H2(ax, x, data, color, y_err=None, title=None):
+    #
+    if y_err is None:
+        # we have expectations or something
+        ax.plot(x, data, color=color)
+    else:
+        # we have empirical data with variance
+        ax.errorbar(x, data, yerr=y_err, color=color, fmt=".", capsize=0)
+    ax.set_xscale('log')
+    ax.grid(alpha=0.2)
+    ax.set_ylim(0, )
+    if title is not None:
+        title = parse_label(title)
+        ax.set_title(title)
+    return 0
+
+
+def parse_label(label):
+    # expects population identifiers of form np.array([labelx, labely])
+    x, y = label
+    if x == y:
+        _label = x
+    else:
+        _label = f'{x[:3]}-{y[:3]}'
+    return _label
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
 Useful constants
 """
 

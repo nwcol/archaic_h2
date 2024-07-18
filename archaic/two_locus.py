@@ -46,7 +46,7 @@ def read_map_file(map_fname, map_col="Map(cM)"):
     return map_positions, map_vals
 
 
-def get_map_vals(map_fname, positions, map_col="Map(cM)"):
+def get_r_map(map_fname, positions, map_col="Map(cM)"):
 
     map_pos, map_vals = read_map_file(map_fname, map_col=map_col)
     if np.any(positions < map_pos[0]):
@@ -75,70 +75,65 @@ Compute H2 statistics
 
 
 def count_site_pairs(
-    map_vals,
+    r_map,
     r_bins,
     positions=None,
     window=None,
-    vectorized=False,
+    vectorized=True,
     bp_thresh=0,
     upper_bound=None,
     verbose=2
 ):
     # check whether there are actually any sites
-    if len(map_vals) == 0:
+    if len(r_map) == 0:
         return np.zeros(len(r_bins) - 1)
     # to use a distance threshold, we need positions
     if bp_thresh:
         if not np.any(positions):
             raise ValueError("You must provide positions to use bp_thresh!")
     d_bins = map_function(r_bins)
-    if np.any(window):
-        if not np.any(positions):
+    if window is not None:
+        if positions is None:
             raise ValueError("You must provide positions to use a window!")
-        l_start, l_stop = one_locus.get_window_bounds(window, positions)
+        l_start, l_stop = np.searchsorted(positions, window)
         if upper_bound:
             r_stop = np.searchsorted(positions, upper_bound)
         else:
-            max_d = map_vals[l_stop - 1] + d_bins[-1]
-            r_stop = np.searchsorted(map_vals, max_d)
-        map_vals = map_vals[l_start:r_stop]
+            max_d = r_map[l_stop - 1] + d_bins[-1]
+            r_stop = np.searchsorted(r_map, max_d)
+        r_map = r_map[l_start:r_stop]
         if bp_thresh:
             positions = positions[l_start:r_stop]
     else:
         l_start = 0
-        l_stop = r_stop = len(map_vals)
+        l_stop = r_stop = len(r_map)
     n_left_loci = l_stop - l_start
     cum_counts = np.zeros(len(d_bins), dtype=np.int64)
     if vectorized:
-        edges = map_vals[:n_left_loci, np.newaxis] + d_bins[np.newaxis, :]
-        counts = np.searchsorted(map_vals, edges)
+        edges = r_map[:n_left_loci, np.newaxis] + d_bins[np.newaxis, :]
+        counts = np.searchsorted(r_map, edges)
         cum_counts = counts.sum(0)
-        pair_counts = np.diff(cum_counts)
+        n_site_pairs = np.diff(cum_counts)
         # correction on lowest bin
         if r_bins[0] == 0:
             n_redundant = np.sum(
                 np.arange(n_left_loci)
-                - np.searchsorted(map_vals, map_vals[:n_left_loci])
+                - np.searchsorted(r_map, r_map[:n_left_loci])
             ) + n_left_loci
-            pair_counts[0] -= n_redundant
+            n_site_pairs[0] -= n_redundant
     else:
         for i in np.arange(n_left_loci):
             if bp_thresh > 0:
                 j = np.searchsorted(positions, positions[i] + bp_thresh + 1)
             else:
                 j = i + 1
-            _bins = d_bins + map_vals[i]
-            cum_counts += np.searchsorted(map_vals[j:], _bins)
+            _bins = d_bins + r_map[i]
+            cum_counts += np.searchsorted(r_map[j:], _bins)
             if i % 1e6 == 0:
                 if n_left_loci > 1e6 and verbose == 2:
                     print(utils.get_time(), f"locus {i} of {n_left_loci} loci")
-        pair_counts = np.diff(cum_counts)
-    if verbose >= 1:
-        print(
-            utils.get_time(),
-            f"loci at idx {l_start}:{l_stop}-{r_stop} parsed"
-        )
-    return pair_counts
+        n_site_pairs = np.diff(cum_counts)
+    return n_site_pairs
 
 
 def count_H2(
@@ -172,7 +167,7 @@ def count_H2(
     return H2_counts
 
 
-def count_H2xy(
+def count_two_sample_H2(
     genotypes_x,
     genotypes_y,
     map_vals,
@@ -180,8 +175,7 @@ def count_H2xy(
     positions=None,
     window=None,
     bp_thresh=0,
-    upper_bound=None,
-    verbose=True
+    upper_bound=None
 ):
     # unphased, of course
     if bp_thresh:
@@ -224,10 +218,8 @@ def count_H2xy(
             select = np.searchsorted(allowed_Hxy, left_Hxy)
             locus_H2xy = precomputed_H2xy[select, i:j_max]
             cum_counts += locus_H2xy[edges]
-    if verbose:
-        print(utils.get_time(), f"H2xy parsed for {n_left_loci} loci")
-    H2xy_counts = np.diff(cum_counts)
-    return H2xy_counts
+    H2 = np.diff(cum_counts)
+    return H2
 
 
 def get_two_chromosome_H2(site_counts, H_counts):
@@ -248,6 +240,129 @@ def get_two_chromosome_H2(site_counts, H_counts):
 """
 Parsing files
 """
+
+
+def get_one_sample_H2(
+    genotypes,
+    r_map,
+    r_bins,
+    positions,
+    windows,
+    bounds
+):
+    #
+    site_H = genotypes[:, 0] != genotypes[:, 1]
+    H_idx = np.nonzero(site_H)[0]
+    H_r_map = r_map[H_idx]
+    H_positions = positions[H_idx]
+    H2 = np.zeros((len(windows), len(r_bins) - 1))
+    for k, window in enumerate(windows):
+        H2[k] = count_site_pairs(
+            H_r_map,
+            r_bins,
+            positions=H_positions,
+            window=window,
+            upper_bound=bounds[k]
+        )
+    return H2
+
+
+def get_two_sample_H2(
+    genotypes_x,
+    genotypes_y,
+    r_map,
+    r_bins,
+    positions,
+    windows,
+    bounds
+):
+    #
+    H2 = np.zeros((len(windows), len(r_bins) - 1))
+    for k, window in enumerate(windows):
+        H2[k] = count_two_sample_H2(
+            genotypes_x,
+            genotypes_y,
+            r_map,
+            r_bins,
+            positions=positions,
+            window=window,
+            upper_bound=bounds[k]
+        )
+    return H2
+
+
+def compute_H2(
+    genotypes,
+    genotype_positions,
+    positions,
+    r_map,
+    r_bins,
+    windows=None,
+    bounds=None,
+    sample_mask=None
+):
+    #
+    if windows is None:
+        windows = np.array([[positions[0], positions[-1] + 1]])
+    if bounds is None:
+        bounds = np.array([positions[-1] + 1])
+    if sample_mask is not None:
+        genotypes = genotypes[:, sample_mask]
+    # site pairs
+    n_site_pairs = np.zeros((len(windows), len(r_bins) - 1))
+    for i, window in enumerate(windows):
+        n_site_pairs[i] = count_site_pairs(
+            r_map,
+            r_bins,
+            positions=positions,
+            window=window,
+            vectorized=True
+        )
+        print(
+            utils.get_time(),
+            f'n site pairs parsed for window {i}'
+        )
+    genotype_r_map = r_map[np.searchsorted(positions, genotype_positions)]
+    n_samples = genotypes.shape[1]
+    idxs = [(i, j) for i in range(n_samples) for j in np.arange(i, n_samples)]
+    H2 = np.zeros((len(windows), len(idxs), len(r_bins) - 1))
+    for i, (x, y) in enumerate(idxs):
+        if x == y:
+            H2[:, i] = get_one_sample_H2(
+                genotypes[:, x],
+                genotype_r_map,
+                r_bins,
+                genotype_positions,
+                windows,
+                bounds
+            )
+            print(
+                utils.get_time(),
+                f'H2 parsed for sample {x}'
+            )
+        else:
+            H2[:, i] = get_two_sample_H2(
+                genotypes[:, x],
+                genotypes[:, y],
+                genotype_r_map,
+                r_bins,
+                genotype_positions,
+                windows,
+                bounds
+            )
+            print(
+                utils.get_time(),
+                f'H2 parsed for samples {(x, y)}'
+            )
+    print(
+        utils.get_time(),
+        f'H2 parsed for {n_samples} samples '
+        f'at {len(positions)} sites in {len(windows)} windows'
+    )
+    return n_site_pairs, H2
+
+
+
 
 
 def parse_pair_counts(pos_map, pos, windows, bounds, r_bins, thresh=0):
