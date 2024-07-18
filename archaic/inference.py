@@ -295,6 +295,9 @@ def optimize_super_composite(
 
     sample_config = {sample: 2 for sample in SFS_data.pop_ids}
 
+    if H2_data.has_H:
+        H2_data = H2_data.remove_H()
+
     builder = minf._get_demes_dict(graph_fname)
     options = minf._get_params_dict(params_fname)
     param_names, params_0, lower_bounds, upper_bounds = \
@@ -484,9 +487,13 @@ Parse parameters from large number of graphs
 """
 
 
-def parse_graph_params(params_fname, graph_fnames):
-    #
+def parse_graph_params(params_fname, graph_fnames, permissive=False):
+    # shape (n_files, n_parameters)
     params = minf._get_params_dict(params_fname)
+    if permissive:
+        for i in range(len(params['parameters'])):
+            params['parameters'][i]['lower_bound'] *= 0.99
+            params['parameters'][i]['upper_bound'] *= 1.01
     names = None
     arr = []
     for fname in graph_fnames:

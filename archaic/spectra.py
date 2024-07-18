@@ -185,7 +185,9 @@ class H2Spectrum:
                 self.data[:-1],
                 self.r_bins,
                 self.ids,
-                covs=covs
+                covs=covs,
+                sample_ids=self.sample_ids,
+                has_H=False
             )
         else:
             print(f'H2Spectrum does not contain H!')

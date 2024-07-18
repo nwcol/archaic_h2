@@ -161,6 +161,8 @@ def SFS_infer(graph_fname_0, args, data, uL, out_fname):
 
 def composite_infer(graph_fname_0, args, H2_data, SFS_data, L, out_fname):
     #
+    if H2_data.has_H:
+        H2_data = H2_data.remove_H()
     graph, opt_info = inference.optimize_super_composite(
         graph_fname_0,
         args.params_fname,
@@ -260,7 +262,7 @@ def main():
         composite_infer(graph_fname_0, args, H2_data, SFS_data, L, out_fname)
         composite_fnames.append(out_fname)
 
-    percentile = args.return_best / args.n_reps
+    percentile = 1 - args.return_best / args.n_reps
     print(f'returning {percentile * 100}% highest-ll graphs')
     _, best_SFS = get_best_fit_graphs(SFS_fnames, percentile)
     print(best_SFS)
@@ -268,7 +270,7 @@ def main():
     print(best_H2)
     _, best_composite = get_best_fit_graphs(composite_fnames, percentile)
     print(best_H2)
-    for fname in best_SFS + best_H2 + composite_fnames:
+    for fname in best_SFS + best_H2 + best_composite:
         base_name = fname.split('/')[-1]
         g = demes.load(fname)
         demes.dump(g, base_name)

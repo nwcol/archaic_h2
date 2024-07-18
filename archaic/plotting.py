@@ -1,6 +1,7 @@
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib.lines import Line2D
 import numpy as np
 from archaic import utils
 
@@ -87,12 +88,54 @@ def parse_label(label):
     return _label
 
 
+"""
+Plotting parameters
+"""
 
 
-
-
-
-
+def plot_parameters(names, truths, bounds, labels, *args, n_cols=5):
+    # truths is a vector of underlying true parameters
+    n = len(names)
+    n_axs = utils.n_choose_2(n)
+    n_rows = int(np.ceil(n_axs / n_cols))
+    fig, axs = plt.subplots(
+        n_rows, n_cols, figsize=(n_cols * 3.5, n_rows * 3),
+        layout="constrained"
+    )
+    axs = axs.flat
+    for ax in axs[n_axs:]:
+        ax.remove()
+    colors = ['blue', 'red', 'green']
+    idxs = utils.get_pair_idxs(n)
+    for k, (i, j) in enumerate(idxs):
+        ax = axs[k]
+        ax.set_xlabel(names[i])
+        ax.set_ylabel(names[j])
+        ax.set_xlim(bounds[i])
+        ax.set_ylim(bounds[j])
+        for z, arr in enumerate(args):
+            ax.scatter(arr[:, i], arr[:, j], color=colors[z], marker='.')
+        ax.scatter(truths[i], truths[j], color='black', marker='x')
+    legend_elements = [
+        Line2D(
+            [0],
+            [0],
+            marker='.',
+            color='w',
+            label=labels[i],
+            markerfacecolor=colors[i],
+            markersize=10
+        ) for i in range(len(labels))
+    ]
+    fig.legend(
+        handles=legend_elements,
+        loc='lower center',
+        shadow=True,
+        fontsize=10,
+        ncols=3,
+        bbox_to_anchor=(0.5, -0.1)
+    )
+    return 0
 
 
 
