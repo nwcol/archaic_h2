@@ -50,7 +50,7 @@ def main():
     tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.permute_graph:
         graph_fname = f'{tag}_init.yaml'
-        inference.permute_graph(
+        inference.perturb_graph(
             args.graph_fname, args.params_fname, graph_fname
         )
     else:

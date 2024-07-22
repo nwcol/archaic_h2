@@ -33,13 +33,17 @@ def main():
     else:
         print("using default single window")
         windows = None
-    if windows.ndim != 2:
-        raise ValueError(f"windows must be dim2, but are dim{windows.ndim}")
-    if windows.shape[1] == 3:
-        bounds = windows[:, 2]
-        windows = windows[:, :2]
-    else:
         bounds = None
+    if windows is not None:
+        if windows.ndim != 2:
+            raise ValueError(
+                f"windows must be dim2, but are dim{windows.ndim}"
+            )
+        if windows.shape[1] == 3:
+            bounds = windows[:, 2]
+            windows = windows[:, :2]
+        else:
+            bounds = None
     if args.r_bins:
         r_bins = np.array(eval(args.r_bins))
     elif args.r_bin_fname:

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.lines import Line2D
 import numpy as np
+import scipy
 from archaic import utils
 
 
@@ -11,24 +12,75 @@ Plotting H2
 """
 
 
-def plot_H2_spectra(*args, n_cols=5):
+def plot_H2_spectra(
+    *args,
+    plot_H=True,
+    colors=None,
+    labels=None,
+    n_cols=5,
+    alpha=0.05,
+    ylim_0=True,
+    log_scale=False
+):
     # they all have to be the same shape
-    colors = ['black', 'blue', 'red']
+    if colors is None:
+        colors = ['black', 'blue', 'red', 'green']
+    ci = scipy.stats.norm().ppf(1 - alpha / 2)
     spectrum = args[0]
     n_axs = spectrum.n
+    if plot_H:
+        n_axs += 2
     n_rows = int(np.ceil(n_axs / n_cols))
+    if log_scale:
+        width = 2.6
+    else:
+        width = 2
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2),
+        n_rows, n_cols, figsize=(n_cols * width, n_rows * 2),
         layout="constrained"
     )
     axs = axs.flat
     for ax in axs[n_axs:]:
         ax.remove()
     for i, spectrum in enumerate(args):
-        plot_H2_spectrum(spectrum, color=colors[i], axs=axs)
+        plot_H2_spectrum(
+            spectrum, color=colors[i], axs=axs, ci=ci, ylim_0=ylim_0,
+            log_scale=log_scale
+        )
+    if plot_H:
+        # required offset
+        ax1 = axs[spectrum.n]
+        ax2 = axs[spectrum.n + 1]
+        for i, spectrum in enumerate(args):
+            plot_H_on_H2_spectrum(
+                spectrum, ax1, ax2, color=colors[i], ci=ci, ylim_0=ylim_0,
+                log_scale=log_scale
+            )
+    if labels is not None:
+        legend_elements = [
+            Line2D([0], [0], color=colors[i], lw=2, label=labels[i])
+            for i in range(len(labels))
+        ]
+        fig.legend(
+            handles=legend_elements,
+            loc='lower center',
+            shadow=True,
+            fontsize=10,
+            ncols=4,
+            bbox_to_anchor=(0.5, -0.1)
+        )
+    return fig, axs
 
 
-def plot_H2_spectrum(spectrum, color=None, axs=None, n_cols=5):
+def plot_H2_spectrum(
+    spectrum,
+    color=None,
+    axs=None,
+    n_cols=5,
+    ci=1.96,
+    ylim_0=True,
+    log_scale=False
+):
     #
     if color is None:
         color = 'black'
@@ -49,7 +101,7 @@ def plot_H2_spectrum(spectrum, color=None, axs=None, n_cols=5):
                 var = spectrum.covs[:-1, i, i]
             else:
                 var = spectrum.covs[:, i, i]
-            y_err = np.sqrt(var) * 1.96
+            y_err = np.sqrt(var) * ci
         else:
             y_err = None
         ax = axs[i]
@@ -57,11 +109,23 @@ def plot_H2_spectrum(spectrum, color=None, axs=None, n_cols=5):
             data = spectrum.data[:-1, i]
         else:
             data = spectrum.data[:, i]
-        plot_single_H2(ax, x, data, color, y_err=y_err, title=_id)
+        plot_single_H2(
+            ax, x, data, color, y_err=y_err, title=_id, ylim_0=ylim_0,
+            log_scale=log_scale
+        )
     return 0
 
 
-def plot_single_H2(ax, x, data, color, y_err=None, title=None):
+def plot_single_H2(
+    ax,
+    x,
+    data,
+    color,
+    y_err=None,
+    title=None,
+    ylim_0=True,
+    log_scale=False
+):
     #
     if y_err is None:
         # we have expectations or something
@@ -71,10 +135,60 @@ def plot_single_H2(ax, x, data, color, y_err=None, title=None):
         ax.errorbar(x, data, yerr=y_err, color=color, fmt=".", capsize=0)
     ax.set_xscale('log')
     ax.grid(alpha=0.2)
-    ax.set_ylim(0, )
+    if log_scale:
+        ax.set_yscale('log')
+    else:
+        if ylim_0:
+            ax.set_ylim(0, )
     if title is not None:
         title = parse_label(title)
         ax.set_title(title)
+    return 0
+
+
+def plot_H_on_H2_spectrum(
+    spectrum,
+    ax1,
+    ax2,
+    color='black',
+    ci=1.96,
+    ylim_0=True,
+    log_scale=False
+):
+    #
+    ids = spectrum.ids
+    one_sample = np.where(ids[:, 0] == ids[:, 1])[0]
+    H = spectrum.data[-1, one_sample]
+    x1 = np.arange(len(H))
+    if spectrum.covs is None:
+        ax1.scatter(x1, H, color=color, marker='_')
+    else:
+        H_var = spectrum.covs[-1, one_sample, one_sample]
+        H_y_err = np.sqrt(H_var) * ci
+        ax1.errorbar(x1, H, yerr=H_y_err, color=color, fmt='.')
+    labels = [parse_label(x) for x in ids[one_sample]]
+    ax1.set_xticks(x1, labels, fontsize=6)
+    ax1.set_title('H')
+
+    two_sample = np.where(ids[:, 0] != ids[:, 1])[0]
+    H_xy = spectrum.data[-1, two_sample]
+    x2 = np.arange(len(H_xy))
+    if spectrum.covs is None:
+        ax2.scatter(x2, H_xy, color=color, marker='_')
+    else:
+        H_xy_var = spectrum.covs[-1, two_sample, two_sample]
+        H_xy_y_err = np.sqrt(H_xy_var) * ci
+        ax2.errorbar(x2, H_xy, yerr=H_xy_y_err, color=color, fmt='.')
+    _labels = [parse_label(x) for x in ids[two_sample]]
+    ax2.set_xticks(x2, _labels, fontsize=6)
+    ax2.set_title('Hxy')
+    for ax in [ax1, ax2]:
+        ax.grid(alpha=0.2)
+        if log_scale:
+            ax.set_yscale('log')
+        else:
+            if ylim_0:
+                ax.set_ylim(0, )
     return 0
 
 
@@ -93,7 +207,16 @@ Plotting parameters
 """
 
 
-def plot_parameters(names, truths, bounds, labels, *args, n_cols=5):
+def plot_parameters(
+    names,
+    truths,
+    bounds,
+    labels,
+    *args,
+    n_cols=5,
+    marker_size=2,
+    title=None
+):
     # truths is a vector of underlying true parameters
     n = len(names)
     n_axs = utils.n_choose_2(n)
@@ -114,8 +237,15 @@ def plot_parameters(names, truths, bounds, labels, *args, n_cols=5):
         ax.set_xlim(bounds[i])
         ax.set_ylim(bounds[j])
         for z, arr in enumerate(args):
-            ax.scatter(arr[:, i], arr[:, j], color=colors[z], marker='.')
-        ax.scatter(truths[i], truths[j], color='black', marker='x')
+            ax.scatter(
+                arr[:, i],
+                arr[:, j],
+                color=colors[z],
+                marker='.',
+                s=marker_size
+            )
+        if truths is not None:
+            ax.scatter(truths[i], truths[j], color='black', marker='x')
     legend_elements = [
         Line2D(
             [0],
@@ -135,10 +265,64 @@ def plot_parameters(names, truths, bounds, labels, *args, n_cols=5):
         ncols=3,
         bbox_to_anchor=(0.5, -0.1)
     )
+    if title is not None:
+        fig.suptitle(title)
     return 0
 
 
-
+def box_plot_parameters(
+    pnames,
+    truths,
+    bounds,
+    labels,
+    *args,
+    n_cols=5,
+    title=None
+):
+    n_axs = len(pnames)
+    n_rows = int(np.ceil(n_axs / n_cols))
+    fig, axs = plt.subplots(
+        n_rows, n_cols, figsize=(n_cols * 2.5, n_rows * 3),
+        layout="constrained"
+    )
+    axs = axs.flat
+    for ax in axs[n_axs:]:
+        ax.remove()
+    colors = ['blue', 'red', 'green']
+    for i, ax in enumerate(axs):
+        ax.set_title(pnames[i])
+        ax.set_ylabel(pnames[i])
+        ax.scatter(0, truths[i], marker='x', color='black')
+        boxes = ax.boxplot(
+            [arr[:, i] for arr in args],
+            vert=True,
+            patch_artist=True
+        )
+        for j, patch in enumerate(boxes['boxes']):
+            patch.set_facecolor(colors[j])
+        ax.set_ylim(bounds[i])
+    legend_elements = [
+        Line2D(
+            [0],
+            [0],
+            marker='.',
+            color='w',
+            label=labels[i],
+            markerfacecolor=colors[i],
+            markersize=10
+        ) for i in range(len(labels))
+    ]
+    fig.legend(
+        handles=legend_elements,
+        loc='lower center',
+        shadow=True,
+        fontsize=10,
+        ncols=3,
+        bbox_to_anchor=(0.5, -0.1)
+    )
+    if title is not None:
+        fig.suptitle(title)
+    return 0
 
 
 

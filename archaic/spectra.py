@@ -1,12 +1,9 @@
 """
 A class for holding H2 statistics
 """
-
-
 import demes
 import numpy as np
 import moments
-from archaic import utils
 
 
 class H2Spectrum:
@@ -64,7 +61,7 @@ class H2Spectrum:
     def from_bootstrap_distribution(cls, fname, i, sample_ids=None):
         # load the ith resampling from a bootstrap file with 'dist' arrays
         file = np.load(fname)
-        data = np.vstack([file['H2_dist'][i], file['H_dist'][i]])
+        data = np.vstack([file['H2_dist'][i].T, file['H_dist'][i]])
         covs = np.vstack([file['H2_cov'], file['H_cov'][np.newaxis, :, :]])
         r_bins = file['r_bins']
         ids = file['ids']
@@ -101,7 +98,7 @@ class H2Spectrum:
         np.savez(fname, **dic)
 
     @classmethod
-    def from_graph(cls, graph, sample_ids, r, u):
+    def from_graph(cls, graph, sample_ids, r, u, r_bins=None):
         #
         sample_ids = sorted(sample_ids)
         stats = moments.LD.LDstats.from_demes(
@@ -119,7 +116,6 @@ class H2Spectrum:
             _exp_H2[:, k] = stats.H2(x, y, phased=phased)
         exp_H2 = cls.approximate_H2(_exp_H2)
         data = np.vstack([exp_H2, exp_H])
-        r_bins = None
         spectrum = cls(data, r_bins, np.array(ids), has_H=True)
         return spectrum
 
@@ -148,7 +144,6 @@ class H2Spectrum:
             i for i in range(self.n)
             if self.ids[i, 0] in sample_ids and self.ids[i, 1] in sample_ids
         ])
-        print(idx)
         return self.subset_idx(idx)
 
     def subset_idx(self, idx):
@@ -231,3 +226,60 @@ class H2Spectrum:
         #
         n = len(ids)
         return [(ids[i], ids[j]) for i in range(n) for j in np.arange(i + 1, n)]
+
+    @property
+    def arr(self):
+        # alias
+        return self.data
+
+
+class H2stats(list):
+    """
+    """
+
+    def __new__(cls, data, pop_ids=None, num_pops=None):
+        """
+        """
+        h2_list = super(H2stats, cls).__new__(
+            cls, data, pop_ids=None, num_pops=None
+        )
+        return h2_list
+
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], list):
+            list.__init__(self, args[0])
+        else:
+            list.__init__(self, args)
+        self.__dict__.update(kwargs)
+
+    def from_file(self):
+
+        return None
+
+    def to_file(self):
+
+        return None
+
+    def from_demes(self):
+
+        return None
+
+    def from_dict(self):
+
+        return None
+
+    def from_vcf_file(self):
+
+        return None
+
+    def subset(self):
+
+        return None
+
+    def as_array(self):
+
+        return None
+
+
+
+

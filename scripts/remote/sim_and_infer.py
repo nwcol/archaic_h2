@@ -124,7 +124,7 @@ def main():
     init_fname, h2_fname, sfs_fname = get_out_fnames(args)
     if args.permute_graph:
         graph_fname = init_fname
-        inference.permute_graph(args.graph_fname, args.param_fname, graph_fname)
+        inference.perturb_graph(args.graph_fname, args.param_fname, graph_fname)
     else:
         graph_fname = args.graph_fname
     r_bins, data = inference.read_data("temp/h2.npz", args.sample_names)

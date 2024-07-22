@@ -1,170 +1,117 @@
 """
 Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
 """
-
-
 import argparse
 import demes
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from matplotlib import cm
 import numpy as np
-import scipy
-from archaic import inference
-from archaic import plotting
-from archaic import utils
+
+from archaic import inference, plotting
+from archaic.spectra import H2Spectrum
 
 
 def get_args():
     # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--graph_fnames", nargs='*', default=[])
-    parser.add_argument("-a", "--archive_fnames", nargs='*', default=[])
-    parser.add_argument("-d", "--boot_fnames", nargs='*', default=[])
+    parser.add_argument('-d', '--data_fnames', nargs='*', default=[])
+    parser.add_argument('-g', '--graph_fnames', nargs='*', default=[])
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-u", "--u", type=float, default=1.35e-8)
-    parser.add_argument("-H", "--use_H", type=int, default=1)
-    parser.add_argument("-H2", "--use_H2", type=int, default=1)
-    parser.add_argument("-m", "--num_method", default="Simpsons")
-    parser.add_argument("-alpha", "--alpha", type=float, default=0.05)
-    parser.add_argument("-s", "--sample_names", nargs='*', default=[])
-    parser.add_argument("-ly", "--log_y", type=int, default=0)
-    parser.add_argument("-yH", "--H_ylim", type=float, default=None)
-    parser.add_argument("-yH2", "--H2_ylim", type=float, default=None)
-    parser.add_argument("-neg", "--allow_negatives", type=int, default=0)
-    parser.add_argument("-t", "--fig_title", default=None)
+    parser.add_argument('--alpha', type=float, default=0.05)
+    parser.add_argument('--sample_ids', nargs='*', default=[])
+    parser.add_argument('--title', default=None)
     parser.add_argument("--n_cols", type=int, default=5)
+    parser.add_argument('--labels', nargs='*', default=None)
+    parser.add_argument('--log_scale', type=int, default=0)
     return parser.parse_args()
 
 
-def get_ci(cov_H, cov_H2, alpha):
-    # get error bars
-    ci = scipy.stats.norm.ppf(1 - alpha / 2)
-    n = len(cov_H)
-    idx = np.arange(n)
-    ci_H = np.sqrt(cov_H[idx, idx]) * ci
-    ci_H2 = np.sqrt(cov_H2[:, idx, idx]) * ci
-    return ci_H, ci_H2
-
-
 def main():
-    #
-    if len(args.sample_names) > 0:
-        sample_names = args.sample_names
-    else:
-        if len(args.graph_fnames) > 0:
-            sample_names = inference.scan_names(
-                args.graph_fnames[0], args.boot_fnames[0]
-            )
-            # guess sample names from the graph
-        else:
-            if len(args.boot_fnames) > 0:
-                sample_names = list(np.load(args.boot_fnames[0])["sample_names"])
-    pairs = utils.get_pairs(sample_names)
-    pair_names = utils.get_pair_names(sample_names)
+    # if graphs are provided, only demes which occur in the first graph are
+    # loaded from the data file.
+    # conversely, if data and graphs are provided, the first data file is used
+    # to compute likelihood
+    # the provision of sample_ids overrules both [?]
+    args = get_args()
 
-    abbrev_names = [name[:3] for name in sample_names]
-    abbrev_pairs = [f"{x[:3]}-{y[:3]}" for x, y in pairs]
-    n_samples = len(sample_names)
-    n_pairs = len(pair_names)
-    if n_pairs > 0:
-        offset = 2
+    spectra = []
+    labels = []
+    n_datas = 0
+    n_graphs = 0
+
+    if args.sample_ids:
+        sample_ids = args.sample_ids
+        graph = None
+    elif len(args.graph_fnames) > 0:
+        sample_ids = None
+        graph = demes.load(args.graph_fnames[0])
     else:
-        offset = 1
-    n_plots = offset + n_samples + n_pairs
-    if n_plots < args.n_cols:
-        n_rows = 1
-        n_cols = n_plots
-    else:
-        n_rows = np.ceil(n_plots / args.n_cols).astype(int)
-        n_cols = args.n_cols
-    shape = (n_rows, n_cols)
-    fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * 3, n_rows * 2), layout="constrained"
-    )
-    if n_rows == 1:
-        axs = axs[np.newaxis, :]
-    if len(args.boot_fnames) > 0:
-        r_bins = np.load(args.boot_fnames[0])["r_bins"]
-    else:
-        r_bins = np.logspace(-6, -2, 30)
-    r = inference.get_r(r_bins, method="midpoint")
-    _r = inference.get_r(r_bins, method=args.num_method)
-    n_boots = len(args.boot_fnames)
-    n_graphs = len(args.graph_fnames)
-    n_archives = len(args.archive_fnames)
-    b_colors = plotting.get_terrain_cmap(n_boots)
-    colors = plotting.get_gnu_cmap(n_graphs + n_archives)
-    for k, fname in enumerate(args.boot_fnames):
-        r_bins, data = inference.read_data(fname, sample_names)
-        __r = inference.get_r(r_bins, method="midpoint")
-        _, __, H, cov_H, H2, cov_H2 = data
-        H_err, H2_err = get_ci(cov_H, cov_H2, args.alpha)
-        label = fname.replace(".npz", "")
-        plotting.plot_error_points(
-            axs, H, H_err, H2, H2_err, r, abbrev_names, abbrev_pairs,
-            b_colors[k], args.log_y, label=label
+        sample_ids = None
+        graph = None
+
+    for fname in args.data_fnames:
+        spectra.append(
+            H2Spectrum.from_bootstrap_file(
+                fname,
+                sample_ids=sample_ids,
+                graph=graph
+            )
         )
-    for k, fname in enumerate(args.graph_fnames):
-        graph = demes.load(fname)
-        E_H, E_H2 = inference.get_H_stats(
-            graph, sample_names, pairs, _r, args.u, num_method=args.num_method
-        )
-        label = fname.replace(".yaml", "")
-        if len(args.boot_fnames) > 0:
-            r_bins, data = inference.read_data(args.boot_fnames[0], sample_names)
-            samples, pairs, H, H_cov, H2, H2_cov = data
-            data = (samples, pairs, H, np.linalg.inv(H_cov), H2, np.linalg.inv(H2_cov))
-            lik = inference.eval_log_lik(graph, data, _r, args.u)
-            print(lik)
-            label += f": LL = {np.round(lik, 0)}"
-        plotting.plot_curves(
-            axs, E_H, E_H2, r, samples, pairs, colors[k],
-            args.log_y, label=label
-        )
-    for k, fname in enumerate(args.archive_fnames):
-        archive = np.load(fname)
-        __r = archive["r"]
-        H = archive["H"]
-        H2 = archive["H2"]
-        label = fname.replace(".npz", "")
-        plotting.plot_curves(
-            axs, H, H2, __r, abbrev_names, abbrev_pairs, colors[k + n_graphs],
-            args.log_y, label=label
-        )
-    if args.allow_negatives:
-        bottom = None
+        labels.append(fname.split('/')[-1])
+        n_datas += 1
+
+    # used to compute graph H2 values
+    if sample_ids:
+        _sample_ids = sample_ids
+    elif len(args.data_fnames) > 0:
+        _sample_ids = spectra[0].sample_ids
     else:
-        bottom = 0
-    if n_pairs == 0:
-        offset = 1
+        # no data
+        graph = demes.load(args.graph_fnames[0])
+        _sample_ids = [d.name for d in graph.demes if d.end_time == 0]
+
+    # getting r
+    if len(args.data_fnames) > 0:
+        r_bins = spectra[0].r_bins
+        r = H2Spectrum.get_r(r_bins)
     else:
-        offset = 2
-    for i in np.arange(0, offset):
-        idx = np.unravel_index(i, shape)
-        if args.H_ylim:
-            axs[idx].set_ylim(bottom, args.H_ylim)
+        r_bins = np.logspace(-6, -2, 17)
+        r = H2Spectrum.get_r(r_bins)
+
+    for graph_fname in args.graph_fnames:
+        graph = demes.load(graph_fname)
+        spectrum = H2Spectrum.from_graph(
+            graph, _sample_ids, r, args.u, r_bins=r_bins
+        )
+        if len(args.data_fnames) > 0:
+            ll = inference.compute_ll_H2(spectrum, spectra[0])
+            ll_label = f', ll={np.round(ll, 0)}'
         else:
-            axs[idx].set_ylim(bottom=bottom)
-    for i in np.arange(offset, n_plots):
-        idx = np.unravel_index(i, shape)
-        if not args.log_y:
-            if args.H2_ylim:
-                axs[idx].set_ylim(bottom, args.H2_ylim)
-            else:
-                axs[idx].set_ylim(bottom=bottom)
-    fig.legend(
-        loc="lower center", shadow=True, fontsize=9, ncols=4,
-        bbox_to_anchor=(0.5, -0.1)
+            ll_label = ''
+        spectra.append(spectrum)
+        basename = graph_fname.split('/')[-1]
+        labels.append(f'{basename}{ll_label}')
+        n_graphs += 1
+
+    colors = list(cm.terrain(np.linspace(0, 0.85, n_datas))) + \
+             list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
+
+    fig, axs = plotting.plot_H2_spectra(
+        *spectra,
+        plot_H=True,
+        colors=colors,
+        labels=labels,
+        n_cols=args.n_cols,
+        alpha=args.alpha,
+        log_scale=args.log_scale
     )
-    if args.fig_title:
-        fig.title(args.fig_title)
-    axs = axs.flat
-    for ax in axs[2 + n_samples + n_pairs:]:
-        ax.remove()
+
+    if args.title:
+        fig.suptitle(args.title)
     plt.savefig(args.out_fname, dpi=200, bbox_inches='tight')
     return 0
 
 
 if __name__ == "__main__":
-    args = get_args()
     main()

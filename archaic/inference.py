@@ -1,14 +1,13 @@
 """
 Functions for computing approx composite likelihoods and inferring demographies
 """
-
-
 import demes
 import numpy as np
 import scipy
 import moments
 import moments.Demes.Inference as minf
 import time
+
 from archaic import utils
 from archaic.spectra import H2Spectrum
 
@@ -19,7 +18,7 @@ opt_methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
 
 
 """
-Graph optimization -- inference
+Fitting graphs with H2
 """
 
 
@@ -31,7 +30,8 @@ def optimize_H2(
     opt_method='NelderMead',
     u=1.35e-8,
     verbosity=1,
-    use_H=True
+    use_H=True,
+    out_fname=None
 ):
     #
     t0 = time.time()
@@ -102,15 +102,10 @@ def optimize_H2(
         return 1
     builder = minf._update_builder(builder, options, xopt)
     graph = demes.Graph.fromdict(builder)
+
     global counter
     counter = 0
-    end_printout(
-        t0,
-        fopt=fopt,
-        iters=iters,
-        func_calls=func_calls,
-        warnflag=warnflag
-    )
+
     opt_info = dict(
         method=opt_method,
         fopt=-fopt,
@@ -118,6 +113,10 @@ def optimize_H2(
         func_calls=func_calls,
         warnflag=warnflag
     )
+    end_printout(t0, **opt_info)
+    if out_fname is not None:
+        graph.metadata['opt_info'] = opt_info
+        demes.dump(out_fname, graph)
     return graph, opt_info
 
 
@@ -205,31 +204,12 @@ def scan_names(graph_fname, boot_fname):
     return names
 
 
-def read_data(fname, sample_names):
-
-    archive = np.load(fname)
-    r_bins = archive["r_bins"]
-    pairs = utils.get_pairs(sample_names)
-    pair_names = utils.get_pair_names(sample_names)
-    all_names = list(archive["sample_names"]) + list(archive["pair_names"])
-    idx = np.array(
-        [all_names.index(x) for x in sample_names]
-        + [all_names.index(x) for x in pair_names]
-    )
-    mesh_idx = np.ix_(idx, idx)
-    H = archive["H_mean"][idx]
-    H_cov = archive["H_cov"][mesh_idx]
-    H2 = archive["H2_mean"][:, idx]
-    H2_cov = np.array([x[mesh_idx] for x in archive["H2_cov"]])
-    return r_bins, (sample_names, pairs, H, H_cov, H2, H2_cov)
-
-
 """
 Inference with the SFS
 """
 
 
-def optimize_with_SFS(
+def optimize_SFS(
     data_fname,
     graph_fname,
     params_fname,
@@ -260,17 +240,6 @@ def optimize_with_SFS(
         overwrite=True
     )
     print(fit)
-    return 0
-
-
-"""
-Confidence intervals
-"""
-
-
-def compute_confidence():
-
-
     return 0
 
 
@@ -429,7 +398,7 @@ def objective_composite(
 
 
 def compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model):
-    #
+    """"""
     ll_H2 = compute_ll_H2(H2_model, H2_data)
     ll_SFS = moments.Inference.ll(SFS_model, SFS_data)
     ll = ll_H2 + ll_SFS
@@ -450,7 +419,7 @@ def log_uniform(lower, upper):
     return draws
 
 
-def permute_graph(graph_fname, param_fname, out_fname):
+def perturb_graph(graph_fname, param_fname, out_fname):
     # uniformly and randomly pick parameter values
     builder = minf._get_demes_dict(graph_fname)
     param_dict = minf._get_params_dict(param_fname)
@@ -501,3 +470,276 @@ def parse_graph_params(params_fname, graph_fnames, permissive=False):
         names, vals, _, __, = minf._set_up_params_and_bounds(params, g)
         arr.append(vals)
     return names, np.array(arr)
+
+
+# testing
+
+
+"""
+notes. what do i want
+
+
+data = H2Stats.from_file(fname, pop_ids=pop_ids)
+
+model = H2Stats.from_demes(graph, sampled_demes, r=r, u=u)
+how to handle r, approximation etc? (check how moments does this)
+_model = compute_bin_statistics(model, r_bins) or something
+
+ll = compute_ll(model, data)
+
+"""
+
+
+def get_ll(model, data):
+
+    return get_bin_ll(model, data).sum()
+
+
+def get_bin_ll(model, data):
+    # may need more work
+    bin_ll = np.zeros(data.n_bins)
+    for i in range(data.n_bins):
+        x = data.arr[i]
+        mu = model.arr[i]
+        inv_cov = data.inv_covs[i]
+        bin_ll[i] = - (x - mu) @ inv_cov @ (x - mu)
+    return bin_ll
+
+
+def get_bin_statistics():
+    #
+
+    return None
+
+
+"""
+Computing uncertainties, confidence intervals 
+"""
+
+
+def _bin_ll(x, mu, inv_cov):
+    #
+    return - (x - mu) @ inv_cov @ (x - mu)
+
+
+_inv_cov_cache = {}
+
+
+def _ll(xs, mus, covs):
+    #
+    lens = np.array([len(xs), len(mus), len(covs)])
+    if not np.all(lens == lens[0]):
+        raise ValueError('xs, mus, covs lengths do not match')
+    bin_ll = np.zeros(len(xs))
+    for i in range(len(xs)):
+        if i in _inv_cov_cache and np.all(_inv_cov_cache[i]['cov'] == covs[i]):
+            inv_cov = _inv_cov_cache[i]['inv']
+        else:
+            inv_cov = np.linalg.inv(covs[i])
+            _inv_cov_cache[i] = dict(cov=covs[i], inv=inv_cov)
+        bin_ll[i] = _bin_ll(xs[i], mus[i], inv_cov)
+    return bin_ll.sum()
+
+
+def ll(model, data):
+    # replace
+    return _ll(data.arr, model.arr, data.covs)
+
+
+def get_uncerts(
+    graph_fname,
+    options_fname,
+    data,
+    bootstraps=None,
+    u=1.35e-8,
+    delta=0.01,
+    method='GIM'
+):
+    #
+    builder = minf._get_demes_dict(graph_fname)
+    options = minf._get_params_dict(options_fname)
+    pnames, p0, lower_bound, upper_bound = \
+        minf._set_up_params_and_bounds(options, builder)
+
+    def model_func(p):
+        # takes parameters and returns expected statistics
+        nonlocal builder
+        nonlocal options
+        nonlocal data
+        nonlocal u
+
+        builder = minf._update_builder(builder, options, p)
+        graph = demes.Graph.fromdict(builder)
+        model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
+        return model
+
+    if method == 'FIM':
+        H = get_godambe_matrix(
+            model_func,
+            p0,
+            data,
+            bootstraps,
+            delta,
+            just_H=True
+        )
+        uncerts = np.sqrt(np.diag(np.linalg.inv(H)))
+
+    elif method == 'GIM':
+        if bootstraps is None:
+            raise ValueError('You need bootstraps to use the GIM method!')
+        godambe_matrix = get_godambe_matrix(
+            model_func,
+            p0,
+            data,
+            bootstraps,
+            delta
+        )
+        uncerts = np.sqrt(np.diag(np.linalg.inv(godambe_matrix)))
+    else:
+        uncerts = None
+
+    return pnames, p0, uncerts
+
+
+_ll_cache = {}
+
+
+def get_godambe_matrix(
+    model_func,
+    p0,
+    data,
+    bootstraps,
+    delta,
+    just_H=False
+):
+    """
+    """
+
+    def func(p, data):
+        # compute log-likelihood given parameters, data
+        model = model_func(p)
+        return get_ll(model, data)
+
+    H = - get_hessian(func, p0, data, delta)
+
+    if just_H:
+        return H
+
+    J = np.zeros((len(p0), len(p0)))
+    for i, bootstrap in enumerate(bootstraps):
+        cU = get_gradient(func, p0, delta, bootstrap)
+        cJ = cU @ cU.T
+        J += cJ
+        print(f'score {i} computed')
+    J = J / len(bootstraps)
+    J_inv = np.linalg.inv(J)
+    godambe_matrix = H @ J_inv @ H
+    return godambe_matrix
+
+
+def get_hessian(ll_func, p0, data, delta):
+    #
+    f0 = ll_func(p0, data)
+    hs = delta * p0
+
+    hessian = np.zeros((len(p0), len(p0)))
+
+    for i in range(len(p0)):
+        for j in range(i, len(p0)):
+            _p = np.array(p0, copy=True, dtype=float)
+
+            if i == j:
+                _p[i] = p0[i] + hs[i]
+                fp = ll_func(_p, data)
+                _p[i] = p0[i] - hs[i]
+                fm = ll_func(_p, data)
+
+                element = (fp - 2 * f0 + fm) / hs[i] ** 2
+
+            else:
+                _p[i] = p0[i] + hs[i]
+                _p[j] = p0[j] + hs[j]
+                fpp = ll_func(_p, data)
+
+                _p[i] = p0[i] + hs[i]
+                _p[j] = p0[j] - hs[j]
+                fpm = ll_func(_p, data)
+
+                _p[i] = p0[i] - hs[i]
+                _p[j] = p0[j] + hs[j]
+                fmp = ll_func(_p, data)
+
+                _p[i] = p0[i] - hs[i]
+                _p[j] = p0[j] - hs[j]
+                fmm = ll_func(_p, data)
+
+                element = (fpp - fpm - fmp + fmm) / (4 * hs[i] * hs[j])
+
+            hessian[i, j] = element
+            hessian[j, i] = element
+
+    return hessian
+
+
+def get_gradient(func, p0, delta, args):
+    #
+
+    # should be changed to match moments version
+    hs = delta * p0
+
+    # column
+    gradient = np.zeros((len(p0), 1))
+
+    for i in range(len(p0)):
+        _p = np.array(p0, copy=True, dtype=float)
+
+        _p[i] = p0[i] + hs[i]
+        fp = func(_p, args)
+
+        _p[i] = p0[i] - hs[i]
+        fm = func(_p, args)
+
+        gradient[i] = (fp - fm) / (2 * hs[i])
+
+    return gradient
+
+
+def get_hessian_element(ll_func, f0, p0, i, j, hs, data):
+    # approximate an element of the Hessian matrix of second derivatives
+    # using the method of central finite differences. From moments.LD.Godambe
+
+    _p = np.array(p0, copy=True, dtype=float)
+
+    if i == j:
+        _p[i] = p0[i] + hs[i]
+        fp = ll_func(_p, data)
+        _p[i] = p0[i] - hs[i]
+        fm = ll_func(_p, data)
+
+        element = (fp - 2 * f0 + fm) / hs[i] ** 2
+
+    else:
+        _p[i] = p0[i] + hs[i]
+        _p[j] = p0[j] + hs[j]
+        fpp = ll_func(_p, data)
+
+        _p[i] = p0[i] + hs[i]
+        _p[j] = p0[j] - hs[j]
+        fpm = ll_func(_p, data)
+
+        _p[i] = p0[i] - hs[i]
+        _p[j] = p0[j] + hs[j]
+        fmp = ll_func(_p, data)
+
+        _p[i] = p0[i] - hs[i]
+        _p[j] = p0[j] - hs[j]
+        fmm = ll_func(_p, data)
+
+        element = (fpp - fpm - fmp + fmm) / (4 * hs[i] * hs[j])
+
+    return element
+
+
+
+
+

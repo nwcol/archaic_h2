@@ -1,13 +1,12 @@
 """
 
 """
-
-
 import argparse
 import demes
 import moments
 import msprime
 import numpy as np
+
 from archaic import inference, masks, two_locus, utils
 from archaic.parsing import parse_H2, bootstrap_H2, parse_SFS
 from archaic.spectra import H2Spectrum
@@ -50,7 +49,7 @@ def write_mask_file(L):
 
 def write_map_file(L, r):
     #
-    cM = two_locus.map_function(r * L)
+    cM = two_locus.map_function(r) * L
     map_fname = f'{data_dir}/map{int(L / 1e6)}Mb.txt'
     with open(map_fname, 'w') as file:
         file.write('Position(bp)\tRate(cM/Mb)\tMap(cM)\n')
@@ -236,7 +235,7 @@ def main():
     H2_fnames = []
     for i in range(args.n_reps):
         graph_fname_0 = f'{graph_dir}/{tag}_init_rep{i}.yaml'
-        inference.permute_graph(
+        inference.perturb_graph(
             args.graph_fname, args.params_fname, graph_fname_0
         )
         init_fnames.append(graph_fname_0)

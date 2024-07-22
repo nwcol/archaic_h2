@@ -1,12 +1,10 @@
 """
 Simulate coalescence on a chromosome with uniform recombination
 """
-
-
 import argparse
 import demes
 import msprime
-import numpy as np
+
 from archaic import utils
 
 
@@ -29,7 +27,7 @@ def main():
         return [_ + 1 for _ in x]
     args = get_args()
     graph = demes.load(args.graph_fname)
-    demog = msprime.Demography.from_demes(graph)
+    demography = msprime.Demography.from_demes(graph)
     if len(args.samples) > 0:
         samples = args.samples
     else:
@@ -38,7 +36,7 @@ def main():
     ts = msprime.sim_ancestry(
         samples=config,
         ploidy=2,
-        demography=demog,
+        demography=demography,
         sequence_length=int(args.L),
         recombination_rate=args.r,
         discrete_genome=True

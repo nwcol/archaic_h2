@@ -1,5 +1,5 @@
 """
-Plots parameter distributions
+
 """
 import argparse
 import matplotlib.pyplot as plt
@@ -14,14 +14,13 @@ def get_args():
     # get args
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--params_fname", required=True)
-    parser.add_argument("-g", "--graph_fname", default=None)
+    parser.add_argument("-g", "--graph_fname", required=True)
     parser.add_argument("-g1", "--g1", nargs='*', default=[])
     parser.add_argument("-g2", "--g2", nargs='*', default=[])
     parser.add_argument("-g3", "--g3", nargs='*', default=[])
     parser.add_argument('--labels', nargs='*', default=[])
     parser.add_argument('--title', default=None)
-    parser.add_argument('--marker_size', type=int, default=8)
-    parser.add_argument('--n_cols', type=int, default=5)
+    parser.add_argument('--marker_size', type=int, default=2)
     parser.add_argument("-o", "--out_fname", required=True)
     return parser.parse_args()
 
@@ -34,19 +33,12 @@ def parse_params(graph_fname, params_fname):
     return names, init, lower, upper
 
 
-def plot():
+def main():
     #
     args = get_args()
-    if args.graph_fname is None:
-        fname0 = args.g1[1]
-        param_names, _, lower, upper = parse_params(
-            fname0, args.params_fname
-        )
-        real_vals = None
-    else:
-        param_names, real_vals, lower, upper = parse_params(
-            args.graph_fname, args.params_fname
-        )
+    param_names, real_vals, lower, upper = parse_params(
+        args.graph_fname, args.params_fname
+    )
     bounds = np.array([lower, upper]).T
     arrs = []
     for fnames in [args.g1, args.g2, args.g3]:
@@ -58,24 +50,16 @@ def plot():
     labels = args.labels
     if len(labels) != len(arrs):
         raise ValueError('label length mismatches graph category length')
-    plotting.plot_parameters(
+    plotting.box_plot_parameters(
         param_names,
         real_vals,
         bounds,
         labels,
         *arrs,
-        marker_size=args.marker_size,
-        title=args.title,
-        n_cols=args.n_cols
+        title=args.title
     )
     plt.savefig(args.out_fname, dpi=200, bbox_inches='tight')
 
 
-def main():
-    #
-    plot()
-    return 0
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -162,7 +162,7 @@ def main():
             'permuted',
             0
         )
-        inference.permute_graph(
+        inference.perturb_graph(
             args.graph_fname, args.params_fname, graph_fname_0
         )
     else:
