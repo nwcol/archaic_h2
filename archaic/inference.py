@@ -116,7 +116,7 @@ def optimize_H2(
     end_printout(t0, **opt_info)
     if out_fname is not None:
         graph.metadata['opt_info'] = opt_info
-        demes.dump(out_fname, graph)
+        demes.dump(graph, out_fname)
     return graph, opt_info
 
 

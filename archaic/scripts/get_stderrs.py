@@ -17,6 +17,8 @@ def get_args():
     parser.add_argument('-d', '--data_fname', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('--delta', type=float, default=0.01)
+    parser.add_argument('-n', '--n_bootstraps', type=int, default=None)
+    parser.add_argument('--method', default='GIM')
     return parser.parse_args()
 
 
@@ -25,19 +27,27 @@ def main():
     args = get_args()
     graph = demes.load(args.graph_fname)
     data = H2Spectrum.from_bootstrap_file(args.data_fname, graph=graph)
-    file = np.load(args.data_fname)
-    bootstraps = [
-        H2Spectrum.from_bootstrap_distribution(
-            args.data_fname, i, sample_ids=data.sample_ids
-        ) for i in range(len(file['H2_dist']))
-    ]
+    if args.method == 'GIM':
+        if args.n_bootstraps:
+            n = args.n_bootstraps
+        else:
+            file = np.load(args.data_fname)
+            n = len(file['H2_dist'])
+        bootstraps = [
+            H2Spectrum.from_bootstrap_distribution(
+                args.data_fname, i, sample_ids=data.sample_ids
+            ) for i in range(n)
+        ]
+    else:
+        bootstraps = None
     pnames, p0, std_errs = inference.get_uncerts(
         args.graph_fname,
         args.options_fname,
         data,
         bootstraps=bootstraps,
         u=args.u,
-        delta=args.delta
+        delta=args.delta,
+        method=args.method
     )
     print('param\tfit\tstderr')
     for name, p, s in zip(pnames, p0, std_errs):

@@ -161,7 +161,7 @@ def main():
     for i in range(args.n_reps):
         inference.perturb_graph(
             args.graph_fname,
-            args.params_fname,
+            args.options_fname,
             f'{graph_path}/init_rep{i}.yaml'
         )
 
@@ -176,7 +176,7 @@ def main():
                 in_fname,
                 args.options_fname,
                 data,
-                max_iter=args.n_iter,
+                max_iter=args.max_iter,
                 opt_method=args.opt_method,
                 u=args.u,
                 verbosity=1,
