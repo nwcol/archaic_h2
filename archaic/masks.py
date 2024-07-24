@@ -1,14 +1,12 @@
 """
 Utilities for handling and editing genetic masks
 """
-
-
 import numpy as np
 import gzip
 
 
 """
-A new class
+A class for loading/manipulating masks
 """
 
 
@@ -20,7 +18,15 @@ class Mask(np.ndarray):
         dtype=np.int64,
         chrom_num=None
     ):
-        #
+        """
+        loads a .bed mask file as an array
+
+        :param regions: 2dim numpy array of shape (n_regions, 2)
+        :param dtype: optional. defines array data type
+        :param chrom_num: optional. tracks chromosome number. should be numeric
+            (e.g. a bed file with chromosome chr8 has chrom_num=8)
+        :dtype chrom_num: int or str.
+        """
         arr = np.asanyarray(regions, dtype=dtype).view(cls)
         arr.chrom_num = chrom_num
 
@@ -46,7 +52,7 @@ class Mask(np.ndarray):
 
     @classmethod
     def from_bed_file(cls, fname):
-        #
+
         regions = []
         if ".gz" in fname:
             open_func = gzip.open
@@ -63,7 +69,12 @@ class Mask(np.ndarray):
 
     @classmethod
     def from_vcf_file(cls, fname):
-        #
+        """
+        read a mask of .vcf position coverage
+
+        :param fname: path to .vcf or vcf.gz file
+        :return: class instance
+        """
         chrom_idx = 0
         pos_idx = 1
         positions = []
@@ -161,7 +172,7 @@ class TwoLocusMask(np.ndarray):
 
 
 """
-Reading .bed and .bed.gz files
+Reading .bed and .bed.gz files as normal numpy arrays
 """
 
 

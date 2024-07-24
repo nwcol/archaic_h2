@@ -117,7 +117,8 @@ def optimize_H2(
     if out_fname is not None:
         graph.metadata['opt_info'] = opt_info
         demes.dump(graph, out_fname)
-    return graph, opt_info
+    else:
+        return graph, opt_info
 
 
 def objective_H2(
@@ -617,7 +618,13 @@ def get_godambe_matrix(
 
     def func(p, data):
         # compute log-likelihood given parameters, data
-        model = model_func(p)
+        # cache check
+        key = tuple(p)
+        if key in _ll_cache:
+            model = _ll_cache[key]
+        else:
+            model = model_func(p)
+            _ll_cache[key] = model
         return get_ll(model, data)
 
     H = - get_hessian(func, p0, data, delta)

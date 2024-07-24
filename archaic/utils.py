@@ -1,8 +1,6 @@
 """
 Various utilities that are widely used
 """
-
-
 from datetime import datetime
 import numpy as np
 
@@ -46,7 +44,7 @@ Combinatorics
 
 
 def n_choose_2(n):
-
+    #
     return int(n * (n - 1) * 0.5)
 
 
@@ -56,13 +54,10 @@ def n_choose_m(n, m):
 
 
 """
-Printing stuff
+Stats printouts
 """
 
 
 def get_time():
-    # get a string giving the date and time
+    # return a string giving the date and time
     return "[" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
-
-
-

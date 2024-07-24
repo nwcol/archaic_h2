@@ -17,25 +17,25 @@ def get_args():
     parser.add_argument('-g', '--graph_fname', required=True)
     parser.add_argument('-p', '--params_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
-    parser.add_argument('-max', '--max_iter', nargs='*', type=int, default=[1000])
-    parser.add_argument('-opt', '--opt_methods', nargs='*', default=['fmin'])
-    parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
-    parser.add_argument('--permute_graph', type=int, default=0)
+    parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
+    parser.add_argument('--opt_method', nargs='*', default=['powell'])
+    parser.add_argument('-v', '--verbosity', type=int, default=1)
+    parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
     parser.add_argument('--process_id', default='')
     return parser.parse_args()
 
 
-def get_graph_fname(prefix, cluster, process, i):
+def get_tag(prefix, cluster, process):
     # get a string naming an output .yaml file
     c = p = ''
     if len(cluster) > 0:
         c = f'_{cluster}'
     if len(process) > 0:
         p = f'_{process}'
-    fname = f'{prefix}{c}{p}_iter{i}.yaml'
-    return fname
+    tag = f'{prefix}{c}{p}'
+    return tag
 
 
 def main():
@@ -53,25 +53,18 @@ def main():
             marg_idx.append(i)
     data = data.marginalize(marg_idx)
     uL = SFS_file['n_sites'] * args.u
-    if args.permute_graph:
-        graph_fname = get_graph_fname(
-            args.out_prefix,
-            args.cluster_id,
-            args.process_id,
-            0
-        )
+    tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
+    if args.perturb_graph:
+        graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
             args.graph_fname, args.params_fname, graph_fname
         )
     else:
         graph_fname = args.graph_fname
-    for i, opt_method in enumerate(args.opt_methods):
-        out_fname = get_graph_fname(
-            args.out_prefix,
-            args.cluster_id,
-            args.process_id,
-            i + 1
-        )
+    for i, opt_method in enumerate(args.opt_method):
+        out_fname = f'{tag}_iter{i + 1}.yaml'
+        log_fname = f'log.txt'
+        log_file = open(log_fname, 'w')
         _, __, LL = moments.Demes.Inference.optimize(
             graph_fname,
             args.params_fname,
@@ -82,8 +75,13 @@ def main():
             log=False,
             output=out_fname,
             method=opt_method,
+            output_stream=log_file,
             overwrite=True
         )
+        log_file.close()
+        with open(log_file, 'r') as log_file:
+            log = log_file.readlines()
+        last_line = log[-1]
         opt_info = dict(
             method=opt_method,
             fopt=-LL,

@@ -237,7 +237,7 @@ class H2stats(list):
     """
     """
 
-    def __new__(cls, data, pop_ids=None, num_pops=None):
+    def __new__(cls, H, covs=None, pop_ids=None, num_pops=None):
         """
         """
         h2_list = super(H2stats, cls).__new__(

@@ -1,10 +1,32 @@
-
+"""
+Various plotting functions. mostly called by console scripts
+"""
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib.ticker as mticker
 from matplotlib.lines import Line2D
 import numpy as np
 import scipy
+
 from archaic import utils
+
+
+"""
+Useful constants
+"""
+
+
+_line_styles = [
+    "solid",
+    "dashed",
+    "dotted",
+    "dashdot",
+    (0, (1, 1)),
+    (0, (2, 2)),
+    (0, (1, 2, 2, 2)),
+    (0, (3, 4, 2, 4))
+]
 
 
 """
@@ -25,21 +47,30 @@ def plot_H2_spectra(
     # they all have to be the same shape
     if colors is None:
         colors = ['black', 'blue', 'red', 'green']
+    # get the confidence interval based on the alpha level
     ci = scipy.stats.norm().ppf(1 - alpha / 2)
     spectrum = args[0]
     n_axs = spectrum.n
     if plot_H:
-        n_axs += 2
+        if len(args[0].sample_ids) > 1:
+            n_axs += 2
+            has_H_xy = True
+        else:
+            n_axs += 1
+            has_H_xy = False
     n_rows = int(np.ceil(n_axs / n_cols))
+    if n_axs < n_cols:
+        n_cols = n_axs
     if log_scale:
-        width = 2.6
+        width = 2.8
     else:
-        width = 2
+        width = 2.6
     fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(n_cols * width, n_rows * 2),
         layout="constrained"
     )
     axs = axs.flat
+    # get rid of excess subplots
     for ax in axs[n_axs:]:
         ax.remove()
     for i, spectrum in enumerate(args):
@@ -50,13 +81,18 @@ def plot_H2_spectra(
     if plot_H:
         # required offset
         ax1 = axs[spectrum.n]
-        ax2 = axs[spectrum.n + 1]
+        if has_H_xy:
+            ax2 = axs[spectrum.n + 1]
+        else:
+            ax2 = None
         for i, spectrum in enumerate(args):
             plot_H_on_H2_spectrum(
                 spectrum, ax1, ax2, color=colors[i], ci=ci, ylim_0=ylim_0,
                 log_scale=log_scale
             )
+    # write the legend
     if labels is not None:
+        y = 1 / n_rows * 0.35
         legend_elements = [
             Line2D([0], [0], color=colors[i], lw=2, label=labels[i])
             for i in range(len(labels))
@@ -66,8 +102,8 @@ def plot_H2_spectra(
             loc='lower center',
             shadow=True,
             fontsize=10,
-            ncols=4,
-            bbox_to_anchor=(0.5, -0.1)
+            ncols=3,
+            bbox_to_anchor=(0.5, -y)
         )
     return fig, axs
 
@@ -85,6 +121,7 @@ def plot_H2_spectrum(
     if color is None:
         color = 'black'
     if axs is None:
+        # if no axs was provided as an argument, create a new one
         n_axs = spectrum.n
         n_rows = int(np.ceil(n_axs / n_cols))
         fig, axs = plt.subplots(
@@ -128,10 +165,10 @@ def plot_single_H2(
 ):
     #
     if y_err is None:
-        # we have expectations or something
+        # we're plotting expectations, with no variance
         ax.plot(x, data, color=color)
     else:
-        # we have empirical data with variance
+        # we're plotting empirical data with variance
         ax.errorbar(x, data, yerr=y_err, color=color, fmt=".", capsize=0)
     ax.set_xscale('log')
     ax.grid(alpha=0.2)
@@ -142,7 +179,9 @@ def plot_single_H2(
             ax.set_ylim(0, )
     if title is not None:
         title = parse_label(title)
-        ax.set_title(title)
+        ax.set_title(f'$H_2$ {title}')
+    # format the ticks
+    format_ticks(ax)
     return 0
 
 
@@ -167,22 +206,26 @@ def plot_H_on_H2_spectrum(
         H_y_err = np.sqrt(H_var) * ci
         ax1.errorbar(x1, H, yerr=H_y_err, color=color, fmt='.')
     labels = [parse_label(x) for x in ids[one_sample]]
-    ax1.set_xticks(x1, labels, fontsize=6)
-    ax1.set_title('H')
+    ax1.set_xticks(x1, labels, rotation=60)
+    ax1.set_title('$H$')
+    axs = [ax1]
 
-    two_sample = np.where(ids[:, 0] != ids[:, 1])[0]
-    H_xy = spectrum.data[-1, two_sample]
-    x2 = np.arange(len(H_xy))
-    if spectrum.covs is None:
-        ax2.scatter(x2, H_xy, color=color, marker='_')
-    else:
-        H_xy_var = spectrum.covs[-1, two_sample, two_sample]
-        H_xy_y_err = np.sqrt(H_xy_var) * ci
-        ax2.errorbar(x2, H_xy, yerr=H_xy_y_err, color=color, fmt='.')
-    _labels = [parse_label(x) for x in ids[two_sample]]
-    ax2.set_xticks(x2, _labels, fontsize=6)
-    ax2.set_title('Hxy')
-    for ax in [ax1, ax2]:
+    if ax2 is not None:
+        two_sample = np.where(ids[:, 0] != ids[:, 1])[0]
+        H_xy = spectrum.data[-1, two_sample]
+        x2 = np.arange(len(H_xy))
+        if spectrum.covs is None:
+            ax2.scatter(x2, H_xy, color=color, marker='_')
+        else:
+            H_xy_var = spectrum.covs[-1, two_sample, two_sample]
+            H_xy_y_err = np.sqrt(H_xy_var) * ci
+            ax2.errorbar(x2, H_xy, yerr=H_xy_y_err, color=color, fmt='.')
+        _labels = [parse_label(x) for x in ids[two_sample]]
+        ax2.set_xticks(x2, _labels, rotation=60)
+        ax2.set_title('$H_{xy}$')
+        axs.append(ax2)
+
+    for ax in axs:
         ax.grid(alpha=0.2)
         if log_scale:
             ax.set_yscale('log')
@@ -196,10 +239,33 @@ def parse_label(label):
     # expects population identifiers of form np.array([labelx, labely])
     x, y = label
     if x == y:
-        _label = x
+        _label = x[:3]
     else:
         _label = f'{x[:3]}-{y[:3]}'
     return _label
+
+
+def format_ticks(ax):
+    # latex scientific notation for x, y ticks
+    def scientific(x):
+        if x == 0:
+            ret = '0'
+        else:
+            sci_string = np.format_float_scientific(x, precision=2)
+            base, power = sci_string.split('e')
+            # clean up the strings
+            base = base.rstrip('.')
+            power = power.lstrip('0')
+            if float(base) == 1.0:
+                ret = rf'$10^{{{int(power)}}}$'
+            else:
+                ret = rf'${base} \cdot 10^{{{int(power)}}}$'
+        return ret
+
+    formatter = mticker.FuncFormatter(lambda x, p: scientific(x))
+    ax.xaxis.set_major_formatter(formatter)
+    ax.yaxis.set_major_formatter(formatter)
+    return 0
 
 
 """
@@ -217,6 +283,7 @@ def plot_parameters(
     marker_size=2,
     title=None
 ):
+    # plot parameter clouds
     # truths is a vector of underlying true parameters
     n = len(names)
     n_axs = utils.n_choose_2(n)
@@ -279,6 +346,8 @@ def box_plot_parameters(
     n_cols=5,
     title=None
 ):
+    # make box plots comparing distribution of inferred parameters about
+    # simulation parameters
     n_axs = len(pnames)
     n_rows = int(np.ceil(n_axs / n_cols))
     fig, axs = plt.subplots(
@@ -325,238 +394,6 @@ def box_plot_parameters(
     return 0
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-Useful constants
-"""
-
-
-_line_styles = [
-    "solid",
-    "dashed",
-    "dotted",
-    "dashdot",
-    (0, (1, 1)),
-    (0, (2, 2)),
-    (0, (1, 2, 2, 2)),
-    (0, (3, 4, 2, 4))
-]
-
-
-_colors = [
-    "red",
-    "blue",
-    "green"
-]
-
-
-"""
-Colors and color maps
-"""
-
-
-def get_gnu_cmap(n):
-
-    cmap = list(cm.gnuplot(np.linspace(0, 0.95, n)))
-    return cmap
-
-
-def get_terrain_cmap(n):
-
-    cmap = list(cm.terrain(np.linspace(0, 0.95, n)))
-    return cmap
-
-
-"""
-Plotting graph statistics
-"""
-
-
-def plot_curves(axs, H, H2, r, sample_names, pair_names, color, log_scale,
-                label=None):
-
-    shape = axs.shape
-    offset = 1
-    n = len(sample_names)
-    plot_H(axs[0, 0], H[:n], sample_names, color, label=label, title="$H$")
-    if len(pair_names) > 0:
-        offset += 1
-        plot_H(axs[0, 1], H[n:], pair_names, color, title="$H_{xy}$")
-    for i in range(len(sample_names)):
-        idx = np.unravel_index(i + offset, shape)
-        title = f"$H_2$:{sample_names[i]}"
-        plot_H2(axs[idx], r, H2[:, i], color, log_scale=log_scale, title=title)
-    offset += n
-    for i in range(len(pair_names)):
-        idx = np.unravel_index(i + offset, shape)
-        title = f"$H_{{2,xy}}$:{pair_names[i]}"
-        plot_H2(axs[idx], r, H2[:, i + n], color, log_scale=log_scale, title=title)
-    return 0
-
-
-def plot_error_points(axs, H, H_err, H2, H2_err, r, sample_names, pair_names,
-                      color, log_scale, label=None):
-
-    shape = axs.shape
-    offset = 1
-    n = len(sample_names)
-    plot_H_err(axs[0, 0], H[:n], H_err[:n], sample_names, color, label=label, title="$H$")
-    if len(pair_names) > 0:
-        offset += 1
-        plot_H_err(axs[0, 1], H[n:], H_err[n:], pair_names, color, title="$H_{xy}$")
-    for i in range(len(sample_names)):
-        idx = np.unravel_index(i + offset, shape)
-        title = f"$H_2$:{sample_names[i]}"
-        plot_H2_err(axs[idx], r, H2[:, i], H2_err[:, i], color, log_scale=log_scale, title=title)
-    offset += len(sample_names)
-    for i in range(len(pair_names)):
-        idx = np.unravel_index(i + offset, shape)
-        title = f"$H_{{2,xy}}$:{pair_names[i]}"
-        plot_H2_err(axs[idx], r, H2[:, i + n], H2_err[:, i + n], color, log_scale=log_scale, title=title)
-    return 0
-
-
-"""
-Plotting functions dedicated to statistics
-"""
-
-
-def plot_H(ax, H, names, color, label=None, title=None):
-
-    for i, H in enumerate(H):
-        if i >= 1:
-            label = None
-        ax.scatter(i, H, color=color, marker="_", label=label)
-    ax.set_xticks(np.arange(len(names)), names)
-    ax.grid(alpha=0.2)
-    if title:
-        ax.set_title(title)
-
-
-def plot_H_err(ax, H, H_err, names, color, label=None, title=None):
-
-    for i, H in enumerate(H):
-        if i >= 1:
-            label = None
-        ax.errorbar(i, H, yerr=H_err[i], color=color, fmt='.', label=label)
-    ax.set_xticks(np.arange(len(names)), names)
-    ax.grid(alpha=0.2)
-    if title:
-        ax.set_title(title)
-
-
-def _plot_H_err(ax, H, H_err, E_H, names, colors, E_colors, title=None):
-
-    abbrev_names = []
-    for i, name in enumerate(names):
-        if type(name) == str:
-            name = name[:3]
-        else:
-            name = f"{name[0][:3]}-{name[1][:3]}"
-        abbrev_names.append(name)
-        ax.errorbar(i, H[i], yerr=H_err[i], color=colors[i], fmt='.')
-        ax.scatter(i, E_H[i], color=E_colors[i], marker='+')
-    ax.set_ylim(0, )
-    ax.set_xticks(np.arange(len(names)), abbrev_names)
-    ax.grid(alpha=0.2)
-    if title:
-        ax.set_title(title)
-    return ax
-
-
-def plot_H2(ax, r, H2, color, log_scale=False, title=None):
-    # for plotting expectations
-    ax.plot(r, H2, color=color)
-    ax.set_xscale("log")
-    ax.autoscale()
-    ax.grid(alpha=0.2)
-    if log_scale:
-        ax.set_yscale("log")
-    if title:
-        ax.set_title(title)
-    return ax
-
-
-def plot_H2_err(ax, r, H2, H2_err, color, log_scale=False, title=None):
-    # for plotting empirical values
-    ax.errorbar(r, H2, yerr=H2_err, color=color, fmt=".", capsize=0)
-    ax.set_xscale("log")
-    ax.grid(alpha=0.2)
-    if log_scale:
-        ax.set_yscale("log")
-    else:
-        ax.set_ylim(0, )
-    if title:
-        ax.set_title(title)
-    return ax
-
-
-def _plot_H2_err(ax, r, H2, H2_err, E_H2, color, E_color, log_scale=False,
-                title=None):
-
-    ax.errorbar(
-        r, H2, yerr=H2_err, color=color, fmt=".", capsize=0
-    )
-    ax.plot(r, E_H2, color=E_color)
-    ax.set_xscale("log")
-    if log_scale:
-        ax.set_yscale("log")
-    ax.grid(alpha=0.2)
-    if title:
-        ax.set_title(title)
-    return ax
-
-
-def _plot_H2_err(ax, r, H2, names, colors, fmts=None, y_errs=None, log_scale=False, y_lim=None, title=None):
-    # plot several H2 curves. H2 is expected to be shape (n, r) array
-    if H2.ndim == 1:
-        n = 1
-    else:
-        n = len(H2)
-    if fmts == None:
-        fmts = ["-"] * n
-    else:
-        if type(fmts) != list:
-            fmts = [fmts] * n
-        elif len(fmts) < n:
-            fmts = [fmts[0]] * n
-    if y_errs == None:
-        y_errs = [None] * n
-
-    for i, name in enumerate(names):
-        ax.errorbar(
-            r, H2[i], yerr=y_errs[i], color=colors[i], fmt=fmts[i], label=name
-        )
-    ax.set_xscale("log")
-    ax.set_ylabel("$H_2$")
-    ax.set_xlabel("r")
-    ax.grid(alpha=0.2)
-    if log_scale:
-        ax.set_yscale("log")
-    else:
-        if y_lim:
-            ax.set_ylim(0, y_lim)
-        else:
-            ax.set_ylim(0, )
-    if title:
-        ax.set_title(title)
-    return ax
-
-
 """
 Generic plotting functions
 """
@@ -569,11 +406,11 @@ def plot_distribution(
     color="black",
     label=None
 ):
-
-    distribution = np.histogram(data, bins=bins)[0]
-    distribution = distribution / distribution.sum()
+    #
+    dist = np.histogram(data, bins=bins)[0]
+    dist = dist / dist.sum()
     x = bins[1:]
-    ax.plot(x, distribution, color=color, label=label)
+    ax.plot(x, dist, color=color, label=label)
     ax.set_ylabel("freq")
     ax.set_xlim(bins[0], bins[-1])
     ax.grid(alpha=0.2)
