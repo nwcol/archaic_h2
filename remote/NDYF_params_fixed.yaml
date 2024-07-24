@@ -1,0 +1,66 @@
+parameters:
+  - name: T_12
+    lower_bound: 782000
+    upper_bound: 1.5e6
+    values:
+      - demes:
+          Stem2: start_time
+  - name: T_NDYF
+    lower_bound: 781000
+    upper_bound: 1e6
+    values:
+      - demes:
+          ND: start_time
+  - name: T_Y
+    lower_bound: 5e4
+    upper_bound: 1.5e5
+    values:
+      - demes:
+          Yoruba: start_time
+          Stem1:
+            epochs:
+              0: end_time
+          Stem2:
+            epochs:
+              0: end_time
+  - name: N_2
+    lower_bound: 1e4
+    upper_bound: 4e4
+    values:
+      - demes:
+          Stem2:
+            epochs:
+              0: start_size
+  - name: N_Y
+    lower_bound: 1e4
+    upper_bound: 1e5
+    values:
+      - demes:
+          Yoruba:
+            epochs:
+              0: start_size
+  - name: N_F
+    lower_bound: 1e3
+    upper_bound: 1e4
+    values:
+      - demes:
+          French:
+            epochs:
+              0: start_size   
+  - name: f_Y
+    lower_bound: 0.1
+    upper_bound: 0.9
+    values:
+      - demes:
+          Yoruba:
+            proportions: 0
+  - name: m_12
+    lower_bound: 1e-7
+    upper_bound: 1e-4
+    values:
+      - migrations:
+          4: rate
+constraints:
+  - params: [T_12, T_NDYF]
+    constraint: greater_than
+

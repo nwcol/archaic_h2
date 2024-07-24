@@ -1,12 +1,13 @@
 """
-Fit a demes model to H2 data
+
 """
+
+
 import argparse
 import demes
-
+import moments
+import numpy as np
 from archaic import inference
-from archaic import utils
-from archaic.spectra import H2Spectrum
 
 
 def get_args():
@@ -14,12 +15,11 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_fname', required=True)
     parser.add_argument('-g', '--graph_fname', required=True)
-    parser.add_argument('-p', '--options_fname', required=True)
+    parser.add_argument('-p', '--params_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
-    parser.add_argument('-H', '--use_H', type=int, default=1)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
-    parser.add_argument('--opt_method', nargs='*', default=['NelderMead'])
+    parser.add_argument('--opt_method', nargs='*', default=['powell'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
@@ -41,33 +41,51 @@ def get_tag(prefix, cluster, process):
 def main():
     #
     args = get_args()
-    data = H2Spectrum.from_bootstrap_file(
-        args.data_fname, graph=demes.load(args.graph_fname)
-    )
-    print(utils.get_time(), f'running inference for demes {data.sample_ids}')
-    if len(args.opt_method) != len(args.max_iter):
-        raise ValueError('')
+    SFS_file = np.load(args.data_fname)
+    pop_ids = list(SFS_file['samples'])
+    data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
+    deme_names = [d.name for d in demes.load(args.graph_fname).demes]
+    marg_idx = []
+    for i, pop_id in enumerate(pop_ids):
+        if pop_id in deme_names:
+            pass
+        else:
+            marg_idx.append(i)
+    data = data.marginalize(marg_idx)
+    uL = SFS_file['n_sites'] * args.u
     tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.options_fname, graph_fname
+            args.graph_fname, args.params_fname, graph_fname
         )
     else:
         graph_fname = args.graph_fname
     for i, opt_method in enumerate(args.opt_method):
         out_fname = f'{tag}_iter{i + 1}.yaml'
-        inference.optimize_H2(
+        _, __, LL = moments.Demes.Inference.optimize(
             graph_fname,
-            args.options_fname,
+            args.params_fname,
             data,
-            max_iter=args.max_iter[i],
-            opt_method=opt_method,
-            u=args.u,
-            verbosity=args.verbosity,
-            use_H=args.use_H,
-            out_fname=out_fname
+            maxiter=args.max_iter[i],
+            verbose=args.verbosity,
+            uL=uL,
+            log=False,
+            output=out_fname,
+            method=opt_method,
+            overwrite=True
         )
+        opt_info = dict(
+            method=opt_method,
+            fopt=-LL,
+            iters=None,
+            func_calls=None,
+            warnflag=None,
+            inferred_with='SFS'
+        )
+        graph = demes.load(out_fname)
+        graph.metadata['opt_info'] = opt_info
+        demes.dump(graph, out_fname)
         graph_fname = out_fname
     return 0
 

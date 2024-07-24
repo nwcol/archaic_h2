@@ -14,12 +14,12 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_fname', required=True)
     parser.add_argument('-g', '--graph_fname', required=True)
-    parser.add_argument('-p', '--options_fname', required=True)
+    parser.add_argument('-p', '--params_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('-H', '--use_H', type=int, default=1)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
-    parser.add_argument('--opt_method', nargs='*', default=['NelderMead'])
+    parser.add_argument('--opt_methods', nargs='*', default=['NelderMead'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
@@ -45,30 +45,28 @@ def main():
         args.data_fname, graph=demes.load(args.graph_fname)
     )
     print(utils.get_time(), f'running inference for demes {data.sample_ids}')
-    if len(args.opt_method) != len(args.max_iter):
+    if len(args.opt_methods) != len(args.max_iter):
         raise ValueError('')
     tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.options_fname, graph_fname
+            args.graph_fname, args.params_fname, graph_fname
         )
     else:
         graph_fname = args.graph_fname
-    for i, opt_method in enumerate(args.opt_method):
-        out_fname = f'{tag}_iter{i + 1}.yaml'
+    for i, opt_method in enumerate(args.opt_methods):
         inference.optimize_H2(
             graph_fname,
-            args.options_fname,
+            args.params_fname,
             data,
             max_iter=args.max_iter[i],
             opt_method=opt_method,
             u=args.u,
             verbosity=args.verbosity,
             use_H=args.use_H,
-            out_fname=out_fname
+            out_fname=f'{tag}_iter{i + 1}.yaml'
         )
-        graph_fname = out_fname
     return 0
 
 

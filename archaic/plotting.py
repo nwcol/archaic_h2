@@ -64,9 +64,9 @@ def plot_H2_spectra(
     if log_scale:
         width = 2.8
     else:
-        width = 2.6
+        width = 2.2
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * width, n_rows * 2),
+        n_rows, n_cols, figsize=(n_cols * width, n_rows * 1.8),
         layout="constrained"
     )
     axs = axs.flat
@@ -206,7 +206,7 @@ def plot_H_on_H2_spectrum(
         H_y_err = np.sqrt(H_var) * ci
         ax1.errorbar(x1, H, yerr=H_y_err, color=color, fmt='.')
     labels = [parse_label(x) for x in ids[one_sample]]
-    ax1.set_xticks(x1, labels, rotation=60)
+    ax1.set_xticks(x1, labels, fontsize=9, rotation=60)
     ax1.set_title('$H$')
     axs = [ax1]
 
@@ -221,7 +221,7 @@ def plot_H_on_H2_spectrum(
             H_xy_y_err = np.sqrt(H_xy_var) * ci
             ax2.errorbar(x2, H_xy, yerr=H_xy_y_err, color=color, fmt='.')
         _labels = [parse_label(x) for x in ids[two_sample]]
-        ax2.set_xticks(x2, _labels, rotation=60)
+        ax2.set_xticks(x2, _labels, fontsize=9, rotation=60)
         ax2.set_title('$H_{xy}$')
         axs.append(ax2)
 

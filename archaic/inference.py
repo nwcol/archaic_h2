@@ -36,7 +36,7 @@ def optimize_H2(
     #
     t0 = time.time()
     if not use_H and data.has_H:
-        data = data.remove_H
+        data = data.remove_H()
     builder = minf._get_demes_dict(graph_fname)
     options = minf._get_params_dict(params_fname)
     param_names, params_0, lower_bounds, upper_bounds = \
@@ -442,6 +442,7 @@ def perturb_graph(graph_fname, param_fname, out_fname):
         params[below1] = log_uniform(
             lower_bounds[below1], upper_bounds[below1]
         )
+        print(params)
         if constraints:
             if np.all(constraints(params) > 0):
                 satisfied = True

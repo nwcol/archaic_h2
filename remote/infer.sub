@@ -1,0 +1,27 @@
+log = out/job_$(Cluster)_$(Process).log
+error = out/job_$(Cluster)_$(Process).err
+output = out/job_$(Cluster)_$(Process).out
+
+requirements = (Target.HasCHTCStaging == true)
+container_image = file:///staging/nwcollier/archaic-container.sif
+
+executable = fit_H2.sh
+
+
+arguments = --cluster_id $(Cluster) --process_id $(Process) \
+	    -d H2_bootstrap.npz -g MND_mig.yaml -p MND_mig_params.yaml -o MND_mig \
+            --perturb_graph 1 --max_iter 500 --opt_methods Powell -v 20 -u 1.35e-8 --use_H 1
+
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+
+
+transfer_input_files = fit_H2.py, H2_bootstrap.npz, MND_mig.yaml, MND_mig_params.yaml
+
+
+request_cpus = 1
+request_memory = 1GB
+request_disk = 1GB
+
+queue 20

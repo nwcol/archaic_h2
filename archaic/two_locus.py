@@ -81,7 +81,7 @@ def count_site_pairs(
     vectorized=True,
     bp_thresh=0,
     upper_bound=None,
-    verbose=True
+    verbose=False
 ):
     """
     given vectors of recombination map positions and recombination-distance bin
@@ -173,56 +173,73 @@ def count_site_pairs(
 def count_two_sample_H2(
     genotypes_x,
     genotypes_y,
-    map_vals,
+    r_map,
     r_bins,
     positions=None,
     window=None,
     bp_thresh=0,
-    upper_bound=None
+    upper_bound=None,
+    verbose=False
 ):
+    # unphased
+    # make sure that we don't have an empty map array
+    if len(r_map) < 2:
+        return np.zeros(len(r_bins) - 1)
 
-    # unphased, of course
     if bp_thresh:
         if not np.any(positions):
             raise ValueError("You must provide positions to use bp_thresh!")
+
     d_bins = map_function(r_bins)
     if np.any(window):
         if not np.any(positions):
             raise ValueError("You must provide positions to use a window!")
-        l_start, l_stop = one_locus.get_window_bounds(window, positions)
+        # find the left- and right-locus bounds
+        l_start, l_stop = np.searchsorted(positions, window)
         if upper_bound:
             r_stop = np.searchsorted(positions, upper_bound)
         else:
-            max_d = map_vals[l_stop - 1] + d_bins[-1]
-            r_stop = np.searchsorted(map_vals, max_d)
-        map_vals = map_vals[l_start:r_stop]
+            max_d = r_map[l_stop - 1] + d_bins[-1]
+            r_stop = np.searchsorted(r_map, max_d)
+
+        r_map = r_map[l_start:r_stop]
         genotypes_y = genotypes_y[l_start:r_stop]
         genotypes_x = genotypes_x[l_start:r_stop]
         if bp_thresh:
             positions = positions[l_start:r_stop]
     else:
         l_start = 0
-        l_stop = len(map_vals)
+        l_stop = r_stop = len(r_map)
+
     n_left_loci = l_stop - l_start
-    right_lims = np.searchsorted(map_vals, map_vals + d_bins[-1])
-    site_Hxy = one_locus.get_site_Hxy(genotypes_x, genotypes_y)
-    allowed_Hxy = np.array([0.25, 0.5, 0.75, 1])
-    precomputed_H2xy = np.cumsum(allowed_Hxy[:, np.newaxis] * site_Hxy, axis=1)
+    r_lims = np.searchsorted(r_map, r_map + d_bins[-1])
+    site_H = one_locus.site_two_sample_H(genotypes_x, genotypes_y)
+    # precompute site two-sample H
+    # the values 0.25, 0.75 occur only when we have triallelic sites
+    allowed = np.array([0.25, 0.5, 0.75, 1])
+    precomputed_H = np.cumsum(allowed[:, np.newaxis] * site_H, axis=1)
     cum_counts = np.zeros(len(d_bins), dtype=np.float64)
+
     for i in np.arange(n_left_loci):
         if bp_thresh > 0:
             j_min = np.searchsorted(positions, positions[i] + bp_thresh + 1)
         else:
             j_min = i + 1
-        j_max = right_lims[i]
-        left_Hxy = site_Hxy[i]
-        if left_Hxy > 0:
-            _bins = d_bins + map_vals[i]
-            edges = np.searchsorted(map_vals[j_min:j_max], _bins)
-            select = np.searchsorted(allowed_Hxy, left_Hxy)
-            locus_H2xy = precomputed_H2xy[select, i:j_max]
-            cum_counts += locus_H2xy[edges]
+        j_max = r_lims[i]
+        left_H = site_H[i]
+        if left_H > 0:
+            _bins = d_bins + r_map[i]
+            edges = np.searchsorted(r_map[j_min:j_max], _bins)
+            select = np.searchsorted(allowed, left_H)
+            locus_H2 = precomputed_H[select, i:j_max]
+            cum_counts += locus_H2[edges]
     H2 = np.diff(cum_counts)
+
+    if verbose:
+        print(
+            utils.get_time(),
+            f'n site pairs parsed; indices {l_stop}-{l_start}:{r_stop}'
+        )
     return H2
 
 
@@ -324,7 +341,8 @@ def compute_H2(
     r_bins,
     windows=None,
     bounds=None,
-    sample_mask=None
+    sample_mask=None,
+    verbose=True
 ):
     """
 
@@ -354,10 +372,6 @@ def compute_H2(
             positions=positions,
             window=window,
             vectorized=True
-        )
-        print(
-            utils.get_time(),
-            f'n site pairs parsed for window {i}'
         )
     genotype_r_map = r_map[np.searchsorted(positions, genotype_positions)]
     n_samples = genotypes.shape[1]

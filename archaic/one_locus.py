@@ -229,7 +229,7 @@ def get_one_sample_H(genotypes, genotype_positions, windows):
 
 def get_two_sample_H(genotypes_x, genotypes_y, genotype_positions, windows):
     #
-    site_H = get_site_two_sample_H(genotypes_x, genotypes_y)
+    site_H = site_two_sample_H(genotypes_x, genotypes_y)
     H = np.zeros(len(windows))
     for i, window in enumerate(windows):
         lower, upper = np.searchsorted(genotype_positions, window)
@@ -237,13 +237,13 @@ def get_two_sample_H(genotypes_x, genotypes_y, genotype_positions, windows):
     return H
 
 
-def get_site_two_sample_H(genotypes_x, genotypes_y):
+def site_two_sample_H(genotypes_x, genotypes_y):
     # compute probabilities of sampling a distinct allele from x and y at each
-    site_two_sample_H = (
+    H = (
         np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)
         + np.sum(genotypes_x[:, 1][:, np.newaxis] != genotypes_y, axis=1)
     ) / 4
-    return site_two_sample_H
+    return H
 
 
 def compute_H(
@@ -252,6 +252,7 @@ def compute_H(
     mask_positions,
     windows=None,
     sample_mask=None,
+    verbose=True
 ):
     #
     if windows is None:
@@ -271,11 +272,12 @@ def compute_H(
             H[:, k] = get_two_sample_H(
                 genotypes[:, i], genotypes[:, j], genotype_positions, windows
             )
-    print(
-        utils.get_time(),
-        f'H parsed for {n_samples} samples '
-        f'at {n_sites} sites in {len(windows)} windows'
-    )
+    if verbose:
+        print(
+            utils.get_time(),
+            f'H parsed for {n_samples} samples '
+            f'at {n_sites.sum()} sites in {len(windows)} windows'
+        )
     return n_sites, H
 
 

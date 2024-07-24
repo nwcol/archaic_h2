@@ -1,0 +1,41 @@
+parameters:
+  - name: T
+    lower_bound: 1e5
+    upper_bound: 5e5
+    values:
+      - demes:
+          Ancestral:
+            epochs:
+              0: end_time
+
+  - name: N_A
+    lower_bound: 5e3
+    upper_bound: 2e4
+    values:
+      - demes:
+          Ancestral:
+            epochs:
+              0: start_size
+
+  - name: N_X
+    lower_bound: 5e3
+    upper_bound: 4e4
+    values:
+      - demes:
+          X:
+            epochs:
+              0: start_size 
+  - name: N_Y
+    lower_bound: 5e3
+    upper_bound: 4e4
+    values:
+      - demes:
+          Y:
+            epochs:
+              0: start_size 
+  - name: m
+    lower_bound: 1e-6
+    upper_bound: 2e-4
+    values:
+      - migrations:
+          0: rate

@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument("--n_cols", type=int, default=5)
     parser.add_argument('--labels', nargs='*', default=None)
     parser.add_argument('--log_scale', type=int, default=0)
+    parser.add_argument('--plot_H', type=int, default=1)
     return parser.parse_args()
 
 
@@ -51,13 +52,14 @@ def main():
         graph = None
 
     for fname in args.data_fnames:
-        spectra.append(
-            H2Spectrum.from_bootstrap_file(
-                fname,
-                sample_ids=sample_ids,
-                graph=graph
-            )
+        spectrum = H2Spectrum.from_bootstrap_file(
+            fname,
+            sample_ids=sample_ids,
+            graph=graph
         )
+        if not args.plot_H and spectrum.has_H:
+            spectrum = spectrum.remove_H()
+        spectra.append(spectrum)
         labels.append(fname.split('/')[-1])
         n_datas += 1
 
@@ -99,7 +101,7 @@ def main():
 
     fig, axs = plotting.plot_H2_spectra(
         *spectra,
-        plot_H=True,
+        plot_H=args.plot_H,
         colors=colors,
         labels=labels,
         n_cols=args.n_cols,

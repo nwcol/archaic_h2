@@ -1,0 +1,15 @@
+# For building Apptainer container
+
+universe = vanilla
+log = build.log
+
+executable = /usr/bin/hostname
+
+transfer_input_files = build/image.def
+
++IsBuildJob = true
+request_cpus = 4
+request_memory = 16GB
+request_disk = 16GB
+
+queue

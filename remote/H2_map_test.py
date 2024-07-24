@@ -49,7 +49,7 @@ def write_mask_file(L):
 def write_map_file(L, cM_per_Mb):
     #
     cM = (L / 1e6) * cM_per_Mb
-    map_fname = f'{data_path}/map{cM_per_Mb}cMMb.txt'
+    map_fname = f'{data_path}/map{int(L / 1e6)}Mb.txt'
     with open(map_fname, 'w') as file:
         file.write('Position(bp)\tRate(cM/Mb)\tMap(cM)\n')
         file.write('1\t0\t0\n')
@@ -117,9 +117,9 @@ def main():
         samples = [d.name for d in graph.demes if d.end_time == 0]
     tag = f'{args.out_prefix}_{args.cluster_id}_{args.process_id}'
 
-    rates = [0.8, 1.0, 1.2]
+    lengths = [8, 10, 12]
 
-    maps = {c: write_map_file(args.L, c) for c in rates}
+    maps = {c: write_map_file(args.L, c / 10) for c in lengths}
 
     mask_fname = write_mask_file(args.L)
     windows = np.array([[0, args.L]])
@@ -140,8 +140,8 @@ def main():
             u=args.u
         )
 
-    stat_fnames = {c: f'{tag}_{c}cM_H2.npz' for c in rates}
-    for c in rates:
+    stat_fnames = {c: f'{tag}_{c}cM_H2.npz' for c in lengths}
+    for c in lengths:
         H2_dicts = []
         for i in range(args.n_windows):
             H2_dicts.append(
@@ -166,8 +166,8 @@ def main():
         )
 
     # H2
-    fnames = {c: [] for c in rates}
-    for c in rates:
+    fnames = {c: [] for c in lengths}
+    for c in lengths:
         data = H2Spectrum.from_bootstrap_file(f'{tag}_{c}cM_H2.npz', graph=graph)
         for i in range(args.n_reps):
             in_fname = f'{graph_path}/init_rep{i}.yaml'
@@ -187,7 +187,7 @@ def main():
 
     percentile = 1 - args.return_best / args.n_reps
     print(f'returning {percentile * 100}% highest-ll graphs')
-    for c in rates:
+    for c in lengths:
         _, best_fit = get_best_fit_graphs(fnames[c], percentile)
         print(best_fit)
         for fname in best_fit:
