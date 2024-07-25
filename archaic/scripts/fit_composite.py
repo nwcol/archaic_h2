@@ -1,11 +1,11 @@
 """
 SFS + H2
 """
-
 import argparse
 import demes
 import moments
 import numpy as np
+
 from archaic import inference, utils
 from archaic.spectra import H2Spectrum
 

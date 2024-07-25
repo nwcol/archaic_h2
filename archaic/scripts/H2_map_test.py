@@ -168,7 +168,7 @@ def main():
     # H2
     fnames = {c: [] for c in rates}
     for c in rates:
-        data = H2Spectrum.from_bootstrap_file(f'{tag}_{c}cM_H2.npz', graph=graph)
+        data = H2Spectrum.from_bootstrap_file(stat_fnames[c], graph=graph)
         for i in range(args.n_reps):
             in_fname = f'{graph_path}/init_rep{i}.yaml'
             out_fname = f'{graph_path}/{tag}_{c}cM_rep{i}.yaml'

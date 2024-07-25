@@ -1,5 +1,5 @@
 """
-
+fits models using H2, H2+H, SFS, and composite methods
 """
 import argparse
 import demes
@@ -12,7 +12,6 @@ from archaic.parsing import parse_H2, bootstrap_H2, parse_SFS
 from archaic.spectra import H2Spectrum
 
 
-
 data_dir = 'data'
 graph_dir = 'graphs'
 
@@ -21,18 +20,19 @@ def get_args():
     # get args
     parser = argparse.ArgumentParser()
     parser.add_argument('-g', '--graph_fname', required=True)
-    parser.add_argument('-p', '--params_fname', required=True)
+    parser.add_argument('-p', '--options_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-n', '--n_windows', type=int, default=100)
     parser.add_argument('-L', '--L', type=float, default=1e7)
     parser.add_argument('-s', '--samples', nargs='*', default=None)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('-r', '--r', type=float, default=1e-8)
-    parser.add_argument('-max', '--max_iter', type=int, default=500)
-    parser.add_argument('-opt', '--opt_method', default='Powell')
+    parser.add_argument('--max_iter', type=int, default=500)
+    parser.add_argument('--method', default='Powell')
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--n_reps', type=int, default=100)
     parser.add_argument('--return_best', type=int, default=1)
+    parser.add_argument('--fit', nargs='*', default=['H2', 'H2H', 'SFS', 'comp'])
     parser.add_argument('--cluster_id', default='0')
     parser.add_argument('--process_id', default='0')
     return parser.parse_args()
@@ -108,75 +108,6 @@ def get_best_fit_graphs(graph_fnames, percentile):
     return idx, [graph_fnames[i] for i in idx]
 
 
-def H2_infer(graph_fname_0, args, data, out_fname):
-    #
-    graph, opt_info = inference.optimize_H2(
-        graph_fname_0,
-        args.params_fname,
-        data,
-        max_iter=args.max_iter,
-        opt_method=args.opt_method,
-        u=args.u,
-        verbosity=args.verbosity,
-        use_H=True
-    )
-    graph.metadata['opt_info'] = opt_info
-    demes.dump(graph, out_fname)
-
-
-def SFS_infer(graph_fname_0, args, data, uL, out_fname):
-    #
-    # opt methods are named a bit differently in moments.Demes.Inference
-    opt_methods = {
-        'NelderMead': 'fmin',
-        'BFGS': None,
-        'LBFGSB': 'lbfgsb',
-        'Powell': 'powell'
-    }
-    _, __, LL = moments.Demes.Inference.optimize(
-        graph_fname_0,
-        args.params_fname,
-        data,
-        maxiter=args.max_iter,
-        verbose=args.verbosity,
-        uL=uL,
-        log=False,
-        output=out_fname,
-        method=opt_methods[args.opt_method],
-        overwrite=True
-    )
-    opt_info = dict(
-        method=args.opt_method,
-        fopt=-LL,
-        iters=None,
-        func_calls=None,
-        warnflag=None,
-        statistic='SFS'
-    )
-    graph = demes.load(out_fname)
-    graph.metadata['opt_info'] = opt_info
-    demes.dump(graph, out_fname)
-
-
-def composite_infer(graph_fname_0, args, H2_data, SFS_data, L, out_fname):
-    #
-    if H2_data.has_H:
-        H2_data = H2_data.remove_H()
-    graph, opt_info = inference.optimize_super_composite(
-        graph_fname_0,
-        args.params_fname,
-        H2_data,
-        SFS_data,
-        L,
-        max_iter=args.max_iter,
-        opt_method=args.opt_method,
-        u=args.u,
-        verbosity=args.verbosity
-    )
-    graph.metadata['opt_info'] = opt_info
-    demes.dump(graph, out_fname)
-
-
 def main():
     #
     args = get_args()
@@ -229,50 +160,87 @@ def main():
         ref_as_ancestral=True
     )
 
-    # H2
-    H2_data = H2Spectrum.from_bootstrap_file(H2_data_fname, graph=graph)
-    init_fnames = []
-    H2_fnames = []
+    # perturb the initial graph to get starting points
+    inits = []
     for i in range(args.n_reps):
-        graph_fname_0 = f'{graph_dir}/{tag}_init_rep{i}.yaml'
+        fname = f'{graph_dir}/{tag}_init_rep{i}.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.params_fname, graph_fname_0
+            args.graph_fname, args.options_fname, out_fname=fname
         )
-        init_fnames.append(graph_fname_0)
-        out_fname = f'{graph_dir}/{tag}_H2_rep{i}.yaml'
-        H2_infer(graph_fname_0, args, H2_data, out_fname)
-        H2_fnames.append(out_fname)
+        inits.append(fname)
 
-    # SFS
-    SFS_file = np.load(SFS_data_fname)
-    SFS_data = moments.Spectrum(SFS_file['SFS'], pop_ids=list(SFS_file['samples']))
-    L = SFS_file['n_sites']
-    uL = L * args.u
-    SFS_fnames = []
-    for i, graph_fname_0 in enumerate(init_fnames):
-        out_fname = f'{graph_dir}/{tag}_SFS_rep{i}.yaml'
-        SFS_infer(graph_fname_0, args, SFS_data, uL, out_fname)
-        SFS_fnames.append(out_fname)
+    # load statistics
+    H2_data = H2Spectrum.from_bootstrap_file(H2_data_fname, graph=graph)
+    SFS_data, L = inference.read_SFS(SFS_data_fname, H2_data.sample_ids)
 
-    # composite
-    composite_fnames = []
-    for i, graph_fname_0 in enumerate(init_fnames):
-        out_fname = f'{graph_dir}/{tag}_composite_rep{i}.yaml'
-        composite_infer(graph_fname_0, args, H2_data, SFS_data, L, out_fname)
-        composite_fnames.append(out_fname)
+    fits = dict(H2=[], H2H=[], SFS=[], comp=[])
+    for i in range(args.n_reps):
+        H2_fname = f'{graph_dir}/{tag}_H2_rep{i}.yaml'
+        inference.fit_H2(
+            inits[i],
+            args.options_fname,
+            H2_data,
+            max_iter=args.max_iter,
+            method=args.method,
+            u=args.u,
+            verbosity=args.verbosity,
+            use_H=False,
+            out_fname=H2_fname
+        )
+        fits['H2'].append(H2_fname)
+
+        H2H_fname = f'{graph_dir}/{tag}_H2H_rep{i}.yaml'
+        inference.fit_H2(
+            inits[i],
+            args.options_fname,
+            H2_data,
+            max_iter=args.max_iter,
+            method=args.method,
+            u=args.u,
+            verbosity=args.verbosity,
+            use_H=True,
+            out_fname=H2H_fname
+        )
+        fits['H2H'].append(H2H_fname)
+
+        SFS_fname = f'{graph_dir}/{tag}_SFS_rep{i}.yaml'
+        inference.fit_SFS(
+            inits[i],
+            args.options_fname,
+            SFS_data,
+            args.u * L,
+            max_iter=args.max_iter,
+            method=args.method,
+            verbosity=args.verbosity,
+            out_fname=SFS_fname
+        )
+        fits['SFS'].append(SFS_fname)
+        
+        comp_fname = f'{graph_dir}/{tag}_comp_rep{i}.yaml'
+        inference.fit_composite(
+            inits[i],
+            args.options_fname,
+            H2_data,
+            SFS_data,
+            L,
+            max_iter=args.max_iter,
+            method=args.method,
+            u=args.u,
+            verbosity=args.verbosity,
+            out_fname=comp_fname
+        )
+        fits['comp'].append(comp_fname)
 
     percentile = 1 - args.return_best / args.n_reps
     print(f'returning {percentile * 100}% highest-ll graphs')
-    _, best_SFS = get_best_fit_graphs(SFS_fnames, percentile)
-    print(best_SFS)
-    _, best_H2 = get_best_fit_graphs(H2_fnames, percentile)
-    print(best_H2)
-    _, best_composite = get_best_fit_graphs(composite_fnames, percentile)
-    print(best_H2)
-    for fname in best_SFS + best_H2 + best_composite:
-        base_name = fname.split('/')[-1]
-        g = demes.load(fname)
-        demes.dump(g, base_name)
+
+    for x in fits:
+        _, best_fits = get_best_fit_graphs(fits[x], percentile)
+        print(x, best_fits)
+        for fname in best_fits:
+            base_name = fname.split('/')[-1]
+            g = demes.load(fname)
+            demes.dump(g, base_name)
     return 0
 
 

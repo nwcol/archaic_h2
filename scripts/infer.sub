@@ -5,25 +5,23 @@ output = out/job_$(Cluster)_$(Process).out
 requirements = (Target.HasCHTCStaging == true)
 container_image = file:///staging/nwcollier/archaic-container.sif
 
-executable = infer.sh
+executable = fit_H2.sh
 
 
-# permitted opt routines: fmin BFGS LBFGSB
-#
-arguments = --cluster_id $(Cluster) --process_id $(Process) --permute_graph 0 -d stats.npz -g archaics_1737547_$(Process).yaml -p params0.yaml -o archaics -m 10000 -v 100 -r fmin -u 1.35e-8 
-#
+arguments = --cluster_id $(Cluster) --process_id $(Process) \
+	    -d H2_bootstrap.npz -g MND_mig.yaml -p MND_mig_params.yaml -o MND_mig \
+            --perturb_graph 1 --max_iter 500 --opt_methods Powell -v 20 -u 1.35e-8 --use_H 1
+
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
 
-#
-transfer_input_files = infer.py, stats.npz, archaics_1737547_$(Process).yaml, params0.yaml
-#
+transfer_input_files = fit_H2.py, H2_bootstrap.npz, MND_mig.yaml, MND_mig_params.yaml
 
 
 request_cpus = 1
 request_memory = 1GB
 request_disk = 1GB
 
-queue 400
+queue 20

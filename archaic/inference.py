@@ -1,52 +1,122 @@
 """
-Functions for computing approx composite likelihoods and inferring demographies
+functions for fitting models to H2 and SFS statistics
 """
 import demes
 import numpy as np
-import scipy
 import moments
-import moments.Demes.Inference as minf
-import time
+import scipy
 
 from archaic import utils
 from archaic.spectra import H2Spectrum
 
 
-out_of_bounds_val = 1e10
-counter = 0
-opt_methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
-
-
 """
-Fitting graphs with H2
+handling graphs and options/parameters
 """
 
 
-def optimize_H2(
+def perturb_graph(graph_fname, param_fname, out_fname=None):
+    # uniformly and randomly pick parameter values
+
+    def log_uniform(lower, upper):
+        # sample parameters log-uniformly
+        log_lower = np.log10(lower)
+        log_upper = np.log10(upper)
+        log_draws = np.random.uniform(log_lower, log_upper)
+        draws = 10 ** log_draws
+        return draws
+
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(param_fname)
+    pnames, p0, lower_bounds, upper_bounds = \
+        moments.Demes.Inference._set_up_params_and_bounds(options, builder)
+
+    if np.any(np.isinf(upper_bounds)):
+        raise ValueError("all upper bounds must be specified!")
+    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+    above1 = np.where(lower_bounds >= 1)[0]
+    below1 = np.where(lower_bounds < 1)[0]
+    satisfied = False
+    params = None
+    p = None
+
+    while not satisfied:
+        p = np.zeros(len(p0))
+        p[above1] = np.random.uniform(
+            lower_bounds[above1], upper_bounds[above1]
+        )
+        p[below1] = log_uniform(
+            lower_bounds[below1], upper_bounds[below1]
+        )
+        print(params)
+
+        if constraints:
+            if np.all(constraints(params) > 0):
+                satisfied = True
+        else:
+            satisfied = True
+
+    builder = moments.Demes.Inference._update_builder(builder, options, p)
+    graph = demes.Graph.fromdict(builder)
+    if out_fname is not None:
+        demes.dump(graph, out_fname)
+    else:
+        return out_fname
+
+
+def get_params(params_fname, graph_fnames, permissive=False):
+    # load a bunch of parameters from many graph files at once
+    # shape (n_files, n_parameters)
+    params = moments.Demes.Inference._get_params_dict(params_fname)
+    if permissive:
+        for i in range(len(params['parameters'])):
+            params['parameters'][i]['lower_bound'] *= 0.99
+            params['parameters'][i]['upper_bound'] *= 1.01
+    names = None
+    arr = []
+    for fname in graph_fnames:
+        g = moments.Demes.Inference._get_demes_dict(fname)
+        names, vals, _, __, = \
+            moments.Demes.Inference._set_up_params_and_bounds(params, g)
+        arr.append(vals)
+    return names, np.array(arr)
+
+
+_out_of_bounds = -1e10
+_n_func_calls = 0
+_n_iters = 0
+
+
+"""
+optimization functions
+"""
+
+
+def fit_H2(
     graph_fname,
-    params_fname,
+    options_fname,
     data,
-    max_iter=500,
-    opt_method='NelderMead',
+    max_iter=1000,
+    method='NelderMead',
     u=1.35e-8,
     verbosity=1,
     use_H=True,
     out_fname=None
 ):
     #
-    t0 = time.time()
     if not use_H and data.has_H:
         data = data.remove_H()
-    builder = minf._get_demes_dict(graph_fname)
-    options = minf._get_params_dict(params_fname)
-    param_names, params_0, lower_bounds, upper_bounds = \
-        minf._set_up_params_and_bounds(options, builder)
-    constraints = minf._set_up_constraints(options, param_names)
+
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
+    pnames, p0, lower_bounds, upper_bounds = \
+        moments.Demes.Inference._set_up_params_and_bounds(options, builder)
+    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+
     if verbosity > 0:
-        ll_0 = compute_graph_file_ll_H2(graph_fname, data, u)
-        printout(0, 0, param_names, mode='s')
-        printout(0, ll_0, params_0)
-    opt_args = (
+        print_status(0, 0, pnames)
+
+    args = (
         builder,
         options,
         data,
@@ -54,75 +124,24 @@ def optimize_H2(
         lower_bounds,
         upper_bounds,
         constraints,
-        verbosity,
+        verbosity
     )
-    if opt_method not in opt_methods:
-        raise ValueError(f'method: {opt_method} is not in {opt_methods}')
-    if opt_method == 'NelderMead':
-        opt = scipy.optimize.fmin(
-            objective_H2,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, iters, func_calls, warnflag = opt
-    elif opt_method == 'BFGS':
-        opt = scipy.optimize.fmin_bfgs(
-            objective_H2,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag = opt
-        iters = None
-    elif opt_method == 'LBFGSB':
-        opt = scipy.optimize.fmin_l_bfgs_b(
-            objective_H2,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            approx_grad=True
-        )
-        xopt, fopt, d = opt
-        func_calls = d['funcalls']
-        warnflag = d['warnflag']
-        iters = d['nit']
-    elif opt_method == 'Powell':
-        opt = scipy.optimize.fmin_powell(
-            objective_H2,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, direc, iters, func_calls, warnflag = opt
-    else:
-        return 1
-    builder = minf._update_builder(builder, options, xopt)
-    graph = demes.Graph.fromdict(builder)
-
-    global counter
-    counter = 0
-
-    opt_info = dict(
-        method=opt_method,
-        fopt=-fopt,
-        iters=iters,
-        func_calls=func_calls,
-        warnflag=warnflag
+    ret = optimize(
+        objective_H2,
+        p0,
+        args,
+        builder=builder,
+        options=options,
+        method=method,
+        max_iter=max_iter,
+        out_fname=out_fname,
+        bounds=(lower_bounds, upper_bounds)
     )
-    end_printout(t0, **opt_info)
-    if out_fname is not None:
-        graph.metadata['opt_info'] = opt_info
-        demes.dump(graph, out_fname)
-    else:
-        return graph, opt_info
+    return ret
 
 
 def objective_H2(
-    params,
+    p,
     builder,
     options,
     data,
@@ -132,402 +151,380 @@ def objective_H2(
     constraints=None,
     verbosity=1
 ):
-    # objective function for optimization with H2
-    global counter
-    counter += 1
-    if lower_bounds is not None and np.any(params < lower_bounds):
-        ll = -out_of_bounds_val
-    elif upper_bounds is not None and np.any(params > upper_bounds):
-        ll = -out_of_bounds_val
-    elif constraints is not None and np.any(constraints(params) <= 0):
-        ll = -out_of_bounds_val
-    else:
-        builder = minf._update_builder(builder, options, params)
-        graph = demes.Graph.fromdict(builder)
-        graph_data = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
-        ll = compute_ll_H2(graph_data, data)
-    if verbosity > 0 and counter % verbosity == 0:
-        printout(counter, ll, params)
+    #
+    global _n_func_calls
+    _n_func_calls += 1
+
+    if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
+        return -_out_of_bounds
+
+    builder = moments.Demes.Inference._update_builder(builder, options, p)
+    graph = demes.Graph.fromdict(builder)
+    model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
+    ll = get_ll(model, data)
+
+    if verbosity > 0 and _n_func_calls % verbosity == 0:
+        print_status(_n_func_calls, ll, p)
     return -ll
 
 
-def compute_ll_H2(model, data):
-    # takes two H2Spectrum arguments
-    ll = 0
-    for i in range(data.n_bins):
-        x = data.data[i]
-        mu = model.data[i]
-        inv_cov = data.inv_covs[i]
-        ll += - (x - mu) @ inv_cov @ (x - mu)
-    return ll
-
-
-def compute_graph_file_ll_H2(graph_fname, data, u):
-    #
-    graph_data_0 = H2Spectrum.from_graph_file(
-        graph_fname, data.sample_ids, data.r, u
-    )
-    ll = compute_ll_H2(graph_data_0, data)
-    return ll
-
-
-def printout(i, log_lik, params, mode='g'):
-    # used to print parameter names and parameter values
-    if mode == 'g':
-        param_str = ', '.join(['%- 10g' % v for v in params])
-    elif mode == 's':
-        param_str = ', '.join(['%- 10s' % v for v in params])
-    else:
-        param_str = ''
-    print(utils.get_time(), '%-8i, %-8g, %s' % (i, log_lik, param_str))
-
-
-def end_printout(t0, **kwargs):
-    for key in kwargs:
-        print(f'{key}:\t{kwargs[key]}')
-    print(f'time elapsed:\t{np.round(time.time() - t0, 2)} s\n')
-
-
-"""
-Loading and setting up bootstrap statistics
-"""
-
-
-def scan_names(graph_fname, boot_fname):
-    # return a list of sample names that are also deme names
-    graph = demes.load(graph_fname)
-    deme_names = [deme.name for deme in graph.demes]
-    sample_names = [str(x) for x in np.load(boot_fname)["sample_names"]]
-    names = []
-    for name in sample_names:
-        if name in deme_names:
-            names.append(name)
-    return names
-
-
-"""
-Inference with the SFS
-"""
-
-
-def optimize_SFS(
-    data_fname,
+def fit_SFS(
     graph_fname,
-    params_fname,
-    out_fname,
-    u,
-    L,
-    names,
-    method="fmin",
-    max_iter=1_000,
-    verbosity=0,
+    options_fname,
+    data,
+    uL,
+    max_iter=1000,
+    method='NelderMead',
+    verbosity=1,
+    out_fname=None
 ):
     #
-    archive = np.load(data_fname)
-    sample_names = archive["sample_names"]
-    idx = utils.get_pairs(sample_names).index(tuple(names))
-    sfs = archive["sfs"][idx]
-    data = moments.Spectrum(sfs, pop_ids=names)
-    uL = u * L
-    fit = minf.optimize(
-        graph_fname,
-        params_fname,
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
+    pnames, p0, lower_bounds, upper_bounds = \
+        moments.Demes.Inference._set_up_params_and_bounds(options, builder)
+    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+
+    if verbosity > 0:
+        print_status(0, 0, pnames)
+
+    args = (
+        builder,
+        options,
         data,
-        maxiter=max_iter,
-        uL=uL,
-        output=out_fname,
-        verbose=verbosity,
-        method=method,
-        overwrite=True
+        uL,
+        lower_bounds,
+        upper_bounds,
+        constraints
     )
-    print(fit)
-    return 0
+    ret = optimize(
+        objective_SFS,
+        p0,
+        args,
+        builder=builder,
+        options=options,
+        method=method,
+        max_iter=max_iter,
+        out_fname=out_fname,
+        bounds=(lower_bounds, upper_bounds)
+    )
+    return ret
 
 
-"""
-Super-composite inference with H2 and the SFS
-"""
-
-
-def optimize_super_composite(
-    graph_fname,
-    params_fname,
-    H2_data,
-    SFS_data,
-    L,
-    max_iter=500,
-    opt_method='NelderMead',
-    u=1.35e-8,
+def objective_SFS(
+    p,
+    builder,
+    options,
+    data,
+    uL,
+    lower_bounds=None,
+    upper_bounds=None,
+    constraints=None,
     verbosity=1
 ):
     #
-    t0 = time.time()
+    global _n_func_calls
+    _n_func_calls += 1
 
-    sample_config = {sample: 2 for sample in SFS_data.pop_ids}
+    if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
+        return -_out_of_bounds
 
+    builder = moments.Demes.Inference._update_builder(builder, options, p)
+    graph = demes.Graph.fromdict(builder)
+    sampled_demes = data.pop_ids
+    sample_sizes = data.sample_sizes
+    end_times = {d.name: d.end_time for d in graph.demes}
+    sample_times = [end_times[d] for d in sampled_demes]
+    model = moments.Demes.SFS(
+        graph,
+        sampled_demes=sampled_demes,
+        sample_sizes=sample_sizes,
+        sample_times=sample_times,
+        u=uL
+    )
+    ll = moments.Inference.ll(model, data)
+
+    if verbosity > 0 and _n_func_calls % verbosity == 0:
+        print_status(_n_func_calls, ll, p)
+    return -ll
+
+
+def fit_composite(
+    graph_fname,
+    options_fname,
+    H2_data,
+    SFS_data,
+    L,
+    max_iter=1000,
+    method='NelderMead',
+    u=1.35e-8,
+    verbosity=1,
+    out_fname=None
+):
+    #
     if H2_data.has_H:
         H2_data = H2_data.remove_H()
 
-    builder = minf._get_demes_dict(graph_fname)
-    options = minf._get_params_dict(params_fname)
-    param_names, params_0, lower_bounds, upper_bounds = \
-        minf._set_up_params_and_bounds(options, builder)
-    constraints = minf._set_up_constraints(options, param_names)
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
+    pnames, p0, lower_bounds, upper_bounds = \
+        moments.Demes.Inference._set_up_params_and_bounds(options, builder)
+    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
 
     if verbosity > 0:
-        graph = demes.load(graph_fname)
-        H2_model = H2Spectrum.from_graph(
-            graph, H2_data.sample_ids, H2_data.r, u
-        )
-        SFS_model = moments.Demes.SFS(graph, samples=sample_config, u=u) * L
-        lik0 = compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model)
-        printout(0, 0, param_names, mode='s')
-        printout(0, lik0, params_0)
+        print_status(0, 0, pnames)
 
-    opt_args = (
+    args = (
         builder,
         options,
         H2_data,
         SFS_data,
-        sample_config,
         u,
         L,
         lower_bounds,
         upper_bounds,
         constraints,
-        verbosity,
+        verbosity
     )
-
-    if opt_method not in opt_methods:
-        raise ValueError(f'method: {opt_method} is not in {opt_methods}')
-    if opt_method == 'NelderMead':
-        opt = scipy.optimize.fmin(
-            objective_composite,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, iters, func_calls, warnflag = opt
-    elif opt_method == 'BFGS':
-        opt = scipy.optimize.fmin_bfgs(
-            objective_composite,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag = opt
-        iters = None
-    elif opt_method == 'LBFGSB':
-        opt = scipy.optimize.fmin_l_bfgs_b(
-            objective_composite,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            approx_grad=True
-        )
-        xopt, fopt, d = opt
-        func_calls = d['funcalls']
-        warnflag = d['warnflag']
-        iters = d['nit']
-    elif opt_method == 'Powell':
-        opt = scipy.optimize.fmin_powell(
-            objective_composite,
-            params_0,
-            args=opt_args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        xopt, fopt, direc, iters, func_calls, warnflag = opt
-    else:
-        return 1
-    builder = minf._update_builder(builder, options, xopt)
-    graph = demes.Graph.fromdict(builder)
-    global counter
-    counter = 0
-    end_printout(
-        t0,
-        fopt=fopt,
-        iters=iters,
-        func_calls=func_calls,
-        warnflag=warnflag
+    ret = optimize(
+        objective_composite,
+        p0,
+        args,
+        builder=builder,
+        options=options,
+        method=method,
+        max_iter=max_iter,
+        out_fname=out_fname,
+        bounds=(lower_bounds, upper_bounds)
     )
-    opt_info = dict(
-        method=opt_method,
-        fopt=-fopt,
-        iters=iters,
-        func_calls=func_calls,
-        warnflag=warnflag
-    )
-    return graph, opt_info
+    return ret
 
 
 def objective_composite(
-    params,
+    p,
     builder,
     options,
     H2_data,
     SFS_data,
-    sample_config,
     u,
     L,
-    lower_bound=None,
-    upper_bound=None,
+    lower_bounds=None,
+    upper_bounds=None,
     constraints=None,
     verbosity=1,
 ):
-    global counter
-    counter += 1
-    if lower_bound is not None and np.any(params < lower_bound):
-        ll = -out_of_bounds_val
-    elif upper_bound is not None and np.any(params > upper_bound):
-        ll = -out_of_bounds_val
-    elif constraints is not None and np.any(constraints(params) <= 0):
-        ll = -out_of_bounds_val
-    else:
-        builder = minf._update_builder(builder, options, params)
-        graph = demes.Graph.fromdict(builder)
-        H2_model = H2Spectrum.from_graph(
-            graph, H2_data.sample_ids, H2_data.r, u
-        )
-        SFS_model = moments.Demes.SFS(graph, samples=sample_config, u=u) * L
-        ll = compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model)
-    if verbosity > 0 and counter % verbosity == 0:
-        printout(counter, ll, params)
+    #
+    global _n_func_calls
+    _n_func_calls += 1
+
+    if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
+        return -_out_of_bounds
+
+    builder = moments.Demes.Inference._update_builder(builder, options, p)
+    graph = demes.Graph.fromdict(builder)
+    # get expected SFS
+    sampled_demes = SFS_data.pop_ids
+    sample_sizes = SFS_data.sample_sizes
+    end_times = {d.name: d.end_time for d in graph.demes}
+    sample_times = [end_times[d] for d in sampled_demes]
+    SFS_model = moments.Demes.SFS(
+        graph,
+        sampled_demes=sampled_demes,
+        sample_sizes=sample_sizes,
+        sample_times=sample_times,
+        u=u * L
+    )
+    H2_model = H2Spectrum.from_graph(graph, H2_data.sample_ids, H2_data.r, u)
+    ll = moments.Inference.ll(SFS_model, SFS_data) + get_ll(H2_model, H2_data)
+
+    if verbosity > 0 and _n_func_calls % verbosity == 0:
+        print_status(_n_func_calls, ll, p)
     return -ll
 
 
-def compute_ll_composite(H2_data, H2_model, SFS_data, SFS_model):
-    """"""
-    ll_H2 = compute_ll_H2(H2_model, H2_data)
-    ll_SFS = moments.Inference.ll(SFS_model, SFS_data)
-    ll = ll_H2 + ll_SFS
-    return ll
+def check_params(p, lower_bounds, upper_bounds, constraints):
+    #
+    ret = 0
+    if lower_bounds is not None and np.any(p < lower_bounds):
+        ret = 1
+    elif upper_bounds is not None and np.any(p > upper_bounds):
+        ret = 1
+    elif constraints is not None and np.any(constraints(p) <= 0):
+        ret = 1
+    return ret
 
 
-"""
-Graph permutation
-"""
+def optimize(
+    object_func,
+    p0,
+    args,
+    builder=None,
+    options=None,
+    method='NelderMead',
+    max_iter=1000,
+    out_fname=None,
+    bounds=None
+):
+    """
+    minimizes an objective function from initial parameters p0 using a tuple
+    of args.
 
+    when out_fname is provided, saves a graph at the specified path. otherwise
+    returns a demes graph object. optimization exit status and some other
+    information like the number of function calls are stored in a field called
+    'opt_info' in the output demes graph/file.
 
-def log_uniform(lower, upper):
-    # sample parameters log-uniformly
-    log_lower = np.log10(lower)
-    log_upper = np.log10(upper)
-    log_draws = np.random.uniform(log_lower, log_upper)
-    draws = 10 ** log_draws
-    return draws
+    :param object_func: function that returns a negative log likelihood given
+        p and args. data, a graph builder, options etc. are stored in args
+    :param p0: vector of initial parameters
+    :param args: tuple of arguments to object_func
+    :param builder:
+    :param options:
+    :param method: (optional, default 'NelderMead'; specifies a scipy fmin
+        function. options are 'NelderMead', 'Powell', 'BGFS', 'LBFGSB'
+    :type method: string
+    :param max_iter: (optional, default 1000) maximum number of scipy
+        function iterations
+    :param out_fname: (optional) name of output .yaml demes graph file
+    :param bounds: (optional) only used for the LBFGSB algorithm. a tuple of
+        arrays of the form (lower_bounds, upper_bounds)
+    :return:
+    """
+    methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
 
+    if method not in methods:
+        raise ValueError(f'method: {method} is not in {method}')
 
-def perturb_graph(graph_fname, param_fname, out_fname):
-    # uniformly and randomly pick parameter values
-    builder = minf._get_demes_dict(graph_fname)
-    param_dict = minf._get_params_dict(param_fname)
-    param_names, params0, lower_bounds, upper_bounds = \
-        minf._set_up_params_and_bounds(param_dict, builder)
-    if np.any(np.isinf(upper_bounds)):
-        raise ValueError("all upper bounds must be specified!")
-    constraints = minf._set_up_constraints(param_dict, param_names)
-    above1 = np.where(lower_bounds >= 1)[0]
-    below1 = np.where(lower_bounds < 1)[0]
-    n = len(params0)
-    satisfied = False
-    params = None
-    while not satisfied:
-        params = np.zeros(n)
-        params[above1] = np.random.uniform(
-            lower_bounds[above1], upper_bounds[above1]
+    if method == 'NelderMead':
+        opt = scipy.optimize.fmin(
+            object_func,
+            p0,
+            args=args,
+            maxiter=max_iter,
+            full_output=True
         )
-        params[below1] = log_uniform(
-            lower_bounds[below1], upper_bounds[below1]
+        p = opt[0]
+        fopt, n_iter, func_calls, flag = opt[1:5]
+
+    elif method == 'BFGS':
+        opt = scipy.optimize.fmin_bfgs(
+            object_func,
+            p0,
+            args=args,
+            maxiter=max_iter,
+            full_output=True
         )
-        print(params)
-        if constraints:
-            if np.all(constraints(params) > 0):
-                satisfied = True
-        else:
-            satisfied = True
-    builder = minf._update_builder(builder, param_dict, params)
+        p = opt[0]
+        fopt, _, __, func_calls, grad_calls, flag = opt[1:7]
+        # is it correct to equate these?
+        n_iter = grad_calls
+
+    elif method == 'LBFGSB':
+        lower, upper = bounds
+        _bounds = list(zip(lower, upper))
+        opt = scipy.optimize.fmin_l_bfgs_b(
+            object_func,
+            p0,
+            args=args,
+            maxiter=max_iter,
+            bounds=_bounds,
+            epsilon=1e-2,
+            pgtol=1e-5,
+            approx_grad=True
+        )
+        p, fopt, d = opt
+        n_iter = d['nit']
+        func_calls = d['funcalls']
+        flag = d['warnflag']
+
+    elif method == 'Powell':
+        opt = scipy.optimize.fmin_powell(
+            object_func,
+            p0,
+            args=args,
+            maxiter=max_iter,
+            full_output=True,
+        )
+        p = opt[0]
+        fopt, _, n_iter, func_calls, flag = opt[1:6]
+
+    else:
+        return 1
+
+    info = dict(
+        method=method,
+        objective_func=object_func.__name__,
+        fopt=-fopt,
+        max_iter=max_iter,
+        n_iter=n_iter,
+        func_calls=func_calls,
+        flag=flag
+    )
+    print('\n'.join([f'{key}\t{info[key]}' for key in info]))
+
+    if builder is None or options is None:
+        return p, info
+
+    builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
-    demes.dump(graph, out_fname)
+    graph.metadata['opt_info'] = info
+
+    if out_fname is not None:
+        demes.dump(graph, out_fname)
+    else:
+        return graph
 
 
-"""
-Parse parameters from large number of graphs
-"""
-
-
-def parse_graph_params(params_fname, graph_fnames, permissive=False):
-    # shape (n_files, n_parameters)
-    params = minf._get_params_dict(params_fname)
-    if permissive:
-        for i in range(len(params['parameters'])):
-            params['parameters'][i]['lower_bound'] *= 0.99
-            params['parameters'][i]['upper_bound'] *= 1.01
-    names = None
-    arr = []
-    for fname in graph_fnames:
-        g = minf._get_demes_dict(fname)
-        names, vals, _, __, = minf._set_up_params_and_bounds(params, g)
-        arr.append(vals)
-    return names, np.array(arr)
-
-
-# testing
-
-
-"""
-notes. what do i want
-
-
-data = H2Stats.from_file(fname, pop_ids=pop_ids)
-
-model = H2Stats.from_demes(graph, sampled_demes, r=r, u=u)
-how to handle r, approximation etc? (check how moments does this)
-_model = compute_bin_statistics(model, r_bins) or something
-
-ll = compute_ll(model, data)
-
-"""
-
-
-def get_ll(model, data):
-
-    return get_bin_ll(model, data).sum()
-
-
-def get_bin_ll(model, data):
-    # may need more work
-    bin_ll = np.zeros(data.n_bins)
-    for i in range(data.n_bins):
-        x = data.arr[i]
-        mu = model.arr[i]
-        inv_cov = data.inv_covs[i]
-        bin_ll[i] = - (x - mu) @ inv_cov @ (x - mu)
-    return bin_ll
-
-
-def get_bin_statistics():
+def print_status(n_calls, ll, p):
     #
-
-    return None
-
-
-"""
-Computing uncertainties, confidence intervals 
-"""
-
-
-def _bin_ll(x, mu, inv_cov):
-    #
-    return - (x - mu) @ inv_cov @ (x - mu)
+    t = utils.get_time()
+    _n = f'{n_calls:<6}'
+    _ll = f'{np.round(ll, 2):>10}'
+    fmt_p = []
+    for x in p:
+        if isinstance(x, str):
+            fmt_p.append(f'{x:>10}')
+        else:
+            if x > 1:
+                fmt_p.append(f'{np.round(x, 1):>10}')
+            else:
+                sci = np.format_float_scientific(x, 2, trim='k')
+                fmt_p.append(f'{sci:>10}')
+    _p = ''.join(fmt_p)
+    print(t, _n, _ll, _p)
 
 
 _inv_cov_cache = {}
 
 
-def _ll(xs, mus, covs):
+def log_gaussian(x, mu, inv_cov):
+
+    return -(x - mu) @ inv_cov @ (x - mu)
+
+
+def get_ll(model, data):
+    #
+    # implement checks
+    return get_bin_ll(model, data).sum()
+
+
+def get_bin_ll(model, data):
+
+    bin_ll = np.zeros(data.n_bins)
+    for i in range(data.n_bins):
+        x = data.arr[i]
+        mu = model.arr[i]
+        inv_cov = data.inv_covs[i]
+        bin_ll[i] = log_gaussian(x, mu, inv_cov)
+    return bin_ll
+
+
+def _get_ll(xs, mus, covs):
+    # operates on bare arrays
+    return _get_bin_ll(xs, mus, covs).sum()
+
+
+def _get_bin_ll(xs, mus, covs):
     #
     lens = np.array([len(xs), len(mus), len(covs)])
     if not np.all(lens == lens[0]):
@@ -539,13 +536,13 @@ def _ll(xs, mus, covs):
         else:
             inv_cov = np.linalg.inv(covs[i])
             _inv_cov_cache[i] = dict(cov=covs[i], inv=inv_cov)
-        bin_ll[i] = _bin_ll(xs[i], mus[i], inv_cov)
+        bin_ll[i] = log_gaussian(xs[i], mus[i], inv_cov)
     return bin_ll.sum()
 
 
-def ll(model, data):
-    # replace
-    return _ll(data.arr, model.arr, data.covs)
+"""
+confidence intervals
+"""
 
 
 def get_uncerts(
@@ -558,10 +555,10 @@ def get_uncerts(
     method='GIM'
 ):
     #
-    builder = minf._get_demes_dict(graph_fname)
-    options = minf._get_params_dict(options_fname)
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bound, upper_bound = \
-        minf._set_up_params_and_bounds(options, builder)
+        moments.Demes.Inference._set_up_params_and_bounds(options, builder)
 
     def model_func(p):
         # takes parameters and returns expected statistics
@@ -570,7 +567,7 @@ def get_uncerts(
         nonlocal data
         nonlocal u
 
-        builder = minf._update_builder(builder, options, p)
+        builder = moments.Demes.Inference._update_builder(builder, options, p)
         graph = demes.Graph.fromdict(builder)
         model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
         return model
@@ -628,7 +625,7 @@ def get_godambe_matrix(
             _ll_cache[key] = model
         return get_ll(model, data)
 
-    H = - get_hessian(func, p0, data, delta)
+    H = -get_hessian(func, p0, data, delta)
 
     if just_H:
         return H
@@ -712,42 +709,19 @@ def get_gradient(func, p0, delta, args):
     return gradient
 
 
-def get_hessian_element(ll_func, f0, p0, i, j, hs, data):
-    # approximate an element of the Hessian matrix of second derivatives
-    # using the method of central finite differences. From moments.LD.Godambe
-
-    _p = np.array(p0, copy=True, dtype=float)
-
-    if i == j:
-        _p[i] = p0[i] + hs[i]
-        fp = ll_func(_p, data)
-        _p[i] = p0[i] - hs[i]
-        fm = ll_func(_p, data)
-
-        element = (fp - 2 * f0 + fm) / hs[i] ** 2
-
-    else:
-        _p[i] = p0[i] + hs[i]
-        _p[j] = p0[j] + hs[j]
-        fpp = ll_func(_p, data)
-
-        _p[i] = p0[i] + hs[i]
-        _p[j] = p0[j] - hs[j]
-        fpm = ll_func(_p, data)
-
-        _p[i] = p0[i] - hs[i]
-        _p[j] = p0[j] + hs[j]
-        fmp = ll_func(_p, data)
-
-        _p[i] = p0[i] - hs[i]
-        _p[j] = p0[j] - hs[j]
-        fmm = ll_func(_p, data)
-
-        element = (fpp - fpm - fmp + fmm) / (4 * hs[i] * hs[j])
-
-    return element
+"""
+loading SFS from my .npz archives [subject to change]
+"""
 
 
-
-
-
+def read_SFS(fname, pop_ids):
+    #
+    file = np.load(fname)
+    samples = file['samples']
+    SFS = moments.Spectrum(
+        file['SFS'],
+        pop_ids=samples
+    )
+    not_sampled = [i for i in range(len(samples)) if samples[i] not in pop_ids]
+    _SFS = SFS.marginalize(not_sampled)
+    return _SFS, file['n_sites']

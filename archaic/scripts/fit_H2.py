@@ -56,7 +56,10 @@ def main():
     else:
         graph_fname = args.graph_fname
     for i, opt_method in enumerate(args.opt_method):
-        out_fname = f'{tag}_iter{i + 1}.yaml'
+        if len(args.opt_method) > 1:
+            out_fname = f'{tag}_iter{i + 1}.yaml'
+        else:
+            out_fname = f'{tag}.yaml'
         inference.optimize_H2(
             graph_fname,
             args.options_fname,

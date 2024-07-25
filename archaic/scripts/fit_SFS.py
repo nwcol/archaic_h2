@@ -1,13 +1,12 @@
 """
 
 """
-
-
 import argparse
 import demes
 import moments
 import numpy as np
-from archaic import inference
+
+from archaic import _inference as inference
 
 
 def get_args():
@@ -15,7 +14,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_fname', required=True)
     parser.add_argument('-g', '--graph_fname', required=True)
-    parser.add_argument('-p', '--params_fname', required=True)
+    parser.add_argument('-p', '--options_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
@@ -57,43 +56,22 @@ def main():
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.params_fname, graph_fname
+            args.graph_fname, args.params_fname, out_fname=graph_fname
         )
     else:
         graph_fname = args.graph_fname
     for i, opt_method in enumerate(args.opt_method):
         out_fname = f'{tag}_iter{i + 1}.yaml'
-        log_fname = f'log.txt'
-        log_file = open(log_fname, 'w')
-        _, __, LL = moments.Demes.Inference.optimize(
+        inference.fit_SFS(
             graph_fname,
-            args.params_fname,
+            args.options_fname,
             data,
-            maxiter=args.max_iter[i],
-            verbose=args.verbosity,
-            uL=uL,
-            log=False,
-            output=out_fname,
+            uL,
+            max_iter=args.max_iter[i],
             method=opt_method,
-            output_stream=log_file,
-            overwrite=True
+            verbosity=args.verbosity,
+            out_fname=out_fname
         )
-        log_file.close()
-        with open(log_file, 'r') as log_file:
-            log = log_file.readlines()
-        last_line = log[-1]
-        opt_info = dict(
-            method=opt_method,
-            fopt=-LL,
-            iters=None,
-            func_calls=None,
-            warnflag=None,
-            inferred_with='SFS'
-        )
-        graph = demes.load(out_fname)
-        graph.metadata['opt_info'] = opt_info
-        demes.dump(graph, out_fname)
-        graph_fname = out_fname
     return 0
 
 

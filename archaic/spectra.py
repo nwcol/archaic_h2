@@ -233,24 +233,13 @@ class H2Spectrum:
         return self.data
 
 
-class H2stats(list):
+class H2stats:
     """
     """
 
-    def __new__(cls, H, covs=None, pop_ids=None, num_pops=None):
-        """
-        """
-        h2_list = super(H2stats, cls).__new__(
-            cls, data, pop_ids=None, num_pops=None
-        )
-        return h2_list
-
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], list):
-            list.__init__(self, args[0])
-        else:
-            list.__init__(self, args)
-        self.__dict__.update(kwargs)
+    def __init__(self, ):
+        #
+        self.H = H
 
     def from_file(self):
 
@@ -260,7 +249,14 @@ class H2stats(list):
 
         return None
 
-    def from_demes(self):
+    def from_demes(
+        self,
+        graph,
+        sample_demes,
+        u=None,
+        r=None,
+        sample_sizes=None,
+    ):
 
         return None
 
