@@ -1,9 +1,8 @@
 """
-fits models using H2, H2+H, SFS, and composite methods
+fits models to simulated data using H2, H2+H, SFS, and composite methods
 """
 import argparse
 import demes
-import moments
 import msprime
 import numpy as np
 
@@ -14,6 +13,9 @@ from archaic.spectra import H2Spectrum
 
 data_dir = 'data'
 graph_dir = 'graphs'
+
+needs_H2 = ['H2', 'H2H', 'composite']
+needs_SFS = ['SFS', 'composite']
 
 
 def get_args():
@@ -32,7 +34,9 @@ def get_args():
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--n_reps', type=int, default=100)
     parser.add_argument('--return_best', type=int, default=1)
-    parser.add_argument('--fit', nargs='*', default=['H2', 'H2H', 'SFS', 'comp'])
+    parser.add_argument(
+        '--fit', nargs='*', default=['H2', 'H2H', 'SFS', 'composite']
+    )
     parser.add_argument('--cluster_id', default='0')
     parser.add_argument('--process_id', default='0')
     return parser.parse_args()
@@ -111,11 +115,16 @@ def get_best_fit_graphs(graph_fnames, percentile):
 def main():
     #
     args = get_args()
+
+    # make sure we have fit arguments
+    if len(args.fit) == 0:
+        raise ValueError('you must provide at least one fit argument!')
+
     graph = demes.load(args.graph_fname)
     if args.samples:
-        samples = args.samples
+        sample_ids = args.samples
     else:
-        samples = [d.name for d in graph.demes if d.end_time == 0]
+        sample_ids = [d.name for d in graph.demes if d.end_time == 0]
     tag = f'{args.out_prefix}_{args.cluster_id}_{args.process_id}'
 
     mask_fname = write_mask_file(args.L)
@@ -132,33 +141,57 @@ def main():
         coalsim(
             args.graph_fname,
             vcf_fname,
-            samples,
+            sample_ids,
             args.L,
             r=args.r,
             u=args.u
         )
-    H2_dicts = []
-    for i in range(args.n_windows):
-        H2_dicts.append(
-            parse_H2(
-                mask_fname,
-                vcf_fnames[i],
-                map_fname,
-                windows=windows,
-                bounds=bounds,
-                r_bins=r_bins
-            )
-        )
+
+    # declare these here for neatness
     H2_data_fname = f'{tag}_H2.npz'
-    H2_stats = bootstrap_H2(H2_dicts)
-    np.savez(H2_data_fname, **H2_stats)
     SFS_data_fname = f'{tag}_SFS.npz'
-    parse_SFS(
-        [mask_fname] * args.n_windows,
-        vcf_fnames,
-        SFS_data_fname,
-        ref_as_ancestral=True
-    )
+
+    # check whether we need H2
+    want_H2 = False
+    for stat in args.fit:
+        if stat in needs_H2:
+            want_H2 = True
+
+    if want_H2:
+        H2_dicts = []
+        for i in range(args.n_windows):
+            H2_dicts.append(
+                parse_H2(
+                    mask_fname,
+                    vcf_fnames[i],
+                    map_fname,
+                    windows=windows,
+                    bounds=bounds,
+                    r_bins=r_bins
+                )
+            )
+        H2_stats = bootstrap_H2(H2_dicts)
+        np.savez(H2_data_fname, **H2_stats)
+        H2_data = H2Spectrum.from_bootstrap_file(H2_data_fname, graph=graph)
+    else:
+        H2_data = None
+
+    # check whether SFS is needed
+    want_SFS = False
+    for stat in args.fit:
+        if stat in needs_SFS:
+            want_SFS = True
+
+    if want_SFS:
+        parse_SFS(
+            [mask_fname] * args.n_windows,
+            vcf_fnames,
+            SFS_data_fname,
+            ref_as_ancestral=True
+        )
+        SFS_data, L = inference.read_SFS(SFS_data_fname, sample_ids)
+    else:
+        SFS_data = None
 
     # perturb the initial graph to get starting points
     inits = []
@@ -169,74 +202,74 @@ def main():
         )
         inits.append(fname)
 
-    # load statistics
-    H2_data = H2Spectrum.from_bootstrap_file(H2_data_fname, graph=graph)
-    SFS_data, L = inference.read_SFS(SFS_data_fname, H2_data.sample_ids)
-
-    fits = dict(H2=[], H2H=[], SFS=[], comp=[])
+    fits = {stat: [] for stat in args.fit}
     for i in range(args.n_reps):
-        H2_fname = f'{graph_dir}/{tag}_H2_rep{i}.yaml'
-        inference.fit_H2(
-            inits[i],
-            args.options_fname,
-            H2_data,
-            max_iter=args.max_iter,
-            method=args.method,
-            u=args.u,
-            verbosity=args.verbosity,
-            use_H=False,
-            out_fname=H2_fname
-        )
-        fits['H2'].append(H2_fname)
+        if 'H2' in fits:
+            H2_fname = f'{graph_dir}/{tag}_H2_rep{i}.yaml'
+            inference.fit_H2(
+                inits[i],
+                args.options_fname,
+                H2_data,
+                max_iter=args.max_iter,
+                method=args.method,
+                u=args.u,
+                verbosity=args.verbosity,
+                use_H=False,
+                out_fname=H2_fname
+            )
+            fits['H2'].append(H2_fname)
 
-        H2H_fname = f'{graph_dir}/{tag}_H2H_rep{i}.yaml'
-        inference.fit_H2(
-            inits[i],
-            args.options_fname,
-            H2_data,
-            max_iter=args.max_iter,
-            method=args.method,
-            u=args.u,
-            verbosity=args.verbosity,
-            use_H=True,
-            out_fname=H2H_fname
-        )
-        fits['H2H'].append(H2H_fname)
+        if 'H2H' in fits:
+            H2H_fname = f'{graph_dir}/{tag}_H2H_rep{i}.yaml'
+            inference.fit_H2(
+                inits[i],
+                args.options_fname,
+                H2_data,
+                max_iter=args.max_iter,
+                method=args.method,
+                u=args.u,
+                verbosity=args.verbosity,
+                use_H=True,
+                out_fname=H2H_fname
+            )
+            fits['H2H'].append(H2H_fname)
 
-        SFS_fname = f'{graph_dir}/{tag}_SFS_rep{i}.yaml'
-        inference.fit_SFS(
-            inits[i],
-            args.options_fname,
-            SFS_data,
-            args.u * L,
-            max_iter=args.max_iter,
-            method=args.method,
-            verbosity=args.verbosity,
-            out_fname=SFS_fname
-        )
-        fits['SFS'].append(SFS_fname)
-        
-        comp_fname = f'{graph_dir}/{tag}_comp_rep{i}.yaml'
-        inference.fit_composite(
-            inits[i],
-            args.options_fname,
-            H2_data,
-            SFS_data,
-            L,
-            max_iter=args.max_iter,
-            method=args.method,
-            u=args.u,
-            verbosity=args.verbosity,
-            out_fname=comp_fname
-        )
-        fits['comp'].append(comp_fname)
+        if 'SFS' in fits:
+            SFS_fname = f'{graph_dir}/{tag}_SFS_rep{i}.yaml'
+            inference.fit_SFS(
+                inits[i],
+                args.options_fname,
+                SFS_data,
+                args.u * L,
+                max_iter=args.max_iter,
+                method=args.method,
+                verbosity=args.verbosity,
+                out_fname=SFS_fname
+            )
+            fits['SFS'].append(SFS_fname)
+
+        if 'composite' in fits:
+            composite_fname = f'{graph_dir}/{tag}_composite_rep{i}.yaml'
+            inference.fit_composite(
+                inits[i],
+                args.options_fname,
+                H2_data,
+                SFS_data,
+                max_iter=args.max_iter,
+                method=args.method,
+                u=args.u,
+                L=L,
+                verbosity=args.verbosity,
+                out_fname=composite_fname
+            )
+            fits['composite'].append(composite_fname)
 
     percentile = 1 - args.return_best / args.n_reps
     print(f'returning {percentile * 100}% highest-ll graphs')
 
-    for x in fits:
-        _, best_fits = get_best_fit_graphs(fits[x], percentile)
-        print(x, best_fits)
+    for stat in fits:
+        _, best_fits = get_best_fit_graphs(fits[stat], percentile)
+        print(stat, best_fits)
         for fname in best_fits:
             base_name = fname.split('/')[-1]
             g = demes.load(fname)

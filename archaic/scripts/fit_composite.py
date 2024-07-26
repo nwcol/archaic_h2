@@ -19,8 +19,8 @@ def get_args():
     parser.add_argument('-p', '--params_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
-    parser.add_argument('-max', '--max_iter', nargs='*', type=int, default=[200])
-    parser.add_argument('-opt', '--opt_methods', nargs='*', default=['NelderMead'])
+    parser.add_argument('--max_iter', nargs='*', type=int, default=[200])
+    parser.add_argument('--method', nargs='*', default=['NelderMead'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--permute_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
@@ -42,7 +42,7 @@ def get_tag(prefix, cluster, process):
 def main():
     #
     args = get_args()
-    if len(args.opt_methods) != len(args.max_iter):
+    if len(args.method) != len(args.max_iter):
         raise ValueError('')
     tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.permute_graph:
@@ -52,7 +52,9 @@ def main():
         )
     else:
         graph_fname = args.graph_fname
+
     # read SFS data
+    ### replace
     SFS_file = np.load(args.SFS_fname)
     pop_ids = list(SFS_file['samples'])
     data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
@@ -65,27 +67,32 @@ def main():
             marg_idx.append(i)
     SFS_data = data.marginalize(marg_idx)
     L = SFS_file['n_sites']
+
     # read H2 data
     H2_data = H2Spectrum.from_bootstrap_file(
         args.H2_fname, graph=demes.load(args.graph_fname)
     )
-    print(utils.get_time(), f'running inference for demes {H2_data.sample_ids}')
-    for i, opt_method in enumerate(args.opt_methods):
-        graph, opt_info = inference.optimize_super_composite(
+    print(
+        utils.get_time(),
+        f'running inference for demes {H2_data.sample_ids}'
+    )
+    for i, method in enumerate(args.method):
+        if len(args.method) > 1:
+            out_fname = f'{tag}_iter{i + 1}.yaml'
+        else:
+            out_fname = f'{tag}.yaml'
+        inference.fit_composite(
             graph_fname,
             args.params_fname,
             H2_data,
             SFS_data,
-            L,
-            args.max_iter[i],
-            verbosity=args.verbosity,
+            L=L,
             u=args.u,
-            opt_method=opt_method
+            max_iter=args.max_iter[i],
+            verbosity=args.verbosity,
+            method=method,
+            out_fname=out_fname
         )
-        graph.metadata['opt_info'] = opt_info
-        out_fname = f'{tag}_iter{i + 1}.yaml'
-        demes.dump(graph, out_fname)
-        graph_fname = out_fname
     return 0
 
 

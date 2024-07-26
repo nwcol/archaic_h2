@@ -98,12 +98,15 @@ def fit_H2(
     data,
     max_iter=1000,
     method='NelderMead',
-    u=1.35e-8,
+    u=None,
     verbosity=1,
     use_H=True,
     out_fname=None
 ):
     #
+    if u is None:
+        raise ValueError('you must provide a u argument!')
+
     if not use_H and data.has_H:
         data = data.remove_H()
 
@@ -179,6 +182,9 @@ def fit_SFS(
     out_fname=None
 ):
     #
+    if uL is None:
+        raise ValueError('you must provide an uL argument')
+
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
@@ -254,14 +260,19 @@ def fit_composite(
     options_fname,
     H2_data,
     SFS_data,
-    L,
     max_iter=1000,
     method='NelderMead',
+    L=None,
     u=1.35e-8,
     verbosity=1,
     out_fname=None
 ):
     #
+    if L is None:
+        raise ValueError('you must provide an L argument')
+    if u is None:
+        raise ValueError('you must provide an u argument')
+
     if H2_data.has_H:
         H2_data = H2_data.remove_H()
 
@@ -725,3 +736,21 @@ def read_SFS(fname, pop_ids):
     not_sampled = [i for i in range(len(samples)) if samples[i] not in pop_ids]
     _SFS = SFS.marginalize(not_sampled)
     return _SFS, file['n_sites']
+
+
+"""
+utilities for remote inference
+"""
+
+
+def get_tag(prefix, cluster, process):
+    # get a string naming an output .yaml file
+    c = p = ''
+    if len(cluster) > 0:
+        c = f'_{cluster}'
+    if len(process) > 0:
+        p = f'_{process}'
+    tag = f'{prefix}{c}{p}'
+    return tag
+
+

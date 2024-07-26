@@ -6,7 +6,7 @@ import demes
 import moments
 import numpy as np
 
-from archaic import _inference as inference
+from archaic import inference as inference
 
 
 def get_args():
@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
-    parser.add_argument('--opt_method', nargs='*', default=['powell'])
+    parser.add_argument('--method', nargs='*', default=['powell'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
@@ -26,20 +26,11 @@ def get_args():
     return parser.parse_args()
 
 
-def get_tag(prefix, cluster, process):
-    # get a string naming an output .yaml file
-    c = p = ''
-    if len(cluster) > 0:
-        c = f'_{cluster}'
-    if len(process) > 0:
-        p = f'_{process}'
-    tag = f'{prefix}{c}{p}'
-    return tag
-
-
 def main():
     #
     args = get_args()
+
+    ### replace
     SFS_file = np.load(args.data_fname)
     pop_ids = list(SFS_file['samples'])
     data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
@@ -52,7 +43,9 @@ def main():
             marg_idx.append(i)
     data = data.marginalize(marg_idx)
     uL = SFS_file['n_sites'] * args.u
-    tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
+    ###
+
+    tag = inference.get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
@@ -60,15 +53,19 @@ def main():
         )
     else:
         graph_fname = args.graph_fname
-    for i, opt_method in enumerate(args.opt_method):
-        out_fname = f'{tag}_iter{i + 1}.yaml'
+
+    for i, method in enumerate(args.method):
+        if len(args.method) > 1:
+            out_fname = f'{tag}_iter{i + 1}.yaml'
+        else:
+            out_fname = f'{tag}.yaml'
         inference.fit_SFS(
             graph_fname,
             args.options_fname,
             data,
             uL,
             max_iter=args.max_iter[i],
-            method=opt_method,
+            method=method,
             verbosity=args.verbosity,
             out_fname=out_fname
         )

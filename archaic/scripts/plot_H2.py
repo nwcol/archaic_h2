@@ -87,7 +87,7 @@ def main():
             graph, _sample_ids, r, args.u, r_bins=r_bins
         )
         if len(args.data_fnames) > 0:
-            ll = inference.compute_ll_H2(spectrum, spectra[0])
+            ll = inference.get_ll(spectrum, spectra[0])
             ll_label = f', ll={np.round(ll, 0)}'
         else:
             ll_label = ''
