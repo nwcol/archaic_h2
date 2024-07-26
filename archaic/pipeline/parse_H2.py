@@ -1,10 +1,9 @@
 """
 
 """
-
-
 import argparse
 import numpy as np
+
 from archaic import parsing
 
 

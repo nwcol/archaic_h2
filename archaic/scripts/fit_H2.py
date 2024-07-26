@@ -36,12 +36,11 @@ def main():
 
     if len(args.method) != len(args.max_iter):
         raise ValueError('')
-
     tag = inference.get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.options_fname, graph_fname
+            args.graph_fname, args.options_fname, out_fname=graph_fname
         )
     else:
         graph_fname = args.graph_fname

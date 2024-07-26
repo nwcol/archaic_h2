@@ -58,6 +58,26 @@ def get_r_map(map_fname, positions, map_col="Map(cM)"):
     return vals
 
 
+def parse_map_file_header(map_fname):
+    # for hapmap format files
+    if ".gz" in map_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    file = open_fxn(map_fname, "rb")
+    header = file.readline().decode()
+    file.close()
+    header_list = header.split('\t')
+    header_dict = dict(zip(header_list, range(len(header_list))))
+    for key in header_dict:
+        if key.isnumeric():
+            raise ValueError(
+                'numeric characters in zeroth row; '
+                'map file may not have a header'
+            )
+    return header_dict
+
+
 """
 Haldane's map function
 """

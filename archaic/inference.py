@@ -15,7 +15,7 @@ handling graphs and options/parameters
 """
 
 
-def perturb_graph(graph_fname, param_fname, out_fname=None):
+def perturb_graph(graph_fname, options_fname, out_fname=None):
     # uniformly and randomly pick parameter values
 
     def log_uniform(lower, upper):
@@ -27,7 +27,7 @@ def perturb_graph(graph_fname, param_fname, out_fname=None):
         return draws
 
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
-    options = moments.Demes.Inference._get_params_dict(param_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
 
@@ -37,7 +37,6 @@ def perturb_graph(graph_fname, param_fname, out_fname=None):
     above1 = np.where(lower_bounds >= 1)[0]
     below1 = np.where(lower_bounds < 1)[0]
     satisfied = False
-    params = None
     p = None
 
     while not satisfied:
@@ -48,10 +47,9 @@ def perturb_graph(graph_fname, param_fname, out_fname=None):
         p[below1] = log_uniform(
             lower_bounds[below1], upper_bounds[below1]
         )
-        print(params)
 
         if constraints:
-            if np.all(constraints(params) > 0):
+            if np.all(constraints(p) > 0):
                 satisfied = True
         else:
             satisfied = True
@@ -64,10 +62,10 @@ def perturb_graph(graph_fname, param_fname, out_fname=None):
         return out_fname
 
 
-def get_params(params_fname, graph_fnames, permissive=False):
+def get_params(graph_fnames, options_fname, permissive=False):
     # load a bunch of parameters from many graph files at once
     # shape (n_files, n_parameters)
-    params = moments.Demes.Inference._get_params_dict(params_fname)
+    params = moments.Demes.Inference._get_params_dict(options_fname)
     if permissive:
         for i in range(len(params['parameters'])):
             params['parameters'][i]['lower_bound'] *= 0.99
