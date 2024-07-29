@@ -62,7 +62,7 @@ def perturb_graph(graph_fname, options_fname, out_fname=None):
         return out_fname
 
 
-def get_params(graph_fnames, options_fname, permissive=False):
+def get_param_arr(graph_fnames, options_fname, permissive=False):
     # load a bunch of parameters from many graph files at once
     # shape (n_files, n_parameters)
     params = moments.Demes.Inference._get_params_dict(options_fname)
@@ -102,9 +102,6 @@ def fit_H2(
     out_fname=None
 ):
     #
-    if u is None:
-        raise ValueError('you must provide a u argument!')
-
     if not use_H and data.has_H:
         data = data.remove_H()
 
@@ -113,6 +110,15 @@ def fit_H2(
     pnames, p0, lower_bounds, upper_bounds = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+
+    if u is None:
+        fit_u = True
+        pnames = np.append(pnames, 'u')
+        p0 = np.append(p0, 1.2e-8)
+        lower_bounds = np.append(lower_bounds, 1e-8)
+        upper_bounds = np.append(upper_bounds, 2e-8)
+    else:
+        fit_u = False
 
     if verbosity > 0:
         print_status(0, 0, pnames)
@@ -125,7 +131,8 @@ def fit_H2(
         lower_bounds,
         upper_bounds,
         constraints,
-        verbosity
+        verbosity,
+        fit_u
     )
     ret = optimize(
         objective_H2,
@@ -136,7 +143,8 @@ def fit_H2(
         method=method,
         max_iter=max_iter,
         out_fname=out_fname,
-        bounds=(lower_bounds, upper_bounds)
+        bounds=(lower_bounds, upper_bounds),
+        fit_u=fit_u
     )
     return ret
 
@@ -150,11 +158,15 @@ def objective_H2(
     lower_bounds=None,
     upper_bounds=None,
     constraints=None,
-    verbosity=1
+    verbosity=1,
+    fit_u=False
 ):
     #
     global _n_func_calls
     _n_func_calls += 1
+
+    if fit_u:
+        u = p[-1]
 
     if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
         return -_out_of_bounds
@@ -372,7 +384,8 @@ def optimize(
     method='NelderMead',
     max_iter=1000,
     out_fname=None,
-    bounds=None
+    bounds=None,
+    fit_u=False
 ):
     """
     minimizes an objective function from initial parameters p0 using a tuple
@@ -469,7 +482,11 @@ def optimize(
         func_calls=func_calls,
         flag=flag
     )
-    print('\n'.join([f'{key}\t{info[key]}' for key in info]))
+
+    if fit_u:
+        info['u'] = p[-1]
+
+    print('\n'.join([f'{key}: {info[key]}' for key in info]))
 
     if builder is None or options is None:
         return p, info

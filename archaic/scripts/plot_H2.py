@@ -96,8 +96,11 @@ def main():
         labels.append(f'{basename}{ll_label}')
         n_graphs += 1
 
-    colors = list(cm.terrain(np.linspace(0, 0.85, n_datas))) + \
-             list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
+    data_colors = ['b', 'orange', 'g', 'r', 'purple', 'brown', 'm', 'g']
+
+    colors = data_colors[:n_datas] + list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
+    #list(cm.brg(np.linspace(0, 0.85, n_datas))) + data_colors[n])
+    #        list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
 
     fig, axs = plotting.plot_H2_spectra(
         *spectra,

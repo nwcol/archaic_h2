@@ -78,6 +78,18 @@ def parse_map_file_header(map_fname):
     return header_dict
 
 
+def write_map_file(fname, positions, map_positions):
+    #
+    if ".gz" in fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(fname, "w") as file:
+        file.write('Position(bp)\tRate(cM/Mb)\tMap(cM)\n')
+        for i in range(len(positions)):
+            file.write(f'{int(positions[i])}\t0\t{map_positions[i]}\n')
+
+
 """
 Haldane's map function
 """

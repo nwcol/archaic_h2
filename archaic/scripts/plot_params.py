@@ -18,6 +18,7 @@ def get_args():
     parser.add_argument("-g1", "--g1", nargs='*', default=[])
     parser.add_argument("-g2", "--g2", nargs='*', default=[])
     parser.add_argument("-g3", "--g3", nargs='*', default=[])
+    parser.add_argument("-g4", "--g4", nargs='*', default=[])
     parser.add_argument('--labels', nargs='*', default=[])
     parser.add_argument('--title', default=None)
     parser.add_argument('--marker_size', type=int, default=8)
@@ -49,10 +50,10 @@ def plot():
         )
     bounds = np.array([lower, upper]).T
     arrs = []
-    for fnames in [args.g1, args.g2, args.g3]:
+    for fnames in [args.g1, args.g2, args.g3, args.g4]:
         if len(fnames) > 0:
-            _, arr = inference.parse_graph_params(
-                args.params_fname, fnames, permissive=True
+            _, arr = inference.get_param_arr(
+                fnames, args.params_fname, permissive=True
             )
             arrs.append(arr)
     labels = args.labels

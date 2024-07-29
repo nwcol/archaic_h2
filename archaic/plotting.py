@@ -52,12 +52,10 @@ def plot_H2_spectra(
     spectrum = args[0]
     n_axs = spectrum.n
     if plot_H:
-        if len(args[0].sample_ids) > 1:
+        if len(spectrum.sample_ids) > 1:
             n_axs += 2
-            has_H_xy = True
         else:
             n_axs += 1
-            has_H_xy = False
     n_rows = int(np.ceil(n_axs / n_cols))
     if n_axs < n_cols:
         n_cols = n_axs
@@ -76,20 +74,17 @@ def plot_H2_spectra(
     for i, spectrum in enumerate(args):
         plot_H2_spectrum(
             spectrum, color=colors[i], axs=axs, ci=ci, ylim_0=ylim_0,
-            log_scale=log_scale
+            log_scale=log_scale, plot_H=plot_H
         )
-    if plot_H:
-        # required offset
-        ax1 = axs[spectrum.n]
-        if has_H_xy:
-            ax2 = axs[spectrum.n + 1]
+    # adjust ylim etc
+    for ax in axs:
+        ax.grid(alpha=0.2)
+        if log_scale:
+            ax.set_yscale('log')
         else:
-            ax2 = None
-        for i, spectrum in enumerate(args):
-            plot_H_on_H2_spectrum(
-                spectrum, ax1, ax2, color=colors[i], ci=ci, ylim_0=ylim_0,
-                log_scale=log_scale
-            )
+            if ylim_0:
+                ax.set_ylim(0, )
+
     # write the legend
     if labels is not None:
         y = 1 / n_rows * 0.35
@@ -115,14 +110,24 @@ def plot_H2_spectrum(
     n_cols=5,
     ci=1.96,
     ylim_0=True,
-    log_scale=False
+    log_scale=False,
+    plot_H=True
 ):
     #
     if color is None:
         color = 'black'
     if axs is None:
+
         # if no axs was provided as an argument, create a new one
         n_axs = spectrum.n
+
+        # we need extra axes if we want to plot H
+        if plot_H:
+            if len(spectrum.sample_ids) > 1:
+                n_axs += 2
+            else:
+                n_axs += 1
+
         n_rows = int(np.ceil(n_axs / n_cols))
         fig, axs = plt.subplots(
             n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2),
@@ -131,6 +136,16 @@ def plot_H2_spectrum(
         axs = axs.flat
         for ax in axs[n_axs:]:
             ax.remove()
+
+        for ax in axs:
+            ax.grid(alpha=0.2)
+            if log_scale:
+                ax.set_yscale('log')
+            else:
+                if ylim_0:
+                    ax.set_ylim(0, )
+
+    # plot H2
     x = spectrum.r_bins[:-1] + np.diff(spectrum.r_bins)
     for i, _id in enumerate(spectrum.ids):
         if spectrum.covs is not None:
@@ -146,10 +161,19 @@ def plot_H2_spectrum(
             data = spectrum.data[:-1, i]
         else:
             data = spectrum.data[:, i]
-        plot_single_H2(
-            ax, x, data, color, y_err=y_err, title=_id, ylim_0=ylim_0,
-            log_scale=log_scale
-        )
+        plot_single_H2(ax, x, data, color, y_err=y_err, title=_id)
+
+    # plot H
+    if plot_H:
+        if spectrum.has_H:
+            ax1 = axs[spectrum.n]
+            if len(spectrum.sample_ids) > 1:
+                ax2 = axs[spectrum.n + 1]
+            else:
+                ax2 = None
+            plot_H_on_H2_spectrum(
+                spectrum, ax1, ax2, color=color, ci=ci
+            )
     return 0
 
 
@@ -159,9 +183,7 @@ def plot_single_H2(
     data,
     color,
     y_err=None,
-    title=None,
-    ylim_0=True,
-    log_scale=False
+    title=None
 ):
     #
     if y_err is None:
@@ -172,11 +194,6 @@ def plot_single_H2(
         ax.errorbar(x, data, yerr=y_err, color=color, fmt=".", capsize=0)
     ax.set_xscale('log')
     ax.grid(alpha=0.2)
-    if log_scale:
-        ax.set_yscale('log')
-    else:
-        if ylim_0:
-            ax.set_ylim(0, )
     if title is not None:
         title = parse_label(title)
         ax.set_title(f'$H_2$ {title}')
@@ -190,9 +207,7 @@ def plot_H_on_H2_spectrum(
     ax1,
     ax2,
     color='black',
-    ci=1.96,
-    ylim_0=True,
-    log_scale=False
+    ci=1.96
 ):
     #
     ids = spectrum.ids
@@ -208,7 +223,6 @@ def plot_H_on_H2_spectrum(
     labels = [parse_label(x) for x in ids[one_sample]]
     ax1.set_xticks(x1, labels, fontsize=8, rotation=90)
     ax1.set_title('$H$')
-    axs = [ax1]
 
     if ax2 is not None:
         two_sample = np.where(ids[:, 0] != ids[:, 1])[0]
@@ -223,15 +237,7 @@ def plot_H_on_H2_spectrum(
         _labels = [parse_label(x) for x in ids[two_sample]]
         ax2.set_xticks(x2, _labels, fontsize=8, rotation=90)
         ax2.set_title('$H_{xy}$')
-        axs.append(ax2)
 
-    for ax in axs:
-        ax.grid(alpha=0.2)
-        if log_scale:
-            ax.set_yscale('log')
-        else:
-            if ylim_0:
-                ax.set_ylim(0, )
     return 0
 
 
@@ -281,7 +287,8 @@ def plot_parameters(
     *args,
     n_cols=5,
     marker_size=2,
-    title=None
+    title=None,
+    wide_bounds=True
 ):
     # plot parameter clouds
     # truths is a vector of underlying true parameters
@@ -295,14 +302,15 @@ def plot_parameters(
     axs = axs.flat
     for ax in axs[n_axs:]:
         ax.remove()
-    colors = ['blue', 'red', 'green']
+    colors = ['b', 'orange', 'g', 'r']
     idxs = utils.get_pair_idxs(n)
     for k, (i, j) in enumerate(idxs):
         ax = axs[k]
         ax.set_xlabel(names[i])
         ax.set_ylabel(names[j])
-        ax.set_xlim(bounds[i])
-        ax.set_ylim(bounds[j])
+        if wide_bounds:
+            ax.set_xlim(bounds[i])
+            ax.set_ylim(bounds[j])
         for z, arr in enumerate(args):
             ax.scatter(
                 arr[:, i],
@@ -357,7 +365,7 @@ def box_plot_parameters(
     axs = axs.flat
     for ax in axs[n_axs:]:
         ax.remove()
-    colors = ['blue', 'red', 'green']
+    colors = ['b', 'orange', 'g', 'r']
     for i, ax in enumerate(axs):
         ax.set_title(pnames[i])
         ax.set_ylabel(pnames[i])
