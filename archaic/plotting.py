@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.ticker as mticker
 from matplotlib.lines import Line2D
+import moments
 import numpy as np
 import scipy
 
@@ -408,6 +409,7 @@ plotting the SFS [using functions from moments]
 
 
 def plot_SFS():
+    #
 
 
     return 0

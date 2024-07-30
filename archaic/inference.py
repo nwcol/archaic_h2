@@ -80,6 +80,11 @@ def get_param_arr(graph_fnames, options_fname, permissive=False):
     return names, np.array(arr)
 
 
+"""
+custom version. copied from moments
+"""
+
+
 _out_of_bounds = -1e10
 _n_func_calls = 0
 _n_iters = 0
@@ -112,6 +117,7 @@ def fit_H2(
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
 
     if u is None:
+        print(f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
         p0 = np.append(p0, 1.2e-8)
@@ -173,6 +179,7 @@ def objective_H2(
 
     builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
+    print(data.sample_ids)
     model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
     ll = get_ll(model, data)
 

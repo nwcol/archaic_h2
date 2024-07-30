@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--max_iter', nargs='*', type=int, default=[200])
     parser.add_argument('--method', nargs='*', default=['NelderMead'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
-    parser.add_argument('--permute_graph', type=int, default=0)
+    parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
     parser.add_argument('--process_id', default='')
     return parser.parse_args()
@@ -45,33 +45,22 @@ def main():
     if len(args.method) != len(args.max_iter):
         raise ValueError('')
     tag = get_tag(args.out_prefix, args.cluster_id, args.process_id)
-    if args.permute_graph:
+    if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.params_fname, graph_fname
+            args.graph_fname, args.params_fname, out_fname=graph_fname
         )
     else:
         graph_fname = args.graph_fname
-
-    # read SFS data
-    ### replace
-    SFS_file = np.load(args.SFS_fname)
-    pop_ids = list(SFS_file['samples'])
-    data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
-    deme_names = [d.name for d in demes.load(args.graph_fname).demes]
-    marg_idx = []
-    for i, pop_id in enumerate(pop_ids):
-        if pop_id in deme_names:
-            pass
-        else:
-            marg_idx.append(i)
-    SFS_data = data.marginalize(marg_idx)
-    L = SFS_file['n_sites']
 
     # read H2 data
     H2_data = H2Spectrum.from_bootstrap_file(
         args.H2_fname, graph=demes.load(args.graph_fname)
     )
+    pop_ids = H2_data.sample_ids
+    # read SFS data
+    SFS_data, L = inference.read_SFS(args.SFS_fname, pop_ids)
+
     print(
         utils.get_time(),
         f'running inference for demes {H2_data.sample_ids}'

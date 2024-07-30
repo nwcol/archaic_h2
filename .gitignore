@@ -6,7 +6,6 @@ __pycache__
 *.vcf.gz
 *.tar
 *.bed
-*.npz
 *.csi
 *.xlsx
 *.bz2
@@ -20,6 +19,7 @@ build/
 data/
 raw/
 stats/
+statistics/
 simulations/
 validation/
 models/

@@ -49,7 +49,7 @@ def main():
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
         inference.perturb_graph(
-            args.graph_fname, args.params_fname, out_fname=graph_fname
+            args.graph_fname, args.options_fname, out_fname=graph_fname
         )
     else:
         graph_fname = args.graph_fname

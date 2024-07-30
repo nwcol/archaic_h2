@@ -8,6 +8,11 @@ import numpy as np
 from archaic import two_locus, utils
 
 
+"""
+msprime simulations
+"""
+
+
 def increment1(x):
 
     return [_ + 1 for _ in x]
@@ -106,3 +111,16 @@ def simulate_chrom(
             f'on contig {contig} and saved at {out_fname}'
         )
     return 0
+
+
+"""
+Coalescent rates
+"""
+
+
+def get_coalescent_rate(graph, t, sampled_deme, n=2):
+
+    demography = msprime.Demography.from_demes(graph)
+    debugger = demography.debug()
+    rates, probs = debugger.coalescence_rate_trajectory(t, {sampled_deme: n})
+    return rates

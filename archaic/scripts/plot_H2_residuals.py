@@ -57,7 +57,7 @@ def main():
         model = H2Spectrum.from_graph(
             graph, _sample_ids, r, args.u, r_bins=r_bins
         )
-        ll = inference.compute_ll_H2(model, data)
+        ll = inference.get_ll(model, data)
         ll_label = f', ll={np.round(ll, 0)}'
         difference = H2Spectrum(
             (model.data - data.data) / data.data,

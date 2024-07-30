@@ -24,7 +24,7 @@ def get_args():
 
 def get_errs(graph_fname, options_fname, data_fname, method='GIM', u=1.35e-8):
     #
-    delta = 0.1
+    delta = 0.01
     graph = demes.load(graph_fname)
     data = H2Spectrum.from_bootstrap_file(data_fname, graph=graph)
     if method == 'GIM':
@@ -49,6 +49,17 @@ def get_errs(graph_fname, options_fname, data_fname, method='GIM', u=1.35e-8):
     return std_errs
 
 
+def format_value(x):
+    #
+    if x < 1:
+        coeff, exponent = np.format_float_scientific(x, precision=2).split('e')
+        exponent = '{' + exponent.replace('0', '') + '}'
+        val = rf'{coeff} \cdot 10^{exponent}'
+    else:
+        val = np.round(x, 0).astype(int)
+    return val
+
+
 def main():
     #
     args = get_args()
@@ -60,21 +71,17 @@ def main():
         args.graph_fname, args.params_fname, args.data_fname, method='GIM'
     )
     expression = (
-        r'\begin{tabular}{ |r|r| } \hline '
-        r'Parameter & Value \\'
+        r'\begin{tabular}{ |r|r|r| } \hline '
+        r'Parameter & Value & Standard Error\\'
         r'\hline '
     )
     for i, par_name in enumerate(par_names):
-        if params0[i] < 1:
-            coeff, exponent = np.format_float_scientific(params0[i], precision=2).split('e')
-            exponent = '{' + exponent.replace('0', '') + '}'
-            val = rf'{coeff} \cdot 10^{exponent}'
-        else:
-            val = np.round(params0[i], 0).astype(int)
+        val = format_value(params0[i])
+        err = format_value(std_errs[i])
         if '_' in par_name:
             idx = par_name.index('_')
             par_name = par_name[:idx] + '_{' + f'{par_name[idx + 1:]}' + '}'
-        expression += rf'${par_name}$ & ${val}$ \\'
+        expression += rf'${par_name}$ & ${val}$ & ${err}$ \\'
     expression += r'\hline \end{tabular}'
     print(expression)
     plt.rcParams['text.usetex'] = True
