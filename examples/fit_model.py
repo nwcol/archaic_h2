@@ -2,6 +2,9 @@
 Fit a demes model to H2 data. Usage is:
 python fit_model.py -d [data filename] -g [graph filename] \
     -p [options filename] -o [output filename]
+
+writes optimization exit status to the output .yaml graph file in the
+'opt_info' metadata field
 """
 import argparse
 import demes
