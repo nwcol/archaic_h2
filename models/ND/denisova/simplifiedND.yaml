@@ -1,0 +1,20 @@
+description: I remove everything that isn't ancestral to Densova and try to manually improve the fit
+time_units: years
+generation_time: 30
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 778597.1557565278, start_size: 11432.385868043744}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 70000.0, start_size: 2983.9439174964045}
+- name: Neandertal
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 166936.6742831392, start_size: 4725.781396602043}
+  - {end_time: 1.2e5, start_size: 350}
+migrations:
+- demes: [Denisova, Neandertal]
+  rate: 5.30012792918828e-06
+

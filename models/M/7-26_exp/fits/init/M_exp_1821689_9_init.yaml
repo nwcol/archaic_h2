@@ -1,0 +1,34 @@
+description: copies the M 7-25 exponential-growth model, but parameterizes ancestral
+  Ne
+time_units: years
+generation_time: 30
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 538379.6120090829, start_size: 22007.773239101767}
+  - {end_time: 72311.14892507644, start_size: 40120.02295399082}
+- name: Stem2
+  start_time: 538379.6120090829
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 72311.14892507644, start_size: 24825.369646496343}
+- name: KhomaniSan
+  start_time: 134844.42828969753
+  ancestors: [Stem2, Stem1]
+  proportions: [0.22128084532480152, 0.7787191546751985]
+  epochs:
+  - {end_time: 0, start_size: 82533.03790288964, end_size: 5444.809775240449}
+- name: Yoruba
+  start_time: 72311.14892507644
+  ancestors: [Stem2, Stem1]
+  proportions: [0.8177685750225656, 0.1822314249774344]
+  epochs:
+  - {end_time: 0, start_size: 31592.50674967312, end_size: 82727.53755177074}
+- name: Han
+  start_time: 46363.091055226585
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 39334.75493400668, end_size: 45268.28264115908}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 2.2866131630914557e-06

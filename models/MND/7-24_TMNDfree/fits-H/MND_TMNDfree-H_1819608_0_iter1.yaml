@@ -1,0 +1,56 @@
+description: A two-stem model linking Yoruba, Khomani-San, French, Denisovan and Vindija
+  Neandertal demes. Modern human admixture parameters, T_12, other T, Ne, m_12 are
+  fixed, but stem populations N_1 and N_2 are free parameters. No constraint is imposed
+  on T_MND/T_12. Ancestral size is fixed at 11500.
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, fopt: -1303.7956946947097, iters: 29, func_calls: 3162,
+    warnflag: 0}
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 875000.0, start_size: 11500}
+  - {end_time: 56000, start_size: 10049.827143098879}
+- name: ND
+  start_time: 881895.4502405917
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 743449.4014961685, start_size: 17130.769695864907}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 70000.0, start_size: 2376.466083330661}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 160000.0, start_size: 3782.545442451506}
+  - {end_time: 50000.0, start_size: 1563.171462060095}
+- name: Stem2
+  start_time: 875000
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 56000, start_size: 7365.886759122278}
+- name: KhomaniSan
+  start_time: 250000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.4, 0.6]
+  epochs:
+  - {end_time: 0, start_size: 43000}
+- name: Yoruba
+  start_time: 56000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.4, 0.6]
+  epochs:
+  - {end_time: 0, start_size: 43000}
+- name: French
+  start_time: 55000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 40000, start_size: 1055}
+  - {end_time: 0, start_size: 7200}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 2e-06
+- demes: [Denisova, Vindija]
+  rate: 6.151067811007972e-06

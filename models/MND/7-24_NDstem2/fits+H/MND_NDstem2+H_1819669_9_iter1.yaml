@@ -1,0 +1,55 @@
+description: This is just like the 7-24_TMNDfree model, except that (1) ND emerges
+  from Stem2 rather than Stem1, and (2) T_12 is parameterized (m_12 is however not).
+  In this model, necessarily T_12 > T_MND.
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, fopt: -2222.5473391216574, iters: 18, func_calls: 2398,
+    warnflag: 0}
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 875000.0, start_size: 11500}
+  - {end_time: 56000, start_size: 3717.2711924080572}
+- name: Stem2
+  start_time: 983789.0426225278
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 56000, start_size: 19702.51027052599}
+- name: ND
+  start_time: 528533.2042937184
+  ancestors: [Stem2]
+  epochs:
+  - {end_time: 528533.2028353704, start_size: 1006.8632486477686}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 70000.0, start_size: 2240.85522241181}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 160000.0, start_size: 3466.4523701901694}
+  - {end_time: 50000.0, start_size: 1411.3737330232643}
+- name: KhomaniSan
+  start_time: 250000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.4, 0.6]
+  epochs:
+  - {end_time: 0, start_size: 43000}
+- name: Yoruba
+  start_time: 56000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.4, 0.6]
+  epochs:
+  - {end_time: 0, start_size: 43000}
+- name: French
+  start_time: 55000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 40000, start_size: 1055}
+  - {end_time: 0, start_size: 7200}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 2e-06
+- demes: [Denisova, Vindija]
+  rate: 5.666344870820523e-06

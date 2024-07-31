@@ -1,0 +1,30 @@
+description: I remove everything that isn't ancestral to Densova and try to manually
+  improve the fit
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: BFGS, objective_func: objective_H2, fopt: -2991.8286091305636,
+    max_iter: 1000, n_iter: 42, func_calls: 264, flag: 2, u: 1.2e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 778597.1557565278, start_size: 11432.385868043744}
+- name: Superarchaic
+  start_time: 2000000.0
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 100000.0, start_size: 20000.0}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 70000.0, start_size: 2983.9439174964045}
+- name: Neandertal
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 166936.6742831392, start_size: 4725.781396602043}
+  - {end_time: 120000.0, start_size: 350}
+migrations:
+- demes: [Denisova, Neandertal]
+  rate: 5.30012792918828e-06
+- demes: [Superarchaic, Denisova]
+  rate: 5e-06

@@ -1,0 +1,33 @@
+description: models Khomani-San Yoruba/Han populations as fractional mixtures from two anciently-diverged (1Ma) stem populations with inter-stem migration, loosely following the best-fit models of Ragsdale et al 2022. Parameterizes initial and final population sizes in Han, Yoruba, Khomani-San, allowing exponential growth or contraction.
+time_units: years
+generation_time: 30
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 1.1e6, start_size: 12000}
+  - {end_time: 8e4, start_size: 10000}
+- name: Stem2
+  start_time: 1.1e6
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 8e4, start_size: 15000}
+- name: KhomaniSan
+  start_time: 2e5
+  ancestors: [Stem2, Stem1]
+  proportions: [0.5, 0.5]
+  epochs:
+  - {end_time: 0, start_size: 10000, end_size: 30000}
+- name: Yoruba
+  start_time: 8e4
+  ancestors: [Stem2, Stem1]
+  proportions: [0.2, 0.8]
+  epochs:
+  - {end_time: 0, start_size: 10000, end_size: 40000}
+- name: Han
+  start_time: 6e4
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 500, end_size: 5000}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 2e-06
