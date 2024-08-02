@@ -16,7 +16,7 @@ from archaic import utils
 def get_args():
     # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--in_fname", required=True)
+    parser.add_argument("-t", "--tsv_fname", required=True)
     parser.add_argument("-n", "--chrom_num", type=int, required=True)
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-f", "--flank_bp", type=int, default=0)
@@ -27,7 +27,7 @@ def main():
     #
     args = get_args()
     regions = []
-    with open(args.in_fname, "rb") as file:
+    with open(args.tsv_fname, "rb") as file:
         for i, line in enumerate(file):
             if i > 0:
                 _, __, num, start, end = line.decode().split('\t')

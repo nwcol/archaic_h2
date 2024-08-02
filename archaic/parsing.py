@@ -8,6 +8,30 @@ from archaic import masks, one_locus, two_locus, utils
 
 
 """
+H
+"""
+
+
+def parse_window_H(
+    mask_fname,
+    vcf_fname,
+    windows
+):
+    mask = masks.Mask.from_bed_file(mask_fname)
+    positions = mask.positions
+    variant_file = one_locus.VariantFile(vcf_fname, mask=mask)
+    genotypes = variant_file.genotypes
+    genotype_positions = variant_file.positions
+    n_sites, H = one_locus.compute_H(
+        genotypes,
+        genotype_positions,
+        positions,
+        windows=windows
+    )
+    return H / n_sites
+
+
+"""
 H2
 """
 
@@ -70,24 +94,37 @@ def parse_H2(
     return stats
 
 
-def bootstrap_H2(dics, n_iters=1000):
+def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
     # carry out bootstraps to get H, H2 distributions.
     # takes dictionaries as args
     n_sites = np.concatenate([dic['n_sites'] for dic in dics])
     H_counts = np.concatenate([dic['H_counts'] for dic in dics])
     n_site_pairs = np.concatenate([dic['n_site_pairs'] for dic in dics])
     H2_counts = np.concatenate([dic['H2_counts'] for dic in dics])
-    n_windows, n, n_bins = H2_counts.shape
+
+    if bin_slice is None:
+        n_windows, n, n_bins = H2_counts.shape
+        r_bins = dics[0]["r_bins"]
+    else:
+        start, stop = bin_slice
+        n_windows, n, _ = H2_counts.shape
+        r_bins = dics[0]['r_bins'][start:stop + 2]
+        print(f'r_bins sliced to {r_bins}')
+        n_bins = len(r_bins) - 1
+        n_site_pairs = n_site_pairs[:, start:stop + 1]
+        H2_counts = H2_counts[:, :, start:stop + 1]
+
     H_dist = np.zeros((n_iters, n))
     H2_dist = np.zeros((n_iters, n, n_bins))
     for i in range(n_iters):
         sample = np.random.randint(n_windows, size=n_windows)
         H_dist[i] = H_counts[sample].sum(0) / n_sites[sample].sum()
         H2_dist[i] = H2_counts[sample].sum(0) / n_site_pairs[sample].sum(0)
+
     H2_cov = np.zeros((n_bins, n, n))
     for i in range(n_bins):
         H2_cov[i, :, :] = np.cov(H2_dist[:, :, i], rowvar=False)
-    r_bins = dics[0]["r_bins"]
+
     ids = dics[0]["ids"]
     # we transpose some arrays for more desirable behavior in inference
     stats = dict(

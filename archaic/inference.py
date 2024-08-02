@@ -81,7 +81,7 @@ def get_param_arr(graph_fnames, options_fname, permissive=False):
 
 
 """
-custom version. copied from moments
+optimization functions
 """
 
 
@@ -90,9 +90,9 @@ _n_func_calls = 0
 _n_iters = 0
 
 
-"""
-optimization functions
-"""
+_init_u = 1.35e-8
+_lower_u = 1e-8
+_upper_u = 1.6e-8
 
 
 def fit_H2(
@@ -120,9 +120,9 @@ def fit_H2(
         print(f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
-        p0 = np.append(p0, 1.2e-8)
-        lower_bounds = np.append(lower_bounds, 1e-8)
-        upper_bounds = np.append(upper_bounds, 2e-8)
+        p0 = np.append(p0, _init_u)
+        lower_bounds = np.append(lower_bounds, _lower_u)
+        upper_bounds = np.append(upper_bounds, _upper_u)
     else:
         fit_u = False
 
@@ -138,7 +138,8 @@ def fit_H2(
         upper_bounds,
         constraints,
         verbosity,
-        fit_u
+        fit_u,
+        use_H
     )
     ret = optimize(
         objective_H2,
@@ -165,7 +166,8 @@ def objective_H2(
     upper_bounds=None,
     constraints=None,
     verbosity=1,
-    fit_u=False
+    fit_u=False,
+    use_H=True
 ):
     #
     global _n_func_calls
@@ -180,7 +182,9 @@ def objective_H2(
     builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
     print(data.sample_ids)
-    model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
+    model = H2Spectrum.from_graph(
+        graph, data.sample_ids, data.r, u, get_H=use_H
+    )
     ll = get_ll(model, data)
 
     if verbosity > 0 and _n_func_calls % verbosity == 0:
@@ -192,21 +196,32 @@ def fit_SFS(
     graph_fname,
     options_fname,
     data,
-    uL,
+    uL=None,
+    L=None,
     max_iter=1000,
     method='NelderMead',
     verbosity=1,
     out_fname=None
 ):
     #
-    if uL is None:
-        raise ValueError('you must provide an uL argument')
-
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+
+    if uL is None:
+        if L is None:
+            raise ValueError('if you do not provide uL, you must provide L!')
+        else:
+            print(f'fitting u as a free parameter')
+            fit_u = True
+            pnames = np.append(pnames, 'u')
+            p0 = np.append(p0, _init_u)
+            lower_bounds = np.append(lower_bounds, _lower_u)
+            upper_bounds = np.append(upper_bounds, _upper_u)
+    else:
+        fit_u = False
 
     if verbosity > 0:
         print_status(0, 0, pnames)
@@ -216,9 +231,12 @@ def fit_SFS(
         options,
         data,
         uL,
+        L,
         lower_bounds,
         upper_bounds,
-        constraints
+        constraints,
+        verbosity,
+        fit_u
     )
     ret = optimize(
         objective_SFS,
@@ -240,10 +258,12 @@ def objective_SFS(
     options,
     data,
     uL,
+    L=None,
     lower_bounds=None,
     upper_bounds=None,
     constraints=None,
-    verbosity=1
+    verbosity=1,
+    fit_u=False
 ):
     #
     global _n_func_calls
@@ -251,6 +271,10 @@ def objective_SFS(
 
     if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
         return -_out_of_bounds
+
+    if fit_u:
+        u = p[-1]
+        uL = L * u
 
     builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
@@ -285,11 +309,6 @@ def fit_composite(
     out_fname=None
 ):
     #
-    if L is None:
-        raise ValueError('you must provide an L argument')
-    if u is None:
-        raise ValueError('you must provide an u argument')
-
     if H2_data.has_H:
         H2_data = H2_data.remove_H()
 
@@ -298,6 +317,18 @@ def fit_composite(
     pnames, p0, lower_bounds, upper_bounds = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
+
+    if L is None:
+        raise ValueError('you must provide an L argument')
+    if u is None:
+        print(f'fitting u as a free parameter')
+        fit_u = True
+        pnames = np.append(pnames, 'u')
+        p0 = np.append(p0, _init_u)
+        lower_bounds = np.append(lower_bounds, _lower_u)
+        upper_bounds = np.append(upper_bounds, _upper_u)
+    else:
+        fit_u = False
 
     if verbosity > 0:
         print_status(0, 0, pnames)
@@ -312,7 +343,8 @@ def fit_composite(
         lower_bounds,
         upper_bounds,
         constraints,
-        verbosity
+        verbosity,
+        fit_u
     )
     ret = optimize(
         objective_composite,
@@ -340,6 +372,7 @@ def objective_composite(
     upper_bounds=None,
     constraints=None,
     verbosity=1,
+    fit_u=False
 ):
     #
     global _n_func_calls
@@ -347,6 +380,10 @@ def objective_composite(
 
     if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
         return -_out_of_bounds
+
+    if fit_u:
+        u = p[-1]
+        uL = L * u
 
     builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
@@ -422,7 +459,7 @@ def optimize(
     methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
 
     if method not in methods:
-        raise ValueError(f'method: {method} is not in {method}')
+        raise ValueError(f'method: {method} is not in {methods}')
 
     if method == 'NelderMead':
         opt = scipy.optimize.fmin(
@@ -536,20 +573,19 @@ def log_gaussian(x, mu, inv_cov):
 
 
 def get_ll(model, data):
-    #
-    # implement checks
+    # operates on H2Spectrum instances
     return get_bin_ll(model, data).sum()
 
 
 def get_bin_ll(model, data):
-
-    bin_ll = np.zeros(data.n_bins)
-    for i in range(data.n_bins):
-        x = data.arr[i]
-        mu = model.arr[i]
-        inv_cov = data.inv_covs[i]
-        bin_ll[i] = log_gaussian(x, mu, inv_cov)
-    return bin_ll
+    # operates on H2Spectrum instances
+    xs = data.arr
+    if data.covs is None:
+        raise ValueError('data has no covariance matrix!')
+    else:
+        covs = data.covs
+    mus = model.arr
+    return _get_bin_ll(xs, mus, covs)
 
 
 def _get_ll(xs, mus, covs):
@@ -558,7 +594,7 @@ def _get_ll(xs, mus, covs):
 
 
 def _get_bin_ll(xs, mus, covs):
-    #
+    # operates on bare arrays
     lens = np.array([len(xs), len(mus), len(covs)])
     if not np.all(lens == lens[0]):
         raise ValueError('xs, mus, covs lengths do not match')
@@ -570,7 +606,7 @@ def _get_bin_ll(xs, mus, covs):
             inv_cov = np.linalg.inv(covs[i])
             _inv_cov_cache[i] = dict(cov=covs[i], inv=inv_cov)
         bin_ll[i] = log_gaussian(xs[i], mus[i], inv_cov)
-    return bin_ll.sum()
+    return bin_ll
 
 
 """
@@ -747,14 +783,21 @@ loading SFS from my .npz archives [subject to change]
 """
 
 
-def read_SFS(fname, pop_ids):
+def read_SFS(fname, pop_ids=None, graph=None):
     #
+    if pop_ids is None and graph is None:
+        raise ValueError('you must provide pop_ids or graph!')
     file = np.load(fname)
     samples = file['samples']
     SFS = moments.Spectrum(
         file['SFS'],
         pop_ids=samples
     )
+    if pop_ids is not None:
+        pass
+    elif graph is not None:
+        deme_names = [d.name for d in graph.demes]
+        pop_ids = [d for d in deme_names if d in samples]
     not_sampled = [i for i in range(len(samples)) if samples[i] not in pop_ids]
     _SFS = SFS.marginalize(not_sampled)
     return _SFS, file['n_sites']

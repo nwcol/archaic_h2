@@ -39,15 +39,18 @@ class H2Spectrum:
             self.sample_ids = [str(x) for x in sample_ids]
         self.has_H = has_H
         self.covs = covs
-        if covs is not None:
-            self.inv_covs = self.invert_cos(covs)
 
     @classmethod
     def from_bootstrap_file(cls, fname, sample_ids=None, graph=None):
         #
         file = np.load(fname)
         data = np.vstack([file['H2_mean'], file['H_mean']])
-        covs = np.vstack([file['H2_cov'], file['H_cov'][np.newaxis, :, :]])
+        if file['H_cov'].ndim == 2:
+            covs = np.vstack([file['H2_cov'], file['H_cov'][np.newaxis, :, :]])
+        else:
+            covs = np.vstack(
+                [file['H2_cov'], file['H_cov'][np.newaxis, np.newaxis, np.newaxis]]
+            )
         r_bins = file['r_bins']
         ids = file['ids']
         spectrum = cls(data, r_bins, ids, has_H=True, covs=covs)
@@ -71,19 +74,52 @@ class H2Spectrum:
         return spectrum
 
     @classmethod
-    def from_file(cls, fname):
-        # from a saved class instance
+    def from_file(cls, fname, sample_ids=None, graph=None):
+        # placeholder. covs are just along windows. masks nan as zero
         file = np.load(fname)
-        data = file['data']
         r_bins = file['r_bins']
         ids = file['ids']
-        sample_ids = file['sample_ids']
-        covs = file['covs']
-        has_H = file['has_H']
+        if 'H2_counts' in file:
+            per_window_H2 = file['H2_counts'] / file['n_site_pairs'][:, np.newaxis, :]
+            if np.any(np.isnan(per_window_H2)):
+                print('setting nan to zero in windowed H2 array')
+                per_window_H2[np.isnan(per_window_H2)] = 0
+            per_window_H = file['H_counts'] / file['n_sites'][:, np.newaxis]
+            # unlikely to happen
+            if np.any(np.isnan(per_window_H)):
+                print('setting nan to zero in windowed H array')
+                per_window_H[np.isnan(per_window_H)] = 0
+
+            if per_window_H2.ndim == 3 and per_window_H2.shape[2] > 1:
+                covs = np.array(
+                    [np.cov(per_window_H2[:, :, i], rowvar=False)
+                     for i in range(per_window_H2.shape[2])]
+                    + [np.cov(per_window_H, rowvar=False)]
+                )
+                if covs.ndim != 3:
+                    n = per_window_H.shape[1]
+                    covs = covs.reshape(len(r_bins), n, n)
+            else:
+                covs = None
+            H2 = file['H2_counts'].sum(0) / file['n_site_pairs'].sum(0)
+            H = file['H_counts'].sum(0) / file['n_sites'].sum()
+            data = np.vstack([H2.T, H[np.newaxis]])
+        elif 'H2' in file:
+            H2 = file['H2']
+            H = file['H']
+            data = np.vstack([H2.T, H[np.newaxis]])
+            covs = None
+
+
         spectrum = cls(
-            data, r_bins, ids, sample_ids=sample_ids, covs=covs, has_H=has_H
+            data, r_bins, ids, covs=covs, has_H=True
         )
+        if sample_ids is not None:
+            spectrum = spectrum.subset(sample_ids)
+        elif graph is not None:
+            spectrum = spectrum.subset_to_graph(graph)
         return spectrum
+
 
     def write(self, fname):
         # write as a .npz archive
@@ -98,14 +134,52 @@ class H2Spectrum:
         np.savez(fname, **dic)
 
     @classmethod
-    def from_graph(cls, graph, sample_ids, r, u, r_bins=None):
+    def from_graph(cls, graph, sample_ids, r, u, r_bins=None, get_H=True):
         #
         sample_ids = sorted(sample_ids)
         stats = moments.LD.LDstats.from_demes(
             graph, sampled_demes=sample_ids, theta=None, r=r, u=u
         )
-        exp_H = stats.H()
         ids = cls.expand_ids(sample_ids)
+        _exp_H2 = np.zeros((len(r), len(ids)))
+        for k, (x, y) in enumerate(ids):
+            if x == y:
+                phased = True
+                y = None
+            else:
+                phased = False
+            _exp_H2[:, k] = stats.H2(x, y, phased=phased)
+        exp_H2 = cls.approximate_H2(_exp_H2)
+        if get_H:
+            exp_H = stats.H()
+            data = np.vstack([exp_H2, exp_H])
+        else:
+            data = exp_H2
+        spectrum = cls(data, r_bins, np.array(ids), has_H=True)
+        return spectrum
+
+    @classmethod
+    def from_demes(
+        cls,
+        graph,
+        sampled_demes=None,
+        sample_times=None,
+        r_bins=None,
+        u=1.35e-8
+    ):
+        # will replace from_graph when I get around to refactoring
+
+        if r_bins is None:
+            r_bins = np.logspace(-6, -2, 17)
+        r = cls.get_r(r_bins)
+
+        if sampled_demes is None:
+            sampled_demes = [d.name for d in graph.demes if d.end_time == 0]
+        stats = moments.LD.LDstats.from_demes(
+            graph, sampled_demes=sampled_demes, theta=None, r=r, u=u
+        )
+        exp_H = stats.H()
+        ids = cls.expand_ids(sampled_demes)
         _exp_H2 = np.zeros((len(r), len(ids)))
         for k, (x, y) in enumerate(ids):
             if x == y:
@@ -149,7 +223,10 @@ class H2Spectrum:
     def subset_idx(self, idx):
         # subset by index
         mesh_idx = np.ix_(idx, idx)
-        covs = np.array([x[mesh_idx] for x in self.covs])
+        if self.covs is not None:
+            covs = np.array([x[mesh_idx] for x in self.covs])
+        else:
+            covs = None
         sub = H2Spectrum(
             self.data[:, idx],
             self.r_bins,
@@ -257,6 +334,10 @@ class H2stats:
         r=None,
         sample_sizes=None,
     ):
+        # can be instantiated in two ways:
+        # (1) from data: H2stats.from_demes(graph, data, u=u)
+        #   then the r bins, sample ids etc are the same as the data
+        # (2) from r bins, sampled_demes, and optionally sampled_times
 
         return None
 

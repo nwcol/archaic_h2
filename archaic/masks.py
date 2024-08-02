@@ -148,7 +148,7 @@ class Mask(np.ndarray):
         #
         if chrom_num is None:
             if self.chrom_num is None:
-                chrom_num = b'chr0'
+                chrom_num = 'chr0'
             else:
                 chrom_num = ('chr' + str(self.chrom_num)).encode()
         if ".gz" in fname:

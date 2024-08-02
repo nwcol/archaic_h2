@@ -29,6 +29,7 @@ def get_args():
     parser.add_argument('-s', '--samples', nargs='*', default=None)
     parser.add_argument('-u', '--u', type=float, default=1.35e-8)
     parser.add_argument('-r', '--r', type=float, default=1e-8)
+    parser.add_argument('--infer_u', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=500)
     parser.add_argument('--method', default='Powell')
     parser.add_argument('-v', '--verbosity', type=int, default=1)
@@ -193,6 +194,15 @@ def main():
     else:
         SFS_data = None
 
+    # do we want to infer u?
+    if args.infer_u:
+        inf_u = None
+        uL = None
+    else:
+        inf_u = args.u
+        if want_SFS:
+            uL = args.u * L
+
     # perturb the initial graph to get starting points
     inits = []
     for i in range(args.n_reps):
@@ -212,7 +222,7 @@ def main():
                 H2_data,
                 max_iter=args.max_iter,
                 method=args.method,
-                u=args.u,
+                u=inf_u,
                 verbosity=args.verbosity,
                 use_H=False,
                 out_fname=H2_fname
@@ -227,7 +237,7 @@ def main():
                 H2_data,
                 max_iter=args.max_iter,
                 method=args.method,
-                u=args.u,
+                u=inf_u,
                 verbosity=args.verbosity,
                 use_H=True,
                 out_fname=H2H_fname
@@ -240,7 +250,8 @@ def main():
                 inits[i],
                 args.options_fname,
                 SFS_data,
-                args.u * L,
+                uL=uL,
+                L=L,
                 max_iter=args.max_iter,
                 method=args.method,
                 verbosity=args.verbosity,
@@ -257,7 +268,7 @@ def main():
                 SFS_data,
                 max_iter=args.max_iter,
                 method=args.method,
-                u=args.u,
+                u=inf_u,
                 L=L,
                 verbosity=args.verbosity,
                 out_fname=composite_fname

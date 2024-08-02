@@ -16,9 +16,9 @@ def get_args():
     parser.add_argument('-g', '--graph_fname', required=True)
     parser.add_argument('-p', '--options_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
-    parser.add_argument('-u', '--u', type=float, default=1.35e-8)
+    parser.add_argument('-u', '--u', type=float, default=None)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
-    parser.add_argument('--method', nargs='*', default=['powell'])
+    parser.add_argument('--method', nargs='*', default=['Powell'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
     parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
@@ -29,22 +29,12 @@ def get_args():
 def main():
     #
     args = get_args()
-
-    ### replace
-    SFS_file = np.load(args.data_fname)
-    pop_ids = list(SFS_file['samples'])
-    data = moments.Spectrum(SFS_file['SFS'], pop_ids=pop_ids)
-    deme_names = [d.name for d in demes.load(args.graph_fname).demes]
-    marg_idx = []
-    for i, pop_id in enumerate(pop_ids):
-        if pop_id in deme_names:
-            pass
-        else:
-            marg_idx.append(i)
-    data = data.marginalize(marg_idx)
-    uL = SFS_file['n_sites'] * args.u
-    ###
-
+    graph = demes.load(args.graph_fname)
+    data, L = inference.read_SFS(args.data_fname, graph=graph)
+    if args.u is not None:
+        uL = L * args.u
+    else:
+        uL = None
     tag = inference.get_tag(args.out_prefix, args.cluster_id, args.process_id)
     if args.perturb_graph:
         graph_fname = f'{tag}_init.yaml'
@@ -63,7 +53,8 @@ def main():
             graph_fname,
             args.options_fname,
             data,
-            uL,
+            uL=uL,
+            L=L,
             max_iter=args.max_iter[i],
             method=method,
             verbosity=args.verbosity,

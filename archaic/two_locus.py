@@ -95,9 +95,14 @@ Haldane's map function
 """
 
 
-def map_function(r_vals):
-    # r > d
-    return -50 * np.log(1 - 2 * r_vals)
+def map_function(r):
+    # r to cM
+    return -50 * np.log(1 - 2 * r)
+
+
+def inverse_map_func(d):
+    # cM to r
+    return (1 - np.exp(-d / 50)) / 2
 
 
 """
@@ -403,7 +408,8 @@ def compute_H2(
             r_bins,
             positions=positions,
             window=window,
-            vectorized=True
+            vectorized=True,
+            upper_bound=bounds[i]
         )
     genotype_r_map = r_map[np.searchsorted(positions, genotype_positions)]
     n_samples = genotypes.shape[1]

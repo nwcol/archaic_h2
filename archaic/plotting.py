@@ -43,7 +43,9 @@ def plot_H2_spectra(
     n_cols=5,
     alpha=0.05,
     ylim_0=True,
-    log_scale=False
+    log_scale=False,
+    sci=True,
+    statistic='$H_2'
 ):
     # they all have to be the same shape
     if colors is None:
@@ -75,7 +77,7 @@ def plot_H2_spectra(
     for i, spectrum in enumerate(args):
         plot_H2_spectrum(
             spectrum, color=colors[i], axs=axs, ci=ci, ylim_0=ylim_0,
-            log_scale=log_scale, plot_H=plot_H
+            log_scale=log_scale, plot_H=plot_H, sci=sci, statistic=statistic
         )
     # adjust ylim etc
     for ax in axs:
@@ -112,7 +114,9 @@ def plot_H2_spectrum(
     ci=1.96,
     ylim_0=True,
     log_scale=False,
-    plot_H=True
+    plot_H=True,
+    sci=True,
+    statistic='$H_2$'
 ):
     #
     if color is None:
@@ -162,7 +166,10 @@ def plot_H2_spectrum(
             data = spectrum.data[:-1, i]
         else:
             data = spectrum.data[:, i]
-        plot_single_H2(ax, x, data, color, y_err=y_err, title=_id)
+        plot_single_H2(
+            ax, x, data, color, y_err=y_err, title=_id, sci=sci,
+            statistic=statistic
+        )
 
     # plot H
     if plot_H:
@@ -184,7 +191,9 @@ def plot_single_H2(
     data,
     color,
     y_err=None,
-    title=None
+    title=None,
+    sci=True,
+    statistic='$H_2$'
 ):
     #
     if y_err is None:
@@ -197,9 +206,10 @@ def plot_single_H2(
     ax.grid(alpha=0.2)
     if title is not None:
         title = parse_label(title)
-        ax.set_title(f'$H_2$ {title}')
+        ax.set_title(f'{statistic} {title}')
     # format the ticks
-    format_ticks(ax)
+    if sci:
+        format_ticks(ax)
     return 0
 
 

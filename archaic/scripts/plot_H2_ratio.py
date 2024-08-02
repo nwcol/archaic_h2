@@ -1,5 +1,5 @@
 """
-Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
+
 """
 import argparse
 import demes
@@ -23,8 +23,6 @@ def get_args():
     parser.add_argument('--title', default=None)
     parser.add_argument("--n_cols", type=int, default=5)
     parser.add_argument('--labels', nargs='*', default=None)
-    parser.add_argument('--log_scale', type=int, default=0)
-    parser.add_argument('--plot_H', type=int, default=1)
     return parser.parse_args()
 
 
@@ -51,6 +49,7 @@ def main():
         sample_ids = None
         graph = None
 
+    # data
     for fname in args.data_fnames:
         if 'H2_mean' in np.load(fname):
             # bootstrap file
@@ -66,8 +65,7 @@ def main():
                 sample_ids=sample_ids,
                 graph=graph
             )
-        if not args.plot_H and spectrum.has_H:
-            spectrum = spectrum.remove_H()
+        spectrum.arr[:-1] = spectrum.arr[:-1] / spectrum.arr[-1] ** 2
         spectra.append(spectrum)
         labels.append(fname.split('/')[-1])
         n_datas += 1
@@ -90,6 +88,7 @@ def main():
         r_bins = np.logspace(-6, -2, 17)
         r = H2Spectrum.get_r(r_bins)
 
+    # graph expectations
     for graph_fname in args.graph_fnames:
         graph = demes.load(graph_fname)
         spectrum = H2Spectrum.from_graph(
@@ -100,6 +99,7 @@ def main():
             ll_label = f', ll={np.round(ll, 0)}'
         else:
             ll_label = ''
+        spectrum.arr[:-1] = spectrum.arr[:-1] / spectrum.arr[-1] ** 2
         spectra.append(spectrum)
         basename = graph_fname.split('/')[-1]
         labels.append(f'{basename}{ll_label}')
@@ -116,13 +116,12 @@ def main():
 
     fig, axs = plotting.plot_H2_spectra(
         *spectra,
-        plot_H=args.plot_H,
         colors=colors,
         labels=labels,
         n_cols=args.n_cols,
         alpha=args.alpha,
-        log_scale=args.log_scale,
-        statistic='$H_2$'
+        sci=False,
+        statistic='$H_2/H^2$'
     )
 
     if args.title:
