@@ -292,8 +292,25 @@ publication-quality H2 plot
 
 def plot_two_panel_H2(model, data, sample_ids, colors):
 
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(4, 5), layout='constrained')
 
-    fig, axs = plt.subplots(1, 2, figsize=(4, 5), layout='constrained')
+    for i, (x, y) in enumerate(model.ids):
+        if x not in sample_ids or y not in sample_ids:
+            continue
+
+        if x == y:
+            c
+
+    for ax in (ax0, ax1):
+        ax.set_ylim(0, )
+        ax.set_xlabel('$r$')
+        ax.set_ylabel('$H_2$')
+        format_ticks(ax)
+        ax.set_xscale('log')
+
+    plt.minorticks_off()
+
+    return fig
 
 
 """
