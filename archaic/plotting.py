@@ -297,7 +297,6 @@ def plot_two_panel_H2(model, data, sample_ids, colors):
     for i, (x, y) in enumerate(model.ids):
         if x not in sample_ids or y not in sample_ids:
             continue
-
         if x == y:
             c
 

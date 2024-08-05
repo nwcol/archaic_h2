@@ -533,6 +533,7 @@ def optimize(
         return 1
 
     global _n_func_calls
+    print_status(_n_func_calls, 'fit p:', p)
     _n_func_calls = 0
 
     info = dict(
