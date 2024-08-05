@@ -15,7 +15,7 @@ handling graphs and options/parameters
 """
 
 
-def perturb_graph(graph_fname, options_fname, out_fname=None):
+def perturb_graph(graph_fname, options_fname, out_fname=None, timeout=1000):
     # uniformly and randomly pick parameter values
 
     def log_uniform(lower, upper):
@@ -37,6 +37,7 @@ def perturb_graph(graph_fname, options_fname, out_fname=None):
     below1 = np.where(lower_bounds < 1)[0]
     satisfied = False
     p = None
+    i = 0
 
     while not satisfied:
         p = np.zeros(len(p0))
@@ -49,6 +50,11 @@ def perturb_graph(graph_fname, options_fname, out_fname=None):
         if constraints:
             if np.all(constraints(p) > 0):
                 satisfied = True
+                print(p)
+            else:
+                i += 1
+                if i > timeout:
+                    raise ValueError('parameter perturbation timeout!')
         else:
             satisfied = True
 
@@ -541,7 +547,7 @@ def optimize(
 
     if fit_u:
         info['u'] = p[-1]
-        p = p[-1]
+        p = p[:-1]
 
     print('\n'.join([f'{key}: {info[key]}' for key in info]))
 
