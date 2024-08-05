@@ -30,10 +30,9 @@ def perturb_graph(graph_fname, options_fname, out_fname=None):
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
-
+    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
     if np.any(np.isinf(upper_bounds)):
         raise ValueError("all upper bounds must be specified!")
-    constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
     above1 = np.where(lower_bounds >= 1)[0]
     below1 = np.where(lower_bounds < 1)[0]
     satisfied = False
@@ -47,7 +46,6 @@ def perturb_graph(graph_fname, options_fname, out_fname=None):
         p[below1] = log_uniform(
             lower_bounds[below1], upper_bounds[below1]
         )
-
         if constraints:
             if np.all(constraints(p) > 0):
                 satisfied = True
@@ -109,7 +107,10 @@ def fit_H2(
     #
     if not use_H and data.has_H:
         data = data.remove_H()
-
+    print(
+        utils.get_time(),
+        f'fitting H2 to data for demes {data.sample_ids}'
+    )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
@@ -117,7 +118,7 @@ def fit_H2(
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
 
     if u is None:
-        print(f'fitting u as a free parameter')
+        print(utils.get_time(), f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
         p0 = np.append(p0, _init_u)
@@ -126,8 +127,7 @@ def fit_H2(
     else:
         fit_u = False
 
-    if verbosity > 0:
-        print_status(0, 0, pnames)
+    print_start(pnames, p0)
 
     args = (
         builder,
@@ -181,7 +181,6 @@ def objective_H2(
 
     builder = moments.Demes.Inference._update_builder(builder, options, p)
     graph = demes.Graph.fromdict(builder)
-    print(data.sample_ids)
     model = H2Spectrum.from_graph(
         graph, data.sample_ids, data.r, u, get_H=use_H
     )
@@ -204,6 +203,10 @@ def fit_SFS(
     out_fname=None
 ):
     #
+    print(
+        utils.get_time(),
+        f'fitting SFS to data for demes {data.pop_ids}'
+    )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
@@ -214,7 +217,7 @@ def fit_SFS(
         if L is None:
             raise ValueError('if you do not provide uL, you must provide L!')
         else:
-            print(f'fitting u as a free parameter')
+            print(utils.get_time(), f'fitting u as a free parameter')
             fit_u = True
             pnames = np.append(pnames, 'u')
             p0 = np.append(p0, _init_u)
@@ -223,8 +226,7 @@ def fit_SFS(
     else:
         fit_u = False
 
-    if verbosity > 0:
-        print_status(0, 0, pnames)
+    print_start(pnames, p0)
 
     args = (
         builder,
@@ -306,12 +308,16 @@ def fit_composite(
     L=None,
     u=1.35e-8,
     verbosity=1,
-    out_fname=None
+    out_fname=None,
+    use_H=True
 ):
     #
     if H2_data.has_H:
         H2_data = H2_data.remove_H()
-
+    print(
+        utils.get_time(),
+        f'fitting SFS and H2 to data for demes {H2_data.sample_ids}'
+    )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
     options = moments.Demes.Inference._get_params_dict(options_fname)
     pnames, p0, lower_bounds, upper_bounds = \
@@ -321,7 +327,7 @@ def fit_composite(
     if L is None:
         raise ValueError('you must provide an L argument')
     if u is None:
-        print(f'fitting u as a free parameter')
+        print(utils.get_time(), f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
         p0 = np.append(p0, _init_u)
@@ -330,8 +336,7 @@ def fit_composite(
     else:
         fit_u = False
 
-    if verbosity > 0:
-        print_status(0, 0, pnames)
+    print_start(pnames, p0)
 
     args = (
         builder,
@@ -344,6 +349,7 @@ def fit_composite(
         upper_bounds,
         constraints,
         verbosity,
+        use_H,
         fit_u
     )
     ret = optimize(
@@ -372,6 +378,7 @@ def objective_composite(
     upper_bounds=None,
     constraints=None,
     verbosity=1,
+    use_H=True,
     fit_u=False
 ):
     #
@@ -399,7 +406,9 @@ def objective_composite(
         sample_times=sample_times,
         u=u * L
     )
-    H2_model = H2Spectrum.from_graph(graph, H2_data.sample_ids, H2_data.r, u)
+    H2_model = H2Spectrum.from_graph(
+        graph, H2_data.sample_ids, H2_data.r, u, get_H=use_H
+    )
     ll = moments.Inference.ll(SFS_model, SFS_data) + get_ll(H2_model, H2_data)
 
     if verbosity > 0 and _n_func_calls % verbosity == 0:
@@ -517,6 +526,9 @@ def optimize(
     else:
         return 1
 
+    global _n_func_calls
+    _n_func_calls = 0
+
     info = dict(
         method=method,
         objective_func=object_func.__name__,
@@ -529,6 +541,7 @@ def optimize(
 
     if fit_u:
         info['u'] = p[-1]
+        p = p[-1]
 
     print('\n'.join([f'{key}: {info[key]}' for key in info]))
 
@@ -545,11 +558,21 @@ def optimize(
         return graph
 
 
+
+def print_start(pnames, p0):
+
+    print_status(0, 'pnames', pnames)
+    print_status(0, 'p0', p0)
+
+
 def print_status(n_calls, ll, p):
     #
     t = utils.get_time()
     _n = f'{n_calls:<6}'
-    _ll = f'{np.round(ll, 2):>10}'
+    if isinstance(ll, float):
+        _ll = f'{np.round(ll, 2):>10}'
+    else:
+        _ll = f'{ll:>10}'
     fmt_p = []
     for x in p:
         if isinstance(x, str):

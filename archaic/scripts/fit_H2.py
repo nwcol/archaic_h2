@@ -32,8 +32,6 @@ def main():
     data = H2Spectrum.from_bootstrap_file(
         args.data_fname, graph=demes.load(args.graph_fname)
     )
-    print(utils.get_time(), f'running inference for demes {data.sample_ids}')
-
     if len(args.method) != len(args.max_iter):
         raise ValueError('')
     tag = inference.get_tag(args.out_prefix, args.cluster_id, args.process_id)

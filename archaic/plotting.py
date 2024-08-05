@@ -271,7 +271,7 @@ def format_ticks(ax):
             sci_string = np.format_float_scientific(x, precision=2)
             base, power = sci_string.split('e')
             # clean up the strings
-            base = base.rstrip('.')
+            base = base.rstrip('0').rstrip('.').rstrip('0')
             power = power.lstrip('0')
             if float(base) == 1.0:
                 ret = rf'$10^{{{int(power)}}}$'
@@ -283,6 +283,17 @@ def format_ticks(ax):
     ax.xaxis.set_major_formatter(formatter)
     ax.yaxis.set_major_formatter(formatter)
     return 0
+
+
+"""
+publication-quality H2 plot
+"""
+
+
+def plot_two_panel_H2(model, data, sample_ids, colors):
+
+
+    fig, axs = plt.subplots(1, 2, figsize=(4, 5), layout='constrained')
 
 
 """

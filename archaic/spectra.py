@@ -6,6 +6,9 @@ import numpy as np
 import moments
 
 
+_default_r = np.logspace(-6, -2, 17)
+
+
 class H2Spectrum:
 
     def __init__(
@@ -314,9 +317,20 @@ class H2stats:
     """
     """
 
-    def __init__(self, ):
+    def __init__(
+        self,
+        H2,
+        covs=None,
+        sample_ids=None,
+        r_bins=None,
+        bin_mask=None,
+        sample_mask=None
+    ):
         #
-        self.H = H
+        self.H2 = H2
+        self.covs = covs
+        self.sample_ids = sample_ids
+        self.r_bins = r_bins
 
     def from_file(self):
 
@@ -327,19 +341,64 @@ class H2stats:
         return None
 
     def from_demes(
-        self,
+        cls,
         graph,
-        sample_demes,
+        template_data=None,
+        sampled_demes=None,
         u=None,
-        r=None,
+        r_bins=None,
         sample_sizes=None,
+        sample_times=None,
+        include_H=True
     ):
-        # can be instantiated in two ways:
+        # can be instantiated in several ways:
         # (1) from data: H2stats.from_demes(graph, data, u=u)
         #   then the r bins, sample ids etc are the same as the data
         # (2) from r bins, sampled_demes, and optionally sampled_times
+        # (3) just from a graph
 
-        return None
+        if template_data is not None:
+            r_bins = template_data.r_bins
+            sampled_demes = template_data.sample_ids
+            sample_times = template_data.sample_times
+
+        else:
+            if r_bins is None:
+                r_bins = _default_r
+
+            if u is None:
+                # change?
+                u = 1.3e-8
+
+            if sampled_demes is None:
+                deme_names = [d.name for d in graph.demes]
+
+        r = cls.r_points(r_bins)
+
+        stats = moments.LD.LDstats.from_demes(
+            graph,
+            sampled_demes=sampled_demes,
+            sample_times=sample_times,
+            theta=None,
+            r=r,
+            u=u
+        )
+
+        ids = cls.get_ids(sampled_demes)
+        raw_H2 = np.zeros((len(r), len(ids)))
+        for k, (x, y) in enumerate(ids):
+            if x == y:
+                phased = True
+                y = None
+            else:
+                phased = False
+            raw_H2[:, k] = stats.H2(x, y, phased=phased)
+        H2 = cls.simpsons_method(raw_H2)
+        if include_H:
+            H = stats.H()
+            H2 = np.vstack([H2, H])
+        ret = cls(H2)
+        return ret
 
     def from_dict(self):
 
@@ -353,9 +412,35 @@ class H2stats:
 
         return None
 
-    def as_array(self):
+    @property
+    def rs(self):
 
-        return None
+        if self.r_bins is None:
+            return None
+        return self.r_points(self.r_bins)
+
+    @staticmethod
+    def r_points(r_bins):
+
+        n = len(r_bins)
+        r = np.zeros(n * 2 - 1)
+        r[np.arange(n) * 2] = r_bins
+        r[np.arange(n - 1) * 2 + 1] = r_bins[:-1] + np.diff(r_bins) / 2
+        return r
+
+    @staticmethod
+    def simpsons_method(arr):
+
+        n = len(arr)
+        b = (n - 1) // 2
+        ret = (
+            1 / 6 * arr[np.arange(b) * 2]
+            + 4 / 6 * arr[np.arange(b) * 2 + 1]
+            + 1 / 6 * arr[np.arange(b) * 2 + 2]
+        )
+        return ret
+
+
 
 
 
