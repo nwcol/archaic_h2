@@ -1,6 +1,8 @@
 """
 makes plots for my research poster
 """
+import bokeh
+from bokeh.palettes import TolRainbow
 import demes
 import demesdraw
 import matplotlib
@@ -12,16 +14,28 @@ import moments
 import numpy as np
 import scipy
 import string
+import os
 
-from archaic import utils, plotting, simulation
+from archaic import utils, plotting, simulation, inference
 from archaic.spectra import H2Spectrum
 
 
-r_bins = np.logspace(-6, -2, 17)
-x = r_bins[:-1] + np.diff(r_bins) / 2
-
 _r = np.concatenate([[0], np.logspace(-7, -1, 30)])
 _x = _r[:-1] + np.diff(_r) / 2
+
+
+one = TolRainbow[4]
+two = TolRainbow[6]
+
+archaic_colors = [
+    one[0],
+    two[0], two[1], two[2],
+    one[1],
+    two[3], two[4],
+    one[2],
+    two[5],
+    one[3]
+]
 
 
 """
@@ -59,161 +73,12 @@ def label_subfigures(axs):
         ax.set_title(alphabet[i], fontsize='large', loc='left')
 
 
-
 """
 main figure funcs
 """
 
 
-def __make_figure1(fname='figures/fig1.svg'):
-    # a 6-subfigure plot of expected H2 behavior
-
-    fig_size = (7, 6)
-
-    fig, _axs = plt.subplots(3, 2, figsize=fig_size, layout='constrained')
-    axs = _axs.flat
-
-    # steady-state and size change
-    b = demes.Builder(time_units='generations')
-    b.add_deme(
-        'X',
-        epochs=[
-            dict(end_time=3e3, start_size=1e4),
-            dict(end_time=0, start_size=1e4)
-        ]
-    )
-    steady_state = b.resolve()
-
-    b = demes.Builder(time_units='generations')
-    b.add_deme(
-        'X',
-        epochs=[
-            dict(end_time=3e3, start_size=1e4),
-            dict(end_time=2e3, start_size=1e4),
-            dict(end_time=0, start_size=1e4, end_size=4e4)
-        ]
-    )
-    expansion = b.resolve()
-
-    b = demes.Builder(time_units='generations')
-    b.add_deme(
-        'X',
-        epochs=[
-            dict(end_time=3e3, start_size=1e4),
-            dict(end_time=2e3, start_size=1e4),
-            dict(end_time=1e3, start_size=1e3),
-            dict(end_time=0, start_size=1e4)
-        ]
-    )
-    bottleneck = b.resolve()
-
-    colors = ['black', 'red', 'blue']
-    labels = ['steady state', 'exponential growth', 'bottleneck']
-
-    _r = np.concatenate([[0], np.logspace(-8, -.3, 30)])
-    _x = _r[:-1] + np.diff(_r) / 2
-    fig_b_graphs = [steady_state, expansion, bottleneck]
-    fig_b_exps = [H2Spectrum.from_demes(g, r_bins=_r).data[:-1, 0] for
-                  g in fig_b_graphs]
-    for i, exp in enumerate(fig_b_exps):
-        demesdraw.size_history(
-            fig_b_graphs[i], ax=axs[0], colours=colors[i], inf_ratio=0
-        )
-        axs[1].plot(
-            _x,
-            exp,
-            color=colors[i]
-        )
-    axs[0].set_ylim(0, 5e4)
-    axs[0].set_yticks(np.arange(0, 6e4, 1e4), [0, 1, 2, 3, 4, 5])
-    axs[0].set_xlim(0, 2.5e3)
-    axs[0].set_xticks(np.arange(0, 4e3, 1e3), [0, 1, 2, 3])
-    make_line_legend(axs[0], labels, colors)
-    axs[0].set_xlabel('$t (N_e)$')
-    axs[0].set_ylabel('$N_e(t)/N_e$', rotation=90)
-    axs[0].patch.set(lw=0.75, ec='black')
-
-    axs[1].set_ylim(0,)
-    axs[1].set_xscale('log')
-    axs[1].set_xlabel('$r$')
-    axs[1].set_ylabel(r'$E[H_2]$')
-    plotting.format_ticks(axs[1])
-    format_H2_ax(axs[1])
-
-
-    # pulsed introgression
-    Ne = 1e4
-    times = [1e-4, 0.05, 0.1]
-    fig_d_graphs = []
-    fig_d_exps = []
-    for t in times:
-        _t = t * 2 * Ne
-        b = demes.Builder(time_units='generations')
-        b.add_deme('Ancestral', epochs=[dict(end_time=2 * Ne + _t, start_size=Ne)])
-        b.add_deme(
-            'X',
-            ancestors=['Ancestral'],
-            epochs=[dict(end_time=0, start_size=Ne)]
-        )
-        b.add_deme(
-            'Y',
-            ancestors=['Ancestral'],
-            epochs=[dict(end_time=_t, start_size=Ne)]
-        )
-        b.add_pulse(sources=['Y'], dest='X', proportions=[0.01], time=_t)
-        print(_t)
-        g = b.resolve()
-        fig_d_graphs.append(g)
-        fig_d_exps.append(H2Spectrum.from_demes(g, r_bins=r_bins).data[:-1, 0])
-    demesdraw.tubes(g, axs[2], colours='grey', labels='xticks')
-
-    colors = ['black', 'red', 'blue', 'orange']
-    # steady state
-    steady_exp = H2Spectrum.from_demes(steady_state, r_bins=r_bins).data[:-1, 0]
-    axs[3].plot(x, steady_exp, color=colors[0])
-    for i, expectation in enumerate(fig_d_exps):
-        axs[3].plot(
-            x,
-            expectation,
-            color=colors[i + 1]
-        )
-    labels = ['no admixture', '$T=0$', '$T=0.05$', '$T=0.1$']
-    format_H2_ax(axs[3])
-    make_line_legend(axs[3], labels, colors)
-
-
-    # ancestral structure
-    Ne = 1e4
-    times = [1e-4, 0.05, 0.1]
-    fig_d_graphs = []
-    fig_d_exps = []
-    for t in times:
-        _t = t * 2 * Ne
-        b = demes.Builder(time_units='generations')
-        b.add_deme('Ancestral', epochs=[dict(end_time=2 * Ne + _t, start_size=Ne)])
-        b.add_deme(
-            'X',
-            ancestors=['Ancestral'],
-            epochs=[dict(end_time=0, start_size=Ne)]
-        )
-        b.add_deme(
-            'Y',
-            ancestors=['Ancestral'],
-            epochs=[dict(end_time=_t, start_size=Ne)]
-        )
-        b.add_pulse(sources=['Y'], dest='X', proportions=[0.01], time=_t)
-        print(_t)
-        g = b.resolve()
-        fig_d_graphs.append(g)
-        fig_d_exps.append(H2Spectrum.from_demes(g, r_bins=r_bins).data[:-1, 0])
-    demesdraw.tubes(g, axs[2], colours='grey', labels='xticks')
-
-
-    plt.savefig(fname, format='svg', bbox_inches='tight')
-    return None
-
-
-def make_figure1(fname='figures/fig1.svg'):
+def make_figure2(fname='figures/fig1.svg'):
     # a 4-subfigure plot of expected H2 behavior
     fig_size = (7, 5)
     fig, _axs = plt.subplots(2, 2, figsize=fig_size, layout='constrained')
@@ -344,14 +209,11 @@ def make_figure1(fname='figures/fig1.svg'):
     axs[3].set_xscale('log')
     make_line_legend(axs[3], labels, colors, columns=2)
 
-
-
-
     plt.savefig(fname, format='svg', bbox_inches='tight')
     return None
 
 
-def make_figure3(fname='figures/figure3.svg'):
+def make_figure5(fname='figures/figure3.svg'):
     # for a structured-ancestry model, compares coalescence rates
     fig_size = (7, 5)
     fig, _axs = plt.subplots(2, 2, figsize=fig_size, layout='constrained')
@@ -361,8 +223,8 @@ def make_figure3(fname='figures/figure3.svg'):
     # graphs
     NeAnc = 1e4
     NeX = 1e4
-    NeY = 2e3
-    Tjoin = 2 * NeAnc * 0.2
+    NeY = 1e3
+    Tjoin = 2 * NeAnc * 0.1
     Tsplit = 2 * NeAnc + Tjoin
     gamma = 0.5
 
@@ -375,33 +237,23 @@ def make_figure3(fname='figures/figure3.svg'):
     b.add_pulse(sources=['Y'], dest='X', proportions=[gamma], time=Tjoin)
     struc_graph = b.resolve()
 
-    t_range = np.linspace(0, Tsplit * 1.2, 200)
+    t_range = np.linspace(0, Tsplit * 1.2, 300)
     struc_rate = simulation.get_coalescent_rate(struc_graph, 'X', t_range)
     inv_rate = 1 / (2 * struc_rate)
 
     _t = np.array([Tjoin + 1, Tsplit - 1])
     _Nx = 1 / (2 * simulation.get_coalescent_rate(struc_graph, 'X', _t))
     b = demes.Builder(time_units='generations')
+
+    _ts = np.flip(t_range)
+    _Ns = np.flip(inv_rate)
+    _Ns = np.append(_Ns, NeX)
     b.add_deme(
         'X',
-        epochs=[
-            dict(end_time=Tsplit, start_size=NeX),
-            dict(end_time=Tjoin, start_size=_Nx[1], end_size=_Nx[0]),
-            dict(end_time=0, start_size=NeX)
-        ]
+        epochs=[dict(end_time=_ts[i], start_size=_Ns[i]) for i in range(len(_ts))]
     )
     size_graph = b.resolve()
     size_rate = simulation.get_coalescent_rate(struc_graph, 'X', t_range)
-
-    #_t_range = np.flip(t_range)
-    #NeX = np.flip(inv_rate)
-    #b = demes.Builder(time_units='generations')
-    #epochs = [dict(end_time=_t_range[i], start_size=NeX[i]) for i in range(len(t_range))]
-    #b.add_deme('X', epochs=epochs)
-    #size_graph = b.resolve()
-    #size_rate = simulation.get_coalescent_rate(struc_graph, 'X', t_range)
-
-
     labels = ['structured', 'unstructured']
     _deme_colors = ['grey', 'blue']
     colors = ['black', 'blue']
@@ -422,19 +274,20 @@ def make_figure3(fname='figures/figure3.svg'):
         axs[2].plot(t_range, rate, color=colors[i], linestyle=styles[i])
     axs[2].set_xlabel('$t$ ($2N_e$)')
     axs[2].set_ylabel('coalescent rate')
-    axs[2].set_xlim(0, Tsplit * 1.4)
+    axs[2].set_xlim(0, Tsplit * 1.2)
     plotting.format_ticks(axs[2])
     axs[2].set_xticks([0, Tjoin, Tsplit], [0, Tjoin/Ne2, Tsplit/Ne2])
     make_line_legend(axs[2], labels, colors)
 
     # H2 plot
+    markers = ['x', '+']
     exps = [H2Spectrum.from_demes(g, r_bins=_r).data
             for g in [struc_graph, size_graph]]
     for i, exp in enumerate(exps):
         axs[3].plot(_x, exp[:-1, 0], color=colors[i], linestyle=styles[i])
         H = exp[-1, 0]
         axs[3].scatter([2e-8, 0.2], [2 * H ** 2, H ** 2], color=colors[i],
-                       marker='+')
+                       marker=markers[i])
 
     axs[3].set_ylim(0,)
     axs[3].set_xlabel('$r$')
@@ -457,43 +310,158 @@ def make_figure3(fname='figures/figure3.svg'):
     return None
 
 
-def make_figure4(g_fname='figures/fig4_graph.svg'):
+def make_figure3(g_fname='figures/fig4_graph.svg'):
     # inferred archaic history
 
     # needs figure title
 
-    graph_fname = '/home/nick/Projects/archaic/models/ND/best_fit/ND_new_bestfit_noH.yaml'
+    graph_fname = '/home/nick/Projects/archaic/models/ND/best_fit/NDbest.yaml'
     data_fname = '/home/nick/Projects/archaic/models/H2stats.npz'
 
-    fig_size = (7, 5)
-    fig, ax = plt.subplots(figsize=fig_size, layout='constrained')
+    fig_size = (9, 5.5)
+    fig, axs = plt.subplot_mosaic('AAB;AAC', figsize=fig_size, layout='constrained')
 
     graph = demes.load(graph_fname)
-    demesdraw.tubes(graph, ax, num_lines_per_migration=0, colours='grey')
-    ax.set_yticks(np.arange(0, 1.1e6, 1e5))
-    plotting.format_ticks(ax)
+
+    data = H2Spectrum.from_bootstrap_file(data_fname, graph=graph)
+    model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, 1.297e-8)
+    labels = ['Alt', 'Cha', 'Den', 'Vin']
+    plotting.plot_two_panel_H2(
+        model,
+        data,
+        labels,
+        archaic_colors,
+        axs=(axs['B'], axs['C']),
+    )
+    demesdraw.tubes(graph, axs['A'], colours='grey')
+    axs['A'].set_yticks(np.arange(0, 1.1e6, 1e5))
+    axs['A'].set_title('A', fontsize='large', loc='left')
+    plotting.format_ticks(axs['A'])
     plt.savefig(g_fname, format='svg', bbox_inches='tight')
     return None
 
 
+def make_figure4(out_fname='figures/figure5.svg'):
+
+    graph_fname = '/home/nick/Projects/archaic/models/ND/NDS/fixed_ND/pulse/fits/NDSpulse_1836367_0.yaml'
+    data_fname = '/home/nick/Projects/archaic/models/H2stats.npz'
+
+    fig_size = (9, 8.25)
+    fig, axs = plt.subplot_mosaic('AAB;AAC;ZZD', figsize=fig_size, layout='constrained')
+    axs['Z'].remove()
+
+    graph = demes.load(graph_fname)
+
+    data = H2Spectrum.from_bootstrap_file(data_fname, graph=graph)
+    model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, 1.297e-8)
+
+    labels = ['Alt', 'Cha', 'Den', 'Vin']
+    plotting.plot_two_panel_H2(
+        model,
+        data,
+        labels,
+        archaic_colors,
+        axs=(axs['B'], axs['C']),
+    )
+    demesdraw.tubes(graph, axs['A'], colours='grey')
+    axs['A'].set_yticks(np.arange(0, 1.1e6, 1e5))
+    axs['A'].set_title('A', fontsize='large', loc='left')
+    plotting.format_ticks(axs['A'])
+    axs['A'].set_ylabel('$t$ (years)')
+
+
+    D = axs['D']
+    ci = 1.96
+    r_bins = data.r_bins
+    x = r_bins[:-1] + np.diff(r_bins) / 2
+    base_graph_fname = '/home/nick/Projects/archaic/models/ND/best_fit/NDbest.yaml'
+    base_graph = demes.load(base_graph_fname)
+    base_model = H2Spectrum.from_graph(base_graph, data.sample_ids, data.r, 1.297e-8)
+    # curves involving Denisova
+    #idx = [7, 2, 5, 8]
+    idx = [7]
+    for i in idx:
+        var = data.covs[:-1, i, i]
+        y_err = np.sqrt(var) * ci
+
+        id_x, id_y = data.ids[i]
+        if id_x == id_y:
+            label = id_x[:3]
+        else:
+            label = f'{id_x[:3]}-{id_y[:3]}'
+
+        D.errorbar(
+            x, data.arr[:-1, i], yerr=y_err, color=archaic_colors[i], fmt=".", capsize=0
+        )
+
+        D.plot(x, base_model.arr[:-1, i], color=archaic_colors[i], linestyle='dashed')
+        D.plot(x, model.arr[:-1, i], color=archaic_colors[i], label=label)
+
+    D.set_ylim(0,)
+    D.set_xlabel('$r$')
+    D.set_ylabel('$H_2$')
+    plotting.format_ticks(D)
+    D.set_xscale('log')
+    D.legend(fontsize='x-small', framealpha=0, )
+    D.set_xlim(9e-7, 2e-2)
+    plt.minorticks_off()
+
+    plt.savefig(out_fname, format='svg', bbox_inches='tight')
 
 
 
+def make_figure6(out_fname='figures/figure6.svg'):
+    # plots SFS vs H2 identifiability
+    graph_fname = '/home/nick/Projects/archaic/simulations/simple_admix_id/admix.yaml'
+    options_fname = '/home/nick/Projects/archaic/simulations/simple_admix_id/padmix.yaml'
+    graph_dir = '/home/nick/Projects/archaic/simulations/simple_admix_id/u/graphs'
+    files = [f'{graph_dir}/{x}' for x in os.listdir(graph_dir)]
+    SFS_graphs = [x for x in files if '.yaml' in x and 'SFS' in x]
+    H2_graphs = [x for x in files if '.yaml' in x and 'H2' in x]
+
+    builder = moments.Demes.Inference._get_demes_dict(graph_fname)
+    options = moments.Demes.Inference._get_params_dict(options_fname)
+    pnames, p0, _, __ = moments.Demes.Inference._set_up_params_and_bounds(options, builder)
+    _, SFS_params = inference.get_param_arr(
+        SFS_graphs, options_fname, permissive=True
+    )
+    _, H2_params = inference.get_param_arr(
+        H2_graphs, options_fname, permissive=True
+    )
+    graph = demes.load(graph_fname)
+    fig, axs = plt.subplot_mosaic('ABC;DEF', figsize=(7, 4), layout='constrained')
+    axs = [axs[x] for x in axs]
+    label_subfigures(axs)
+
+    # A
+    A = axs[0]
+    demesdraw.tubes(graph, ax=A, colours='grey')
+    plotting.format_ticks(A, x_ax=False)
+    A.set_ylabel('$t$ (years)')
+
+    colors = ['blue', 'red']
+    plot_pnames = {'T0': 'Tsplit', 'T1': 'Tjoin', '$\gamma$': 'gamma', 'NX': 'NX', 'NY': 'NY'}
+    for i, pname in enumerate(plot_pnames):
+        ax = axs[i + 1]
+        j = pnames.index(plot_pnames[pname])
+        sfs = SFS_params[:, j]
+        h2 = H2_params[:, j]
+        truth = p0[i]
+        ax.scatter(0, truth, marker='+', color='black')
+        boxes = ax.boxplot(
+            [p for p in [sfs, h2]],
+            vert=True,
+            patch_artist=True,
+            widths=[0.2, 0.2],
+        )
+        for k, patch in enumerate(boxes['boxes']):
+            patch.set_facecolor(colors[k])
+        ax.set_xlim(-0.5, 2.5)
+        ax.set_xticks([0, 1, 2], ['truth', 'SFS-fit', 'H2-fit'])
+        ax.set_ylabel(pname)
+
+    plt.savefig(out_fname, format='svg', bbox_inches='tight')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-make_figure3()
+make_figure4()
 

@@ -70,7 +70,7 @@ def coalsim(
     L,
     n=1,
     r=1e-8,
-    u=1.35e-8,
+    u=None,
     contig_id='0'
 ):
     # perform a coalescent simulation using msprime.sim_ancestry

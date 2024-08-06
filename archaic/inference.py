@@ -312,10 +312,9 @@ def fit_composite(
     max_iter=1000,
     method='NelderMead',
     L=None,
-    u=1.35e-8,
+    u=None,
     verbosity=1,
-    out_fname=None,
-    use_H=True
+    out_fname=None
 ):
     #
     if H2_data.has_H:
@@ -355,7 +354,6 @@ def fit_composite(
         upper_bounds,
         constraints,
         verbosity,
-        use_H,
         fit_u
     )
     ret = optimize(
@@ -384,7 +382,6 @@ def objective_composite(
     upper_bounds=None,
     constraints=None,
     verbosity=1,
-    use_H=True,
     fit_u=False
 ):
     #
@@ -413,7 +410,7 @@ def objective_composite(
         u=u * L
     )
     H2_model = H2Spectrum.from_graph(
-        graph, H2_data.sample_ids, H2_data.r, u, get_H=use_H
+        graph, H2_data.sample_ids, H2_data.r, u, get_H=False
     )
     ll = moments.Inference.ll(SFS_model, SFS_data) + get_ll(H2_model, H2_data)
 

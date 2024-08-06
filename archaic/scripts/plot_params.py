@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument("-g2", "--g2", nargs='*', default=[])
     parser.add_argument("-g3", "--g3", nargs='*', default=[])
     parser.add_argument("-g4", "--g4", nargs='*', default=[])
-    parser.add_argument('--labels', nargs='*', default=[])
+    parser.add_argument('--labels', nargs='*', default=None)
     parser.add_argument('--title', default=None)
     parser.add_argument('--marker_size', type=int, default=8)
     parser.add_argument('--n_cols', type=int, default=5)
@@ -50,13 +50,18 @@ def plot():
         )
     bounds = np.array([lower, upper]).T
     arrs = []
-    for fnames in [args.g1, args.g2, args.g3, args.g4]:
+    file_groups = [x for x in [args.g1, args.g2, args.g3, args.g4] if len(x) > 0]
+    for fnames in file_groups:
         if len(fnames) > 0:
             _, arr = inference.get_param_arr(
                 fnames, args.params_fname, permissive=True
             )
             arrs.append(arr)
-    labels = args.labels
+    if args.labels is None:
+        labels = [_fnames[0] for _fnames in file_groups]
+        print(labels)
+    else:
+        labels = args.labels
     if len(labels) != len(arrs):
         raise ValueError('label length mismatches graph category length')
     plotting.plot_parameters(

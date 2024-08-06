@@ -262,7 +262,7 @@ def parse_label(label):
     return _label
 
 
-def format_ticks(ax):
+def format_ticks(ax, y_ax=True, x_ax=True):
     # latex scientific notation for x, y ticks
     def scientific(x):
         if x == 0:
@@ -280,8 +280,10 @@ def format_ticks(ax):
         return ret
 
     formatter = mticker.FuncFormatter(lambda x, p: scientific(x))
-    ax.xaxis.set_major_formatter(formatter)
-    ax.yaxis.set_major_formatter(formatter)
+    if x_ax:
+        ax.xaxis.set_major_formatter(formatter)
+    if y_ax:
+        ax.yaxis.set_major_formatter(formatter)
     return 0
 
 
@@ -290,15 +292,41 @@ publication-quality H2 plot
 """
 
 
-def plot_two_panel_H2(model, data, sample_ids, colors):
+def plot_two_panel_H2(model, data, labels, colors, axs=None, ci=1.96):
+    # labels is a list of strings naming each individual in proper order
 
-    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(4, 5), layout='constrained')
+    if axs is None:
+        fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(3.5, 5), layout='constrained')
+    else:
+        ax0, ax1 = axs
 
-    for i, (x, y) in enumerate(model.ids):
-        if x not in sample_ids or y not in sample_ids:
-            continue
-        if x == y:
-            c
+    sample_ids = data.sample_ids
+    if labels is None:
+        labels = sample_ids
+    names = dict(zip(sample_ids, labels))
+    r_bins = data.r_bins
+    x = r_bins[:-1] + np.diff(r_bins) / 2
+
+    for i, (id_x, id_y) in enumerate(data.ids):
+        H2 = data.arr[:-1, i]
+        H = data.arr[-1, i]
+        EH2 = model.arr[:-1, i]
+        EH = data.arr[-1, i]
+
+        var = data.covs[:-1, i, i]
+        y_err = np.sqrt(var) * ci
+
+        if id_x == id_y:
+            ax = ax0
+            label = names[id_x]
+        else:
+            ax = ax1
+            label = f'{names[id_x]}-{names[id_y]}'
+
+        ax.plot(x, EH2, color=colors[i], label=label)
+        ax.errorbar(
+            x, H2, yerr=y_err, color=colors[i], fmt=".", capsize=0
+        )
 
     for ax in (ax0, ax1):
         ax.set_ylim(0, )
@@ -306,10 +334,14 @@ def plot_two_panel_H2(model, data, sample_ids, colors):
         ax.set_ylabel('$H_2$')
         format_ticks(ax)
         ax.set_xscale('log')
+        ax.legend(fontsize='x-small', framealpha=0,)
+        ax.set_xlim(9e-7, 2e-2)
+        plt.minorticks_off()
 
-    plt.minorticks_off()
+    ax0.set_title('B', fontsize='large', loc='left')
+    ax1.set_title('C', fontsize='large', loc='left')
 
-    return fig
+    #plt.savefig(out_fname, format='svg', bbox_inches='tight')
 
 
 """
@@ -326,7 +358,7 @@ def plot_parameters(
     n_cols=5,
     marker_size=2,
     title=None,
-    wide_bounds=True
+    wide_bounds=False
 ):
     # plot parameter clouds
     # truths is a vector of underlying true parameters

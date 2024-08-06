@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument('-p', '--options_fname', required=True)
     parser.add_argument('-o', '--out_prefix', required=True)
     parser.add_argument('-u', '--u', type=float, default=None)
-    parser.add_argument('-H', '--use_H', type=int, default=1)
+    parser.add_argument('-H', '--use_H', type=int, default=0)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
     parser.add_argument('--method', nargs='*', default=['Powell'])
     parser.add_argument('-v', '--verbosity', type=int, default=1)
