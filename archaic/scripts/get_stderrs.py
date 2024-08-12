@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument('-g', '--graph_fname', required=True)
     parser.add_argument('-p', '--options_fname', required=True)
     parser.add_argument('-d', '--data_fname', required=True)
-    parser.add_argument('-u', '--u', type=float, default=1.35e-8)
+    parser.add_argument('-u', '--u', type=float, default=None)
     parser.add_argument('--delta', type=float, default=0.01)
     parser.add_argument('-n', '--n_bootstraps', type=int, default=None)
     parser.add_argument('--method', default='GIM')

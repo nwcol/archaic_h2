@@ -190,7 +190,6 @@ def count_site_pairs(
                 utils.get_time(),
                 f'n site pairs parsed; indices {l_stop}-{l_start}:{r_stop}'
             )
-
     else:
         for i in np.arange(n_left_loci):
             if bp_thresh > 0:

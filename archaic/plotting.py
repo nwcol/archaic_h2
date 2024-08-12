@@ -322,11 +322,11 @@ def plot_two_panel_H2(model, data, labels, colors, axs=None, ci=1.96):
         else:
             ax = ax1
             label = f'{names[id_x]}-{names[id_y]}'
-
-        ax.plot(x, EH2, color=colors[i], label=label)
         ax.errorbar(
             x, H2, yerr=y_err, color=colors[i], fmt=".", capsize=0
         )
+        ax.plot(x, EH2, color=colors[i], label=label)
+
 
     for ax in (ax0, ax1):
         ax.set_ylim(0, )
@@ -334,12 +334,8 @@ def plot_two_panel_H2(model, data, labels, colors, axs=None, ci=1.96):
         ax.set_ylabel('$H_2$')
         format_ticks(ax)
         ax.set_xscale('log')
-        ax.legend(fontsize='x-small', framealpha=0,)
-        ax.set_xlim(9e-7, 2e-2)
+        ax.set_xlim(8e-7, 1.15e-2)
         plt.minorticks_off()
-
-    ax0.set_title('B', fontsize='large', loc='left')
-    ax1.set_title('C', fontsize='large', loc='left')
 
     #plt.savefig(out_fname, format='svg', bbox_inches='tight')
 

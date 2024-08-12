@@ -6,7 +6,11 @@ setup(
     version="2024.1",
     author="Nick Collier",
     author_email="nwcollier@wisc.edu",
-    packages=["archaic"],
+    packages=[
+        "archaic", 
+        'archaic.pipeline',
+        'archaic.scripts'
+    ],
     entry_points={
         "console_scripts": [
             "make_exon_masks=archaic.pipeline.make_exon_masks:main",

@@ -646,7 +646,7 @@ def get_uncerts(
     options_fname,
     data,
     bootstraps=None,
-    u=1.35e-8,
+    u=None,
     delta=0.01,
     method='GIM'
 ):
@@ -656,12 +656,26 @@ def get_uncerts(
     pnames, p0, lower_bound, upper_bound = \
         moments.Demes.Inference._set_up_params_and_bounds(options, builder)
 
+    if u is None:
+        # my temporary means of getting mutation rate into p0
+        g = demes.load(graph_fname)
+        _u = float(g.metadata['opt_info']['u'])
+        pnames.append('u')
+        p0 = np.append(p0, _u)
+        fit_u = True
+    else:
+        fit_u = False
+
     def model_func(p):
         # takes parameters and returns expected statistics
         nonlocal builder
         nonlocal options
         nonlocal data
         nonlocal u
+        nonlocal fit_u
+
+        if fit_u:
+            u = p[-1]
 
         builder = moments.Demes.Inference._update_builder(builder, options, p)
         graph = demes.Graph.fromdict(builder)
@@ -731,7 +745,7 @@ def get_godambe_matrix(
         cU = get_gradient(func, p0, delta, bootstrap)
         cJ = cU @ cU.T
         J += cJ
-        print(f'score {i} computed')
+
     J = J / len(bootstraps)
     J_inv = np.linalg.inv(J)
     godambe_matrix = H @ J_inv @ H

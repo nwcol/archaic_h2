@@ -45,7 +45,7 @@ def simulate(
         _r = msprime.RateMap(position=positions, rate=rates)
 
     try:
-        u = float(u)
+        _u = float(u)
         Lu = None
     except:
         if 'txt' in u:
@@ -60,7 +60,7 @@ def simulate(
         if Lu is not None or Lr is not None:
             raise ValueError('you cannot provide L and u or r')
         else:
-            _L = int(L)
+            _L = int(float(L))
     elif Lu is not None and Lr is not None:
         if Lu != Lr:
             raise ValueError('length of u does not match length of r')
