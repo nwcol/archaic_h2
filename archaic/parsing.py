@@ -8,6 +8,41 @@ from archaic import masks, one_locus, two_locus, utils
 
 
 """
+NEW
+"""
+
+
+def count_site_pairs(r_map, bins):
+    #
+    cM_bins = utils.map_function(bins)
+    site_edges = r_map[:, np.newaxis] + cM_bins[np.newaxis, :]
+    counts = np.searchsorted(r_map, site_edges)
+    cum_counts = counts.sum(0)
+    num_pairs = np.diff(cum_counts)
+
+    # correction
+    if bins[0] == 0:
+        redundant_count = np.sum(
+            np.arange(len(r_map))
+            - np.searchsorted(r_map, r_map)
+        ) + n_left_loci
+        n_site_pairs[0] -= n_redundant
+
+    return num_pairs
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
 H
 """
 

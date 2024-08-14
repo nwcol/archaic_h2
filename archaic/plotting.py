@@ -43,6 +43,7 @@ def plot_H2_spectra(
     n_cols=5,
     alpha=0.05,
     ylim_0=True,
+    xlim=None,
     log_scale=False,
     sci=True,
     statistic='$H_2'
@@ -87,6 +88,8 @@ def plot_H2_spectra(
         else:
             if ylim_0:
                 ax.set_ylim(0, )
+            if xlim:
+                ax.set_xlim(xlim, )
 
     # write the legend
     if labels is not None:

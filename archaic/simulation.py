@@ -62,8 +62,16 @@ def simulate(
         else:
             _L = int(float(L))
     elif Lu is not None and Lr is not None:
-        if Lu != Lr:
-            raise ValueError('length of u does not match length of r')
+        if Lu > Lr:
+            print(
+                'length of u map exceeds length of r map; '
+                f'shortening to {Lr}'
+            )
+        elif Lu < Lr:
+            print(
+                'length of r map exceeds length of u map; '
+                f'shortening to {Lu}'
+            )
         else:
             _L = int(Lu)
     elif Lu is not None:
@@ -115,51 +123,58 @@ def process_sim_data():
 
 def simulate_chrom(
     graph,
-    map_fname,
-    u=1.35e-8,
-    sample_ids=None,
-    out_fname=None,
-    contig=0
+    out_fname,
+    u_fname=None,
+    r_fname=None,
+    sampled_demes=None,
+    contig_id=None
 ):
-    # simulate on a genetic map
-    # get the length of the map
-    header_dict = two_locus.parse_map_file_header(map_fname)
-    rate_map = msprime.RateMap.read_hapmap(
-        map_fname,
-        position_col=header_dict['Position(bp)'],
-        map_col=header_dict['Map(cM)']
-    )
+    #
+    u_rates = np.load(u_fname)['rate']
+    positions = np.arange(len(u_rates) + 1)
+    u_map = msprime.RateMap(position=positions, rate=u_rates)
+
+    """
+    r_positions, r_rates = two_locus.read_map_file(r_fname)
+    r_positions[0] = 0
+    idx = np.searchsorted(r_positions, positions[-1])
+    _r_positions = np.append(r_positions[:idx], positions[-1])
+    _r_rates = r_rates[:idx]
+    r_map = msprime.RateMap(position=_r_positions, rate=_r_rates)
+    """
+    r_map = msprime.RateMap.read_hapmap(r_fname, map_col=2, position_col=0)
+    r_map = r_map.slice(right=positions[-1], trim=True)
+
     if isinstance(graph, str):
         graph = demes.load(graph)
     demography = msprime.Demography.from_demes(graph)
-    if sample_ids is None:
-        sample_ids = [d.name for d in graph.demes if d.end_time == 0]
-    config = {s: 1 for s in sample_ids}
-
+    if sampled_demes is None:
+        sampled_demes = [d.name for d in graph.demes if d.end_time == 0]
+    config = {s: 1 for s in sampled_demes}
+    print(utils.get_time(), 'simulating ancestry')
     ts = msprime.sim_ancestry(
         samples=config,
         ploidy=2,
         demography=demography,
-        recombination_rate=rate_map,
-        discrete_genome=True
+        recombination_rate=r_map,
+        discrete_genome=True,
+        record_provenance=False
     )
-    mts = msprime.sim_mutations(ts, rate=u)
+    print(utils.get_time(), 'simulating mutation')
+    mts = msprime.sim_mutations(ts, rate=u_map)
 
-    if out_fname is None:
-        return mts
-    else:
-        with open(out_fname, 'w') as file:
-            mts.write_vcf(
-                file,
-                individual_names=sample_ids,
-                contig_id=str(contig),
-                position_transform=increment1
-            )
-        print(
-            utils.get_time(),
-            f'{int(mts.sequence_length)} sites simulated '
-            f'on contig {contig} and saved at {out_fname}'
+    with open(out_fname, 'w') as file:
+        mts.write_vcf(
+            file,
+            individual_names=sampled_demes,
+            contig_id=str(contig_id),
+            position_transform=increment1
         )
+    print(
+        utils.get_time(),
+        f'{int(mts.sequence_length)} sites simulated '
+        f'on contig {contig_id} and saved at {out_fname}'
+    )
     return 0
 
 

@@ -8,20 +8,23 @@ container_image = file:///staging/nwcollier/archaic-container.sif
 executable = parse_H2.sh
 
 
-arguments = --cluster_id $(Cluster) --process_id $(Process) \
-	    -d H2_bootstrap.npz -g MND_mig.yaml -p MND_mig_params.yaml -o MND_mig \
-            --perturb_graph 1 --max_iter 500 --opt_methods Powell -v 20 -u 1.35e-8 --use_H 1
+arguments = -v *.vcf.gz -m *.bed -r YRI-$(Process)-final.txt -W *windows.txt -B r_bins.txt  
+            -o chr$(Process)_strictmask.npz
 
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
 
-transfer_input_files = fit_H2.py, H2_bootstrap.npz, MND_mig.yaml, MND_mig_params.yaml
+transfer_input_files = data/vcfs/chr$(Process).vcf.gz \
+                        data/omniYRImaps/YRI-$(Process)-final.txt \
+                        data/windows/chr$(Process)_windows.txt \
+                        data/r_bins.txt 
+                        data/masks/strict/20140520.chr$(Process).strict_mask.bed
 
 
 request_cpus = 1
-request_memory = 1GB
-request_disk = 1GB
+request_memory = 8GB
+request_disk = 2GB
 
-queue 20
+queue 2

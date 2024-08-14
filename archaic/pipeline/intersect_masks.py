@@ -11,9 +11,9 @@ from archaic import utils
 def get_args():
     # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--mask_fnames', nargs='*', required=True)
+    parser.add_argument('-b', '--mask_fnames', nargs='*', required=True)
     parser.add_argument('-s', '--negative_mask_fnames', nargs='*', default=[])
-    parser.add_argument('-min', '--min_length', type=int, default=None)
+    parser.add_argument('--min_length', type=int, default=None)
     parser.add_argument('-o', '--out_fname', required=True)
     return parser.parse_args()
 
@@ -36,7 +36,7 @@ def main():
     n_sites = masks.get_n_sites(intersect)
     print(
         utils.get_time(),
-        f'intersected mask for chrom {chrom_num} written; {n_sites} sites'
+        f'intersect mask for chrom {chrom_num} written; {n_sites} sites'
     )
     return 0
 
