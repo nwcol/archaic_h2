@@ -100,8 +100,9 @@ class H2Spectrum:
                     + [np.cov(per_window_H, rowvar=False)]
                 )
                 if covs.ndim != 3:
-                    n = per_window_H.shape[1]
-                    covs = covs.reshape(len(r_bins), n, n)
+                    covs = None
+                    #n = per_window_H.shape[1]
+                    #covs = covs.reshape(len(r_bins), n, n)
             else:
                 covs = None
             H2 = file['H2_counts'].sum(0) / file['n_site_pairs'].sum(0)
