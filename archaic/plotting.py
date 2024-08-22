@@ -10,7 +10,7 @@ import moments
 import numpy as np
 import scipy
 
-from archaic import utils
+from archaic import utils, parsing
 
 
 """
@@ -494,6 +494,73 @@ Generic plotting functions
 """
 
 
+def plot_pair_counts(H2_dict):
+    #
+    fig, ax = plt.subplots(layout='constrained')
+    x = H2_dict['r_bins'][1:]
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.plot(x, H2_dict['n_site_pairs'].sum(0), color='black', label='site_pairs')
+    for i, ids in enumerate(H2_dict['ids']):
+        if ids[0] == ids[1]:
+            ax.plot(
+                x, H2_dict['H2_counts'][:, i].sum(0), label=ids[0]
+            )
+    ax.legend()
+
+
+def plot_arm_H2_H(H2_dict, idx):
+    # assumes that each arm is one window
+    tot_H2 = H2_dict['H2_counts'].sum(0) / H2_dict['n_site_pairs'].sum(0)
+    left_H2 = H2_dict['H2_counts'][0] / H2_dict['n_site_pairs'][0]
+    right_H2 = H2_dict['H2_counts'][1] / H2_dict['n_site_pairs'][1]
+
+    cross_arm_num_h2, cross_arm_num_pairs = parsing.compute_cross_arm_H2(H2_dict, 1)
+    cross_arm_H2 = cross_arm_num_h2 / cross_arm_num_pairs
+
+    tot_H_squared = (H2_dict['H_counts'].sum(0) / H2_dict['n_sites'].sum(0)) ** 2
+    left_H_squared = (H2_dict['H_counts'][0] / H2_dict['n_sites'][0]) ** 2
+    right_H_squared = (H2_dict['H_counts'][1] / H2_dict['n_sites'][1]) ** 2
+
+    fig, ax = plt.subplots(layout='constrained')
+    r = H2_dict['r_bins'][1:]
+
+    ax.plot(r, tot_H2[idx], color='black', label='total $H_2$')
+    ax.plot(r, left_H2[idx], color='red', label='left-arm $H_2$')
+    ax.plot(r, right_H2[idx], color='orange', label='right-arm $H_2$')
+
+    ax.scatter(1, tot_H_squared[idx], marker='x', label='total $H^2$', color='black')
+    ax.scatter(1, left_H_squared[idx], marker='x', label='left-arm $H^2$',
+               color='red')
+    ax.scatter(1, right_H_squared[idx], marker='x', label='right-arm $H^2$',
+               color='orange')
+    ax.scatter(1, cross_arm_H2[idx], marker='+', label='cross-arm $H_2$', color='black')
+    ax.set_xscale('log')
+    ax.set_ylim(0, )
+    ax.legend()
+
+
+def plot_H2_vs_Hsquared(dic):
+    #
+    fig, ax = plt.subplots(layout='constrained')
+    bins = dic['r_bins']
+    colors = list(cm.gnuplot(np.linspace(0.1, 0.95, 10)))
+
+    for i in range(17, 27, 1):
+        bin0 = np.format_float_scientific(bins[i], 2)
+        bin1 = np.format_float_scientific(bins[i + 1], 2)
+        label = rf'$r\in[{bin0}, {bin1}]$'
+        plt.scatter(
+            range(55), dic['H2'][:, i], label=label, facecolors='none',
+            edgecolors=colors[i-17]
+        )
+
+    H_squared = dic['H'] ** 2
+    plt.scatter(range(55), H_squared, marker='+', color='black', label='$H^2$')
+    plt.ylim(0, )
+    fig.legend(fontsize=8, draggable=True)
+
+
 def plot_distribution(
     bins,
     data,
@@ -512,3 +579,9 @@ def plot_distribution(
     ax.legend(fontsize=8)
     return ax
 
+
+
+chrs = [np.load(
+    f'/home/nick/Projects/archaic/statistics/arms/arm_H2_{i}.npz'
+) for i in range(1, 23)]
+mean = parsing.sum_H2(*chrs)

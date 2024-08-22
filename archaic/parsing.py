@@ -7,7 +7,7 @@ import time
 from archaic import masks, utils
 
 
-_default_r_bins = np.logspace(-6, -2, 17)
+_default_bins = np.logspace(-6, -2, 17)
 
 
 """
@@ -277,21 +277,6 @@ def get_two_sample_H2(
     return num_H2
 
 
-def get_cross_chromosome_H2(site_counts, H_counts):
-    # all in one r-bin; 0.5. iterates over all pairs. returns H2, not a count
-    # worth a rewrite
-    n = len(site_counts)
-    if len(H_counts) != n:
-        raise ValueError("length mismatch")
-    n_pairs = int(n * (n - 1) / 2)
-    H2 = np.zeros(n_pairs)
-    for i, (j, k) in enumerate(utils.get_pair_idxs(n)):
-        site_pair_count = site_counts[j] * site_counts[k]
-        H2_count = H_counts[j] * H_counts[k]
-        H2[i] = H2_count / site_pair_count
-    return H2
-
-
 def compute_H2(
     positions,
     genotypes,
@@ -313,7 +298,7 @@ def compute_H2(
     if sample_mask is not None:
         genotypes = genotypes[:, sample_mask]
     if bins is None:
-        bins = _default_r_bins
+        bins = _default_bins
 
     num_pairs = get_site_pairs(positions, windows, bounds, r_map, bins)
 
@@ -354,7 +339,7 @@ def compute_H2(
     return num_pairs, num_H2
 
 
-def count_scaled_site_pairs(
+def __count_scaled_site_pairs(
     r_map,
     u_map,
     bins,
@@ -407,96 +392,96 @@ def count_scaled_site_pairs(
     return scaled_num_pairs
 
 
-def parse_scaled_H2(
-    mask_fname,
-    vcf_fname,
-    map_fname,
-    scale_fname,
-    r_bins,
-    windows=None,
-    bounds=None,
-    scale_name='rates',
+def _count_scaled_site_pairs(
+    r_map,
+    bins,
+    scale,
+    left_bound=None,
+    verbosity=1e5,
+    discrete=100
 ):
     #
-    mask = masks.Mask.from_bed_file(mask_fname)
-    mask_positions = mask.positions
-    variant_file = one_locus.VariantFile(vcf_fname, mask=mask)
-    genotype_arr = variant_file.genotypes
-    vcf_positions = variant_file.positions
-    r_map = two_locus.get_r_map(map_fname, mask_positions)
-    vcf_map = two_locus.get_r_map(map_fname, vcf_positions)
-    print(utils.get_time(), 'files loaded')
+    if not left_bound:
+        left_bound = len(r_map)
 
-    scale_file = np.load(scale_fname)
-    scale_positions = scale_file['positions']
-    _scale = 1 / scale_file['rates']
-    scale = _scale[np.searchsorted(scale_positions, mask_positions)]
-    vcf_scale = _scale[np.searchsorted(scale_positions, vcf_positions)]
-    print(utils.get_time(), 'rate files loaded')
+    cM_bins = utils.map_function(bins)
+    # optimize by capping right index
+    #right_limits = np.searchsorted(r_map, r_map + cM_bins[-1])
+    #right_limits[right_limits > left_bound] = left_bound
 
-    length, n_samples, _ = genotype_arr.shape
-    n_windows = len(windows)
 
-    # one-locus H
-    idxs = [(i, j) for i in range(n_samples) for j in np.arange(i, n_samples)]
-    n_sites = np.zeros(n_windows)
-    H_counts = np.zeros((n_windows, len(idxs)))
+    _bins = r_map[:left_bound, np.newaxis] + cM_bins[np.newaxis, :]
+    edges = np.searchsorted(r_map, _bins)
+    edges -= np.arange(left_bound)[:, np.newaxis]
 
-    for k, window in enumerate(windows):
-        start, end = np.searchsorted(mask_positions, window)
-        _start, _end = np.searchsorted(vcf_positions, window)
-        n_sites[k] = scale[start:end].sum()
-
-        for i, (x, y) in enumerate(idxs):
-            if x != y:
-                continue
-            sequences = genotype_arr[_start:_end, x]
-            indicator = sequences[:, 0] != sequences[:, 1]
-            H_counts[k, i] = (indicator * vcf_scale[_start:_end]).sum()
-    print(utils.get_time(), 'one-locus H computed')
-
-    # two-locus H
-    n_site_pairs = np.zeros((n_windows, len(r_bins) - 1))
-    H2_counts = np.zeros((n_windows, len(idxs), len(r_bins) - 1))
-
-    for k, window in enumerate(windows):
-        start, end = np.searchsorted(mask_positions, window)
-        max_idx = np.searchsorted(mask_positions, bounds[k])
-
-        _start, _end = np.searchsorted(vcf_positions, window)
-        _max_idx = np.searchsorted(vcf_positions, bounds[k])
-
-        n_site_pairs[k] = count_u_scaled_site_pairs(
-            r_map[start:],
-            scale[start:],
-            r_bins,
-            max_idx=max_idx
-        )
-        for i, (x, y) in enumerate(idxs):
-            if x != y:
-                continue
-            sequences = genotype_arr[_start:_end, x]
-            indicator = sequences[_start:, 0] != sequences[_start:, 1]
-            H2_counts[0, i] = count_u_scaled_site_pairs(
-                vcf_map[_start:][indicator],
-                vcf_scale[_start:][indicator],
-                r_bins,
-                max_idx=_max_idx
-            )
-    print(utils.get_time(), 'two-locus H computed')
-
-    ids = variant_file.sample_ids
-    n = len(ids)
-    ids = [(ids[i], ids[j]) for i in np.arange(n) for j in np.arange(i, n)]
-    ret = dict(
-        n_sites=n_sites[np.newaxis],
-        H_counts=H_counts,
-        n_site_pairs=n_site_pairs[np.newaxis],
-        H2_counts=H2_counts,
-        r_bins=r_bins,
-        ids=ids
+    # precompute scale products
+    discrete_scale = np.logspace(
+        np.log10(scale.min()), np.log10(scale.max() * 1.001), discrete
     )
-    return ret
+    grid = np.outer(discrete_scale, discrete_scale)
+
+    def approximate(x, y):
+        #
+        idx_x = np.searchsorted(discrete_scale, x)
+        idx_y = np.searchsorted(discrete_scale, y)
+        return grid[idx_x, idx_y]
+
+    cum_scaled_num_pairs = np.zeros(len(bins))
+
+    for i in np.arange(left_bound):
+        approx_prods = approximate(scale[i], scale[i + 1:i + edges[i, -1]])
+        cum_scaled_num_pairs += approx_prods[edges[i]]
+        if i % verbosity == 0:
+            if i > 0:
+                print(utils.get_time(), f'site pairs counted at site {i}')
+
+    scaled_num_pairs = np.diff(cum_scaled_num_pairs)
+    return scaled_num_pairs
+
+
+def count_scaled_site_pairs(
+    r_map,
+    bins,
+    scale,
+    left_bound=None,
+    verbosity=1e5,
+    discrete=100
+):
+    #
+    if not left_bound:
+        left_bound = len(r_map)
+
+    cM_bins = utils.map_function(bins)
+    # optimize by capping right index
+    #right_limits = np.searchsorted(r_map, r_map + cM_bins[-1])
+    #right_limits[right_limits > left_bound] = left_bound
+
+
+    _bins = r_map[:left_bound, np.newaxis] + cM_bins[np.newaxis, :]
+    edges = np.searchsorted(r_map, _bins)
+    edges -= np.arange(left_bound)[:, np.newaxis]
+
+    # a cheat- I don't fully understand this indexing issue
+    edges[edges == len(edges)] -= 1
+
+    # precompute scale products
+    cum_scale = np.cumsum(scale)
+    cum_scaled_num_pairs = np.zeros(len(bins))
+
+    for i in np.arange(left_bound):
+        edge_scales = cum_scale[edges[i]]
+        cum_scaled_num_pairs += scale[i] * edge_scales
+        if i % verbosity == 0:
+            if i > 0:
+                print(utils.get_time(), f'site pairs counted at site {i}')
+
+    scaled_num_pairs = np.diff(cum_scaled_num_pairs)
+    return scaled_num_pairs
+
+
+"""
+parsing statistics from file
+"""
 
 
 def parse_H(
@@ -575,6 +560,111 @@ def parse_H2(
     return stats
 
 
+def parse_scaled_H2(
+    mask_fname,
+    vcf_fname,
+    map_fname,
+    scale_fname,
+    r_bins,
+    windows=None,
+    bounds=None,
+    scale_name='rates',
+):
+    #
+    t0 = time.time()
+    mask_regions = utils.read_mask_file(mask_fname)
+    mask_positions = utils.mask_to_positions(mask_regions)
+    sample_ids, vcf_positions, genotype_arr = \
+        utils.read_vcf_genotypes(vcf_fname, mask_regions)
+    r_map = utils.read_map_file(map_fname, mask_positions)
+    vcf_r_map = utils.read_map_file(map_fname, vcf_positions)
+    print(utils.get_time(), "files loaded")
+
+    scale_file = np.load(scale_fname)
+    scale_positions = scale_file['positions']
+    _scale = scale_file['rates']
+    scale = _scale[np.searchsorted(scale_positions, mask_positions)]
+    vcf_scale = _scale[np.searchsorted(scale_positions, vcf_positions)]
+    print(utils.get_time(), 'scale files loaded')
+
+    length, n_samples, _ = genotype_arr.shape
+    n_windows = len(windows)
+
+    # one-locus H
+    n_sites = np.zeros(n_windows)
+    H_counts = np.zeros((n_windows, utils.n_choose_2(n_samples) + n_samples))
+
+    for z, window in enumerate(windows):
+        start, end = np.searchsorted(mask_positions, window)
+        _start, _end = np.searchsorted(vcf_positions, window)
+        n_sites[z] = scale[start:end].sum()
+        k = 0
+        for i in range(n_samples):
+            for j in range(i, n_samples):
+                if i != j:
+                    k += 1
+                    continue
+                sequences = genotype_arr[_start:_end, i]
+                indicator = sequences[:, 0] != sequences[:, 1]
+                H_counts[z, k] = (indicator * vcf_scale[_start:_end]).sum()
+                k += 1
+
+    print(utils.get_time(), 'one-locus H computed')
+
+    # two-locus H
+    n_site_pairs = np.zeros((n_windows, len(r_bins) - 1))
+    H2_counts = np.zeros(
+        (n_windows, utils.n_choose_2(n_samples) + n_samples, len(r_bins) - 1)
+    )
+
+    for z, (window, bound) in enumerate(zip(windows, bounds)):
+        start = np.searchsorted(mask_positions, window[0])
+        left_bound = np.searchsorted(mask_positions[start:], window[1])
+        right_bound = np.searchsorted(mask_positions, bounds[z])
+        n_site_pairs[z] = count_scaled_site_pairs(
+            r_map[start:right_bound],
+            r_bins,
+            scale[start:right_bound],
+            left_bound=left_bound
+        )
+        _start = np.searchsorted(vcf_positions, window[0])
+        _right_bound = np.searchsorted(vcf_positions, bound)
+        k = 0
+        for i in range(n_samples):
+            for j in range(i, n_samples):
+                if i != j:
+                    k += 1
+                    continue
+                sequences = genotype_arr[_start:_right_bound, i]
+                indicator = sequences[:, 0] != sequences[:, 1]
+                _left_bound = np.searchsorted(
+                    vcf_positions[_start:_right_bound][indicator], window[1]
+                )
+                H2_counts[z, k] = count_scaled_site_pairs(
+                    vcf_r_map[_start:_right_bound][indicator],
+                    r_bins,
+                    vcf_scale[_start:_right_bound][indicator],
+                    left_bound=_left_bound
+                )
+                k += 1
+
+    print(utils.get_time(), 'two-locus H computed')
+
+    n = len(sample_ids)
+    stat_ids = [
+        (sample_ids[i], sample_ids[j]) for i in np.arange(n) for j in np.arange(i, n)
+    ]
+    ret = dict(
+        n_sites=n_sites,
+        H_counts=H_counts,
+        n_site_pairs=n_site_pairs,
+        H2_counts=H2_counts,
+        r_bins=r_bins,
+        ids=stat_ids
+    )
+    return ret
+
+
 def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
     # carry out bootstraps to get H, H2 distributions.
     # takes dictionaries as args
@@ -621,6 +711,52 @@ def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
     return stats
 
 
+def sum_H2(*args, fancy=True):
+    # sum a number of dictionaries together
+    _ids = 'ids'
+    _r_bins = 'r_bins'
+    _n_sites = 'n_sites'
+    _n_site_pairs = 'n_site_pairs'
+    _n_H = 'H_counts'
+    _n_H2 = 'H2_counts'
+    stats = [_n_sites, _n_site_pairs, _n_H, _n_H2]
+
+    template = args[0]
+
+    ids = template[_ids]
+    r_bins = template[_r_bins]
+    for dic in args:
+        if np.any(ids != dic[_ids]):
+            raise ValueError(f'id mismatch in {dic}')
+        if np.any(r_bins != dic[_r_bins]):
+            raise ValueError(f'r bin mismatch in {dic}')
+
+    ret = {_n_sites: [], _n_site_pairs: [], _n_H: [], _n_H2: []}
+
+    for dic in args:
+        for stat in stats:
+            ret[stat].append(dic[stat])
+
+
+    for stat in [_n_site_pairs, _n_H, _n_H2]:
+        ret[stat] = np.vstack(ret[stat])
+    for stat in [_n_sites]:
+        ret[stat] = np.concatenate(ret[stat])
+
+    ret[_ids] = ids
+    ret[_r_bins] = r_bins
+
+    if fancy:
+        ret['window_H'] = ret[_n_H] / ret[_n_sites][:, np.newaxis]
+        ret['window_H2'] = ret[_n_H2] / ret[_n_site_pairs][:, np.newaxis, :]
+        ret['H'] = ret[_n_H].sum(0) / ret[_n_sites].sum(0)
+        ret['H2'] = ret[_n_H2].sum(0) / ret[_n_site_pairs].sum(0)
+        ret['std_H'] = np.std(ret['window_H'], axis=0)
+        ret['std_H2'] = np.std(ret['window_H2'], axis=0)
+
+    return ret
+
+
 """
 SFS
 """
@@ -665,3 +801,49 @@ def parse_window_SFS():
     # implement
 
     return 0
+
+
+"""
+computing H2 across chromosome arms or across chromosomes
+"""
+
+
+def compute_cross_arm_H2(chrom_dict, cen_idx):
+    # returns a single 'r-bin'. cen_idx indexes first window after the
+    # centromere
+    H = 'H_counts'
+    sites = 'n_sites'
+    H2 = 'H2_counts'
+    pairs = 'n_site_pairs'
+
+    num_H2 = chrom_dict[H][:cen_idx].sum(0) * chrom_dict[H][cen_idx:].sum(0)
+    num_pairs = \
+        chrom_dict[sites][:cen_idx].sum() * chrom_dict[sites][cen_idx:].sum()
+
+    expected_num_pairs = utils.n_choose_2(chrom_dict[sites].sum())
+    assert num_pairs + chrom_dict[pairs].sum() == expected_num_pairs
+
+    return num_H2, num_pairs
+
+
+def compute_cross_chrom_H2(chrom_dicts):
+
+    H = 'H_counts'
+    sites = 'n_sites'
+
+    n_chroms = len(chrom_dicts)
+    n_pairs = utils.n_choose_2(n_chroms)
+    _, n_stats = chrom_dicts[0]['H_counts'].shape
+    num_H2 = np.zeros((n_pairs, n_stats))
+    num_pairs = np.zeros(n_pairs)
+    k = 0
+
+    for i in range(n_chroms):
+        for j in range(i + 1, n_chroms):
+            chr_i = chrom_dicts[i]
+            chr_j = chrom_dicts[j]
+            num_H2[k] = chr_i[H].sum(0) * chr_j[H].sum(0)
+            num_pairs[k] = chr_i[sites].sum() * chr_j[sites].sum()
+            k += 1
+
+    return num_pairs, num_H2
