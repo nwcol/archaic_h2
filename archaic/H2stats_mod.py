@@ -360,11 +360,8 @@ class H2stats(np.ndarray):
         file = np.load(fname)
 
 
+
         return cls(arr, sample_ids=sample_ids, covs=covs, bins=bins)
-
-    def to_file(self):
-
-        return None
 
     @classmethod
     def from_demes(

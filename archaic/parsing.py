@@ -15,44 +15,18 @@ computing one-locus statistics
 """
 
 
-def get_one_sample_H(genotypes, vcf_positions, windows):
-    # compute H sums for a single diploid sample
-    site_H = genotypes[:, 0] != genotypes[:, 1]
-    num_H = np.zeros(len(windows))
-    for i, window in enumerate(windows):
-        lower, upper = np.searchsorted(vcf_positions, window)
-        num_H[i] = site_H[lower:upper].sum()
-    return num_H
-
-
-def get_two_sample_H(genotypes_x, genotypes_y, vcf_positions, windows):
-    # compute H sums for two diploid samples
-    site_H = get_two_sample_site_H(genotypes_x, genotypes_y)
-    num_H = np.zeros(len(windows))
-    for i, window in enumerate(windows):
-        lower, upper = np.searchsorted(vcf_positions, window)
-        num_H[i] = site_H[lower:upper].sum()
-    return num_H
-
-
-def get_multi_sample_H(genotype_arr, vcf_positions, windows):
-
-
-    return 0
-
-
-def get_two_sample_site_H(genotypes_x, genotypes_y):
+def count_two_sample_site_H(gt_x, gt_y):
     # compute probabilities of sampling a distinct allele from x and y at each
-    site_H = (
-        np.sum(genotypes_x[:, 0][:, np.newaxis] != genotypes_y, axis=1)
-        + np.sum(genotypes_x[:, 1][:, np.newaxis] != genotypes_y, axis=1)
-    ) / 4
+    # locus
+    _gt_x = gt_x[:, :, np.newaxis]
+    _gt_y = gt_y[:, np.newaxis]
+    site_H = (_gt_x != _gt_y).sum((2, 1)) / 4
     return site_H
 
 
 def compute_H(
     positions,
-    genotypes,
+    genotype_arr,
     vcf_positions,
     windows=None,
     sample_mask=None,
@@ -62,31 +36,67 @@ def compute_H(
     if windows is None:
         windows = np.array([[positions[0], positions[-1] + 1]])
     if sample_mask is not None:
-        genotypes = genotypes[:, sample_mask]
+        genotype_arr = genotype_arr[:, sample_mask]
+
     n_sites = np.diff(np.searchsorted(positions, windows))[:, 0]
-    _, n_samples, __ = genotypes.shape
-    H = np.zeros((len(windows), utils.n_choose_2(n_samples) + n_samples))
+    _, n_samples, __ = genotype_arr.shape
+    num_H = np.zeros((len(windows), utils.n_choose_2(n_samples) + n_samples))
     k = 0
 
-    for i in range(n_samples):
-        for j in range(i, n_samples):
-            if i == j:
-                H[:, k] = get_one_sample_H(
-                    genotypes[:, i], vcf_positions, windows
-                )
-            else:
-                H[:, k] = get_two_sample_H(
-                    genotypes[:, i], genotypes[:, j], vcf_positions, windows
-                )
-            k += 1
+    for z, window in enumerate(windows):
+        _start, _end = np.searchsorted(vcf_positions, window)
+        for i in range(n_samples):
+            for j in range(i, n_samples):
+                if i == j:
+                    gt = genotype_arr[_start:_end, i]
+                    site_H = gt[:, 0] != gt[:, 1]
+                    num_H[:, k] = site_H.sum()
+                else:
+                    gt_i = genotype_arr[_start:_end, i]
+                    gt_j = genotype_arr[_start:_end, j]
+                    site_H = count_two_sample_site_H(gt_i, gt_j)
+                    num_H[:, k] = site_H.sum()
+                k += 1
 
-    if verbose:
-        print(
-            utils.get_time(),
-            f'computed H for {n_samples} samples '
-            f'at {n_sites.sum()} sites in {len(windows)} windows'
-        )
-    return n_sites, H
+    return n_sites, num_H
+
+
+def compute_scaled_H(
+    positions,
+    genotype_arr,
+    vcf_positions,
+    scale,
+    windows=None
+):
+    # scale local H by the average mutation rate. scale is proportional to u
+    if windows is None:
+        windows = np.array([[positions[0], positions[-1] + 1]])
+
+    vcf_scale = scale[np.searchsorted(positions, vcf_positions)]
+    num_sites = np.zeros(len(windows))
+    _, n_samples, __ = genotype_arr.shape
+    num_H = np.zeros((len(windows), utils.n_choose_2(n_samples) + n_samples))
+
+    for z, window in enumerate(windows):
+        start, end = np.searchsorted(positions, window)
+        # scale factor
+        u_bar = scale[start:end].mean()
+        n = end - start
+        num_sites[z] = n / u_bar
+        _start, _end = np.searchsorted(vcf_positions, window)
+        k = 0
+
+        for i in range(n_samples):
+            for j in range(i, n_samples):
+                if i == j:
+                    gt = genotype_arr[_start:_end, i]
+                    indicator = gt[:, 0] != gt[:, 1]
+                    num_H[z, k] = (1 / vcf_scale[_start:_end][indicator]).sum()
+                else:
+                    pass
+                k += 1
+
+    return num_sites, num_H
 
 
 def compute_SFS(variant_file, ref_as_ancestral=False):
@@ -339,124 +349,18 @@ def compute_H2(
     return num_pairs, num_H2
 
 
-def __count_scaled_site_pairs(
-    r_map,
-    u_map,
-    bins,
-    max_idx=None,
-    positions=None,
-    thresh=None,
-    verbosity=1e6,
-    discretization=30
-):
-    #
-    if not max_idx:
-        max_idx = len(r_map)
-
-    cM_bins = utils.map_function(bins)
-
-    # optimize by capping right index
-    right_limits = np.searchsorted(r_map, r_map + cM_bins[-1])
-    right_limits[right_limits > max_idx] = max_idx
-    cum_scaled_num_pairs = np.zeros(len(bins))
-
-    _bins = r_map[:max_idx, np.newaxis] + cM_bins[np.newaxis, :]
-    edges = np.searchsorted(r_map, _bins)
-    if bins[0] == 0:
-        idx = edges[:, 0] <= np.arange(len(edges))
-        edges[idx, 0] = np.arange(len(edges))[idx] + 1
-
-    discrete_u = np.logspace(
-        np.log10(u_map.min()), np.log10(u_map.max() * 1.001), discretization
-    )
-    precomputed = dict()
-    for i, u in enumerate(discrete_u):
-        vals = np.cumsum(discrete_u[i] * u_map)
-        vals = np.append(vals, vals[-1])
-        precomputed[i] = vals
-
-    for i in np.arange(max_idx):
-        #scales = u_map[i] * u_map[i:max_idx]
-        #cum_scales = np.cumsum(scales)
-        #cum_scaled_num_pairs += cum_scales[edges[i]]
-
-        idx = np.searchsorted(discrete_u, u_map[i])
-        cum_scaled_num_pairs += precomputed[idx][edges[i]]
-
-        if i % verbosity == 0:
-            if i > 0:
-                print(utils.get_time(), f'site pairs counted at site {i}')
-
-    scaled_num_pairs = np.diff(cum_scaled_num_pairs)
-
-    return scaled_num_pairs
-
-
-def _count_scaled_site_pairs(
-    r_map,
-    bins,
-    scale,
-    left_bound=None,
-    verbosity=1e5,
-    discrete=100
-):
-    #
-    if not left_bound:
-        left_bound = len(r_map)
-
-    cM_bins = utils.map_function(bins)
-    # optimize by capping right index
-    #right_limits = np.searchsorted(r_map, r_map + cM_bins[-1])
-    #right_limits[right_limits > left_bound] = left_bound
-
-
-    _bins = r_map[:left_bound, np.newaxis] + cM_bins[np.newaxis, :]
-    edges = np.searchsorted(r_map, _bins)
-    edges -= np.arange(left_bound)[:, np.newaxis]
-
-    # precompute scale products
-    discrete_scale = np.logspace(
-        np.log10(scale.min()), np.log10(scale.max() * 1.001), discrete
-    )
-    grid = np.outer(discrete_scale, discrete_scale)
-
-    def approximate(x, y):
-        #
-        idx_x = np.searchsorted(discrete_scale, x)
-        idx_y = np.searchsorted(discrete_scale, y)
-        return grid[idx_x, idx_y]
-
-    cum_scaled_num_pairs = np.zeros(len(bins))
-
-    for i in np.arange(left_bound):
-        approx_prods = approximate(scale[i], scale[i + 1:i + edges[i, -1]])
-        cum_scaled_num_pairs += approx_prods[edges[i]]
-        if i % verbosity == 0:
-            if i > 0:
-                print(utils.get_time(), f'site pairs counted at site {i}')
-
-    scaled_num_pairs = np.diff(cum_scaled_num_pairs)
-    return scaled_num_pairs
-
-
 def count_scaled_site_pairs(
     r_map,
     bins,
     scale,
     left_bound=None,
-    verbosity=1e5,
-    discrete=100
+    verbosity=1e6
 ):
     #
     if not left_bound:
         left_bound = len(r_map)
 
     cM_bins = utils.map_function(bins)
-    # optimize by capping right index
-    #right_limits = np.searchsorted(r_map, r_map + cM_bins[-1])
-    #right_limits[right_limits > left_bound] = left_bound
-
-
     _bins = r_map[:left_bound, np.newaxis] + cM_bins[np.newaxis, :]
     edges = np.searchsorted(r_map, _bins)
     edges -= np.arange(left_bound)[:, np.newaxis]
