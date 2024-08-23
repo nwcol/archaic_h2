@@ -7,7 +7,69 @@ import numpy as np
 
 
 """
-functions for reading data from file
+recombination map math
+"""
+
+
+def map_function(r):
+    # r to cM
+    return -50 * np.log(1 - 2 * r)
+
+
+def inverse_map_function(d):
+    # cM to r
+    return (1 - np.exp(-d / 50)) / 2
+
+
+"""
+indexing
+"""
+
+
+def get_pairs(items):
+    # return a list of 2-tuples containing every pair in 'items'
+    n = len(items)
+    pairs = []
+    for i in np.arange(n):
+        for j in np.arange(i + 1, n):
+            pair = [items[i], items[j]]
+            pair.sort()
+            pairs.append((pair[0], pair[1]))
+    return pairs
+
+
+def get_pair_idxs(n):
+    # return a list of 2-tuples containing pairs of indices up to n
+    pairs = []
+    for i in np.arange(n):
+        for j in np.arange(i + 1, n):
+            pairs.append((i, j))
+    return pairs
+
+
+"""
+combinatorics
+"""
+
+
+def n_choose_2(n):
+    #
+    return int(n * (n - 1) / 2)
+
+
+"""
+printouts
+"""
+
+
+def get_time():
+    # return a string giving the date and time
+    return "[" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
+
+
+
+"""
+reading and writing data to file
 """
 
 
@@ -17,21 +79,20 @@ def read_mask_file(fname):
     return regions
 
 
-def get_bool_mask(regions):
-    # turn regions into a 1-indexed boolean mask
-    mask = np.zeros(regions[-1, 1] + 1, dtype=bool)
-    for (start, stop) in regions:
-        mask[start + 1:stop + 1] = True
-    assert mask[0] == False
-    assert mask[-1] == True
-    return mask
+def write_mask_file(regions, out_fname, chrom_num, write_header=False):
 
-
-def mask_to_positions(regions):
-    #
-    positions = np.nonzero(get_bool_mask(regions))[0]
-    assert positions[0] >= 1
-    return positions
+    if ".gz" in out_fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(out_fname, "wb") as file:
+        if write_header:
+            header = b'#chrom\tchromStart\tchromEnd\n'
+            file.write(header)
+        for start, stop in regions:
+            line = f'{chrom_num}\t{start}\t{stop}\n'.encode()
+            file.write(line)
+    return 0
 
 
 def read_map_file(fname, positions=None, map_col='Map(cM)'):
@@ -88,7 +149,7 @@ def read_fasta_file(fname, map_symbols=True):
 def get_fa_allele_mask(genotypes):
     # bad name...
     indicator = genotypes != 'N'
-    regions = masks.indicator_to_regions(indicator)
+    regions = get_mask_from_bool(indicator)
     return regions
 
 
@@ -263,7 +324,112 @@ def read_vcf_contig(fname):
 
 
 """
-A class for rapidly reading relatively small .vcf.gz files
+manipulating masks and transforming them into various forms
+"""
+
+
+def get_bool_mask(mask):
+    # turn an array of mask regions into a 1-indexed boolean mask
+    # e.g. the zeroth element of the mask always equals False
+    bool_mask = np.zeros(mask[-1, 1] + 1, dtype=bool)
+    for (start, end) in mask:
+        bool_mask[start + 1:end + 1] = True
+    assert bool_mask[0] == False
+    assert bool_mask[-1] == True
+    return bool_mask
+
+
+def get_bool_mask_0(regions):
+    # get a 0-indexed boolean mask representing mask coverage
+    bool_mask = np.zeros(regions.max())
+    for start, end in regions:
+        bool_mask[start:end] = True
+    assert bool_mask[-1] == True
+    return bool_mask
+
+
+def get_mask_positions(regions):
+    # get a vector of 1-indexed positions from an array of mask regions
+    positions = np.nonzero(get_bool_mask(regions))[0]
+    assert positions[0] >= 1
+    return positions
+
+
+def get_mask_from_bool(bool_mask):
+    # construct an array of mask regions from a 0-indexed boolean mask
+    _bool_mask = np.concatenate([[0], bool_mask, [0]])
+    jumps = np.diff(_bool_mask)
+    starts = np.where(jumps == 1)[0]
+    stops = np.where(jumps == -1)[0]
+    regions = np.stack([starts, stops], axis=1)
+    assert np.all(regions > 0)
+    return regions
+
+
+def collapse_mask(mask):
+    # merge redundant regions together
+    bool_mask = get_bool_mask_0(mask)
+    ret = get_mask_from_bool(bool_mask)
+    return ret
+
+
+def add_mask_flank(mask, flank):
+    # extend each mask region 'flank' bp in each direction
+    flanks = np.repeat(np.array([[-flank, flank]]), len(mask), axis=0)
+    flanked = mask + flanks
+    flanked[flanked < 0] = 0
+    ret = collapse_mask(flanked)
+    return ret
+
+
+def filter_mask_by_length(mask, min_length):
+    # exclude regions smaller than min_length
+    lengths = mask[:, 1] - mask[:, 0]
+    select = lengths >= min_length
+    ret = mask[select]
+    return ret
+
+
+def count_mask_overlaps(*masks):
+
+    lengths = [mask[-1, 1] for mask in masks]
+    max_length = max(lengths)
+    overlaps = np.zeros(max_length)
+    for i, regions in enumerate(masks):
+        overlaps[:lengths[i]] += get_bool_mask_0(regions)
+    return overlaps
+
+
+def intersect_masks(*masks):
+    # take the intersection of mask regions
+    n = len(masks)
+    overlaps = count_mask_overlaps(*masks)
+    indicator = overlaps == n
+    regions = get_mask_from_bool(indicator)
+    return regions
+
+
+def add_masks(*masks):
+    # take the union of mask regions
+    overlaps = count_mask_overlaps(*masks)
+    indicator = overlaps > 0
+    regions = get_mask_from_bool(indicator)
+    return regions
+
+
+def subtract_masks(minuend, subtrahend):
+    # remove regions in subtrahend from minuend
+    lengths = [minuend[-1, 1], subtrahend[-1, 1]]
+    max_length = max(lengths)
+    bool_mask = np.zeros(max_length)
+    bool_mask[:lengths[0]] = get_bool_mask_0(minuend)
+    bool_mask[:lengths[1]] -= get_bool_mask_0(subtrahend)
+    regions = get_mask_from_bool(bool_mask == 1)
+    return regions
+
+
+"""
+a class for rapidly reading and accessing small .vcf files
 """
 
 
@@ -403,61 +569,166 @@ class VariantFile:
 
 
 """
-recombination map math
+a class for loading/manipulating .bed mask files
 """
 
 
-def map_function(r):
-    # r to cM
-    return -50 * np.log(1 - 2 * r)
+class Mask(np.ndarray):
+
+    def __new__(
+        cls,
+        regions,
+        dtype=np.int64,
+        chrom_num=None
+    ):
+        """
+        loads a .bed mask file as an array
+
+        :param regions: 2dim numpy array of shape (n_regions, 2)
+        :param dtype: optional. defines array data type
+        :param chrom_num: optional. tracks chromosome number. should be numeric
+            (e.g. a bed file with chromosome chr8 has chrom_num=8)
+        :dtype chrom_num: int or str.
+        """
+        arr = np.asanyarray(regions, dtype=dtype).view(cls)
+        arr.chrom_num = chrom_num
+
+        # array must have ndim 2
+        if arr.ndim != 2:
+            raise ValueError(
+                'regions must have regions.ndim == 2'
+            )
+
+        # array must have arr.shape[1] = 2
+        if arr.shape[1] != 2:
+            raise ValueError(
+                'regions must have regions.shape[1] == 2'
+            )
+        return arr
+
+    def __array_finalize__(self, obj):
+
+        if obj is None:
+            return
+        np.ndarray.__array_finalize__(self, obj)
+        self.chrom_num = getattr(obj, 'chrom_num', None)
+
+    @classmethod
+    def from_bed_file(cls, fname):
+
+        regions = []
+        if ".gz" in fname:
+            open_func = gzip.open
+        else:
+            open_func = open
+        with open_func(fname, "rb") as file:
+            for line in file:
+                chrom, start, stop = line.decode().strip('\n').split('\t')
+                if start.isnumeric():
+                    regions.append([int(start), int(stop)])
+        regions = np.array(regions, dtype=np.int64)
+        chrom_num = int(chrom.lstrip('chr'))
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_vcf_file(cls, fname):
+        """
+        read a mask of .vcf position coverage
+
+        :param fname: path to .vcf or vcf.gz file
+        :return: class instance
+        """
+        chrom_idx = 0
+        pos_idx = 1
+        positions = []
+        if ".gz" in fname:
+            open_func = gzip.open
+        else:
+            open_func = open
+        with open_func(fname, "rb") as file:
+            for line in file:
+                if line.startswith(b'#'):
+                    continue
+                positions.append(line.split(b'\t')[pos_idx])
+        chrom_num = line.split(b'\t')[chrom_idx].decode()
+        positions = np.array(positions).astype(np.int64)
+        regions = cls.positions_to_regions(positions)
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_boolean(cls, boolean_mask, chrom_num=None):
+        #
+        regions = cls.boolean_to_regions(boolean_mask)
+        return cls(regions, chrom_num=chrom_num)
+
+    @classmethod
+    def from_positions(cls, positions, chrom_num=None):
+        #
+        regions = cls.positions_to_regions(positions)
+        return cls(regions, chrom_num=chrom_num)
+
+    @property
+    def boolean(self):
+        # 0-indexed
+        boolean_mask = np.zeros(self.max(), dtype=bool)
+        for start, stop in self:
+            boolean_mask[start:stop] = True
+        return boolean_mask
+
+    @property
+    def positions(self):
+        # 1-indexed
+        return np.nonzero(self.boolean)[0] + 1
+
+    @property
+    def n_sites(self):
+        #
+        return self.boolean.sum()
+
+    @classmethod
+    def positions_to_regions(cls, positions):
+        #
+        return cls.boolean_to_regions(cls.positions_to_boolean(positions))
+
+    @staticmethod
+    def boolean_to_regions(boolean):
+        #
+        _boolean = np.concatenate([np.array([0]), boolean, np.array([0])])
+        jumps = np.diff(_boolean)
+        regions = np.stack(
+            [np.where(jumps == 1)[0], np.where(jumps == -1)[0]], axis=1
+        )
+        return regions
+
+    @staticmethod
+    def positions_to_boolean(positions):
+        #
+        boolean_mask = np.zeros(positions.max(), dtype=bool)
+        boolean_mask[positions - 1] = True
+        return boolean_mask
+
+    def write_bed_file(self, fname, write_header=False, chrom_num=None):
+        #
+        if chrom_num is None:
+            if self.chrom_num is None:
+                chrom_num = 'chr0'
+            else:
+                chrom_num = ('chr' + str(self.chrom_num)).encode()
+        if ".gz" in fname:
+            open_fxn = gzip.open
+        else:
+            open_fxn = open
+        with open_fxn(fname, "wb") as file:
+            if write_header:
+                header = b'#chrom\tchromStart\tchromEnd\n'
+                file.write(header)
+            for start, stop in self:
+                line = f'{chrom_num}\t{start}\t{stop}\n'.encode()
+                file.write(line)
+        return 0
 
 
-def inverse_map_func(d):
-    # cM to r
-    return (1 - np.exp(-d / 50)) / 2
+class TwoLocusMask(np.ndarray):
 
-
-"""
-indexing
-"""
-
-
-def get_pairs(items):
-    # return a list of 2-tuples containing every pair in 'items'
-    n = len(items)
-    pairs = []
-    for i in np.arange(n):
-        for j in np.arange(i + 1, n):
-            pair = [items[i], items[j]]
-            pair.sort()
-            pairs.append((pair[0], pair[1]))
-    return pairs
-
-
-def get_pair_idxs(n):
-    # return a list of 2-tuples containing pairs of indices up to n
-    pairs = []
-    for i in np.arange(n):
-        for j in np.arange(i + 1, n):
-            pairs.append((i, j))
-    return pairs
-
-
-"""
-combinatorics
-"""
-
-
-def n_choose_2(n):
-    #
-    return int(n * (n - 1) / 2)
-
-
-"""
-printouts
-"""
-
-
-def get_time():
-    # return a string giving the date and time
-    return "[" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
+    def __new__(cls, regions):
+        pass

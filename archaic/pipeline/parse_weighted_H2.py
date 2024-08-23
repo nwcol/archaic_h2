@@ -13,7 +13,7 @@ def get_args():
     parser.add_argument("-v", "--vcf_fname", required=True)
     parser.add_argument("-b", "--mask_fname", required=True)
     parser.add_argument("-r", "--map_fname", required=True)
-    parser.add_argument("-s", "--scale_fname", required=True)
+    parser.add_argument("-s", "--weight_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument('--bins', default=None)
     parser.add_argument('-w', '--window_fname')
@@ -29,11 +29,11 @@ def main():
         window_arr = window_arr[np.newaxis]
     windows = window_arr[:, :2]
     bounds = window_arr[:, 2]
-    dic = parsing.parse_scaled_H2(
+    dic = parsing.parse_weighted_H2(
         args.mask_fname,
         args.vcf_fname,
         args.map_fname,
-        args.scale_fname,
+        args.weight_fname,
         bins,
         windows=windows,
         bounds=bounds

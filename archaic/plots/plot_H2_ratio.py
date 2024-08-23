@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument('--title', default=None)
     parser.add_argument("--n_cols", type=int, default=5)
     parser.add_argument('--labels', nargs='*', default=None)
+    parser.add_argument('--plot_two_sample', type=int, default=1)
     return parser.parse_args()
 
 
@@ -121,7 +122,9 @@ def main():
         n_cols=args.n_cols,
         alpha=args.alpha,
         sci=False,
-        statistic='$H_2/H^2$'
+        statistic='$H_2/H^2$',
+        plot_two_sample=args.plot_two_sample,
+        ratio_yticks=True
     )
 
     if args.title:

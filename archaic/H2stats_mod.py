@@ -355,11 +355,77 @@ class H2stats(np.ndarray):
         self.bins = getattr(obj, 'bins', None)
 
     @classmethod
-    def from_file(cls, fname):
+    def from_arrays(
+        cls,
+        num_H,
+        num_sites,
+        num_H2,
+        num_pairs,
+        sample_ids,
+        bins
+    ):
+        # instantiate from bare arrays of site and pair counts.
+        # transposes arrays where the bin dimension is the last (second)
+        # into arrays where it is the first
+
+        # single window
+        if num_sites.shape == (1,):
+            H = num_H / num_sites
+            H2 = (num_H2 / num_pairs).T
+            n_bins = num_pairs.shape[0]
+            n_stats = num_H2.shape[0]
+            covs = np.zeros((n_bins, n_stats, n_stats))
+
+        # multiple windows
+        else:
+            H = num_H.sum(0) / num_sites.sum()
+            H2 = (num_H2.sum(0) / num_pairs.sum(0)).T
+            window_H = (num_H / num_sites[:, np.newaxis]).T
+            # shape to (n_bins, n_stats, n_windows)
+            window_H2 = (num_H2 / num_pairs[:, np.newaxis, :]).T
+            covs = np.array(
+                [np.cov(vals) for vals in window_H2] + [np.cov(window_H)]
+            )
+
+        arr = np.vstack([H2, H[np.newaxis]])
+
+        if np.any(np.isnan(H)):
+            print('divided by zero computing H')
+
+        if np.any(np.isnan(H2)):
+            print('divided by zero computing H2')
+
+        return cls(arr, sample_ids=sample_ids, covs=covs, bins=bins)
+
+    @classmethod
+    def from_dict(self, dic):
+
+        return None
+
+    @classmethod
+    def from_file(
+        cls,
+        fname,
+        sample_ids='sample_ids',
+        bins='bins'
+    ):
         #
         file = np.load(fname)
 
+        if sample_ids not in file:
+            raise ValueError(f'{sample_ids} file is not present')
+        else:
+            sample_ids = file[sample_ids]
 
+        if bins not in file:
+            raise ValueError(f'{bins} file is not present')
+        else:
+            bins = file[bins]
+
+        _num_H2 = 'num_H2'
+        _num_pairs = 'num_pairs'
+
+        if _num_H2 in file:
 
         return cls(arr, sample_ids=sample_ids, covs=covs, bins=bins)
 
@@ -405,13 +471,14 @@ class H2stats(np.ndarray):
             r=r_steps,
             u=u
         )
+
         n_demes = len(sampled_demes)
         n_stats = n_demes + utils.n_choose_2(n_demes)
         raw_arr = np.zeros((len(r_steps), n_stats))
         k = 0
         for i, x in enumerate(sampled_demes):
             for y in sampled_demes[i:]:
-                if i == j:
+                if x == y:
                     phased = True
                     y = None
                 else:
@@ -421,10 +488,6 @@ class H2stats(np.ndarray):
         arr = quadratic_interpolate(raw_arr)
 
         return cls(arr, sample_ids=sampled_demes, covs=None, bins=bins)
-
-    def from_dict(self):
-
-        return None
 
     def from_vcf_file(self):
 

@@ -46,7 +46,9 @@ def plot_H2_spectra(
     xlim=None,
     log_scale=False,
     sci=True,
-    statistic='$H_2'
+    statistic='$H_2',
+    plot_two_sample=True,
+    ratio_yticks=False
 ):
     # they all have to be the same shape
     if colors is None:
@@ -54,12 +56,18 @@ def plot_H2_spectra(
     # get the confidence interval based on the alpha level
     ci = scipy.stats.norm().ppf(1 - alpha / 2)
     spectrum = args[0]
-    n_axs = spectrum.n
+
+    if plot_two_sample:
+        n_axs = spectrum.n
+    else:
+        n_axs = 10
+
     if plot_H:
+        n_axs += 1
         if len(spectrum.sample_ids) > 1:
-            n_axs += 2
-        else:
-            n_axs += 1
+            if plot_two_sample:
+                n_axs += 1
+
     n_rows = int(np.ceil(n_axs / n_cols))
     if n_axs < n_cols:
         n_cols = n_axs
@@ -77,11 +85,24 @@ def plot_H2_spectra(
         ax.remove()
     for i, spectrum in enumerate(args):
         plot_H2_spectrum(
-            spectrum, color=colors[i], axs=axs, ci=ci, ylim_0=ylim_0,
-            log_scale=log_scale, plot_H=plot_H, sci=sci, statistic=statistic
+            spectrum,
+            color=colors[i],
+            axs=axs,
+            ci=ci,
+            ylim_0=ylim_0,
+            log_scale=log_scale,
+            plot_H=plot_H,
+            sci=sci,
+            statistic=statistic,
+            plot_two_sample=plot_two_sample
         )
     # adjust ylim etc
-    for ax in axs:
+    for i, ax in enumerate(axs):
+        if ax is None:
+            continue
+        if ratio_yticks:
+            if n_axs - i > 1 + plot_two_sample:
+                ax.set_yticks([1, 2])
         ax.grid(alpha=0.2)
         if log_scale:
             ax.set_yscale('log')
@@ -119,7 +140,8 @@ def plot_H2_spectrum(
     log_scale=False,
     plot_H=True,
     sci=True,
-    statistic='$H_2$'
+    statistic='$H_2$',
+    plot_two_sample=True
 ):
     #
     if color is None:
@@ -155,7 +177,11 @@ def plot_H2_spectrum(
 
     # plot H2
     x = spectrum.r_bins[:-1] + np.diff(spectrum.r_bins)
+    k = 0
     for i, _id in enumerate(spectrum.ids):
+        if not plot_two_sample:
+            if _id[0] != _id[1]:
+                continue
         if spectrum.covs is not None:
             if spectrum.has_H:
                 var = spectrum.covs[:-1, i, i]
@@ -164,7 +190,7 @@ def plot_H2_spectrum(
             y_err = np.sqrt(var) * ci
         else:
             y_err = None
-        ax = axs[i]
+        ax = axs[k]
         if spectrum.has_H:
             data = spectrum.data[:-1, i]
         else:
@@ -173,17 +199,22 @@ def plot_H2_spectrum(
             ax, x, data, color, y_err=y_err, title=_id, sci=sci,
             statistic=statistic
         )
+        k += 1
 
     # plot H
+    ax2 = None
     if plot_H:
         if spectrum.has_H:
-            ax1 = axs[spectrum.n]
             if len(spectrum.sample_ids) > 1:
-                ax2 = axs[spectrum.n + 1]
+                if plot_two_sample:
+                    ax2 = axs[k + 1]
+                    ax1 = axs[k]
+                else:
+                    ax1 = axs[k]
             else:
-                ax2 = None
+                ax1 = axs[k]
             plot_H_on_H2_spectrum(
-                spectrum, ax1, ax2, color=color, ci=ci
+                spectrum, ax1, ax2, color=color, ci=ci,
             )
     return 0
 
