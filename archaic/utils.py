@@ -76,7 +76,21 @@ reading and writing data to file
 def read_mask_file(fname):
     #
     regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)
+    if regions.ndim == 1:
+        regions = regions[np.newaxis]
     return regions
+
+
+def read_mask_chrom_num(fname):
+    # return the chromosome number as int, absent any alphabetic characters
+    chrom_nums = np.loadtxt(fname, usecols=(0), dtype=str)
+    if chrom_nums[0] == 'chrom':
+        chrom_nums = chrom_nums[1:]
+    unique_nums = np.unique(chrom_nums)
+    if len(unique_nums) > 1:
+        raise ValueError(f'more than one chromosome is represented in {fname}')
+    chrom_num = int(unique_nums[0].lstrip('chrom'))
+    return chrom_num
 
 
 def write_mask_file(regions, out_fname, chrom_num, write_header=False):
@@ -199,7 +213,7 @@ def read_vcf_genotypes(fname, mask_regions=None, verbosity=1e5):
                 gt_index = fields[format_idx].split(':').index('GT')
             else:
                 if i % verbosity == 0:
-                    print(get_time(), f'parsing row {i}')
+                    print(get_time(), f'read .vcf row {i}')
 
             if is_in_mask(position):
                 positions.append(position)
@@ -310,9 +324,15 @@ def read_vcf_rates(
 
 
 def read_vcf_contig(fname):
-    # return the contig id of the first row
+    # return the contig id of the first row of a .vcf.gz file
+    if ".gz" in fname:
+        open_func = gzip.open
+    else:
+        open_func = open
+
     chrom_idx = 0
-    with gzip.open(fname, 'rb') as file:
+
+    with open_func(fname, 'rb') as file:
         for line_b in file:
             line = line_b.decode()
             if line[0] == '#':
@@ -331,7 +351,7 @@ manipulating masks and transforming them into various forms
 def get_bool_mask(mask):
     # turn an array of mask regions into a 1-indexed boolean mask
     # e.g. the zeroth element of the mask always equals False
-    bool_mask = np.zeros(mask[-1, 1] + 1, dtype=bool)
+    bool_mask = np.zeros(mask.max() + 1, dtype=bool)
     for (start, end) in mask:
         bool_mask[start + 1:end + 1] = True
     assert bool_mask[0] == False

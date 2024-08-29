@@ -151,6 +151,7 @@ def fit_H2(
         objective_H2,
         p0,
         args,
+        u=u,
         builder=builder,
         options=options,
         method=method,
@@ -435,6 +436,7 @@ def optimize(
     object_func,
     p0,
     args,
+    u=None,
     builder=None,
     options=None,
     method='NelderMead',
@@ -466,6 +468,8 @@ def optimize(
     :param out_fname: (optional) name of output .yaml demes graph file
     :param bounds: (optional) only used for the LBFGSB algorithm. a tuple of
         arrays of the form (lower_bounds, upper_bounds)
+    :param u:
+    :param fit_u:
     :return:
     """
     methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
@@ -533,6 +537,12 @@ def optimize(
     print_status(_n_func_calls, 'fit p:', p)
     _n_func_calls = 0
 
+    if fit_u:
+        info_u = p[-1]
+        p = p[:-1]
+    else:
+        info_u = u
+
     info = dict(
         method=method,
         objective_func=object_func.__name__,
@@ -540,12 +550,9 @@ def optimize(
         max_iter=max_iter,
         n_iter=n_iter,
         func_calls=func_calls,
-        flag=flag
+        flag=flag,
+        u=info_u
     )
-
-    if fit_u:
-        info['u'] = p[-1]
-        p = p[:-1]
 
     print('\n'.join([f'{key}: {info[key]}' for key in info]))
 

@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument("-r", "--map_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument("-w", "--window_fname", default=None)
+    parser.add_argument('--get_two_sample', type=int, default=1)
     parser.add_argument('--bins', default=None)
     return parser.parse_args()
 
@@ -50,7 +51,8 @@ def main():
         args.map_fname,
         windows=windows,
         bounds=bounds,
-        bins=bins
+        bins=bins,
+        get_two_sample=args.get_two_sample
     )
     np.savez(args.out_fname, **dic)
     return 0

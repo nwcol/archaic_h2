@@ -13,10 +13,10 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--graph_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
-    parser.add_argument("-L", type=str)
+    parser.add_argument("-L", type=float, required=True)
     parser.add_argument("-s", "--sampled_demes", nargs='*', default=None)
-    parser.add_argument("-u", "--u", type=str, default='1e-8')
-    parser.add_argument("-r", "--r", type=str, default='1e-8')
+    parser.add_argument("-u", "--u", type=float, default=1e-8)
+    parser.add_argument("-r", "--r", type=float, default=1e-8)
     parser.add_argument("-c", "--contig_id", default="0")
     return parser.parse_args()
 

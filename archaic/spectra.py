@@ -100,6 +100,8 @@ class H2Spectrum:
                     + [np.cov(per_window_H, rowvar=False)]
                 )
                 if covs.ndim != 3:
+                    #n_stats = file['H2_counts'].shape[1]
+                    #covs = np.zeros((len(r_bins), n_stats, n_stats))
                     covs = None
                     #n = per_window_H.shape[1]
                     #covs = covs.reshape(len(r_bins), n, n)

@@ -97,8 +97,12 @@ def main():
         spectrum = H2Spectrum.from_graph(
             graph, _sample_ids, r, args.u, r_bins=r_bins
         )
-        if len(args.data_fnames) > 0:
-            ll = inference.get_ll(spectrum, spectra[0])
+        if len(args.data_fnames) > 0 and np.any(spectra[0].covs > 0):
+            data = spectra[0]
+            if not args.plot_H:
+                data = data.remove_H()
+                spectrum = spectrum.remove_H()
+            ll = inference.get_ll(spectrum, data)
             ll_label = f', ll={np.round(ll, 0)}'
         else:
             ll_label = ''

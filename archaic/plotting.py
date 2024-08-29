@@ -110,6 +110,7 @@ def plot_H2_spectra(
             if ylim_0:
                 ax.set_ylim(0, )
             if xlim:
+                ax.autoscale_view()
                 ax.set_xlim(xlim, )
 
     # write the legend

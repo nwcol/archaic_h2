@@ -23,12 +23,19 @@ def get_args():
 def main():
     #
     args = get_args()
-    bins = np.loadtxt(args.bins)
-    window_arr = np.loadtxt(args.window_fname)
-    if window_arr.ndim == 1:
-        window_arr = window_arr[np.newaxis]
-    windows = window_arr[:, :2]
-    bounds = window_arr[:, 2]
+    if args.bins is not None:
+        bins = np.loadtxt(args.bins)
+    else:
+        bins = None
+    if args.window_fname is not None:
+        window_arr = np.loadtxt(args.window_fname)
+        if window_arr.ndim == 1:
+            window_arr = window_arr[np.newaxis]
+            windows = window_arr[:, :2]
+            bounds = window_arr[:, 2]
+    else:
+        windows = None
+        bounds = None
     dic = parsing.parse_weighted_H2(
         args.mask_fname,
         args.vcf_fname,
