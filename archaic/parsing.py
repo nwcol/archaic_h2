@@ -29,7 +29,8 @@ def compute_H(
     genotype_arr,
     vcf_positions,
     windows=None,
-    sample_mask=None
+    sample_mask=None,
+    get_two_sample=True
 ):
     # compute H across a chromosome in one or more windows
     if windows is None:
@@ -39,7 +40,13 @@ def compute_H(
 
     n_sites = np.diff(np.searchsorted(positions, windows))[:, 0]
     _, n_samples, __ = genotype_arr.shape
-    num_H = np.zeros((len(windows), utils.n_choose_2(n_samples) + n_samples))
+
+    if get_two_sample:
+        n_stats = n_samples + utils.n_choose_2(n_samples)
+    else:
+        n_stats = n_samples
+
+    num_H = np.zeros((len(windows), n_stats))
 
     for z, window in enumerate(windows):
         vcf_start, vcf_end = np.searchsorted(vcf_positions, window)
@@ -51,12 +58,15 @@ def compute_H(
                     gts = genotype_arr[vcf_start:vcf_end, i]
                     site_H = gts[:, 0] != gts[:, 1]
                     num_H[z, k] = site_H.sum()
+                    k += 1
                 else:
+                    if not get_two_sample:
+                        continue
                     gts_i = genotype_arr[vcf_start:vcf_end, i]
                     gts_j = genotype_arr[vcf_start:vcf_end, j]
                     site_H = get_two_sample_site_H(gts_i, gts_j)
                     num_H[z, k] = site_H.sum()
-                k += 1
+                    k += 1
 
     return n_sites, num_H
 
@@ -426,7 +436,8 @@ def parse_H2(
         mask_positions,
         genotype_arr,
         vcf_positions,
-        windows=windows
+        windows=windows,
+        get_two_sample=get_two_sample
     )
     print(utils.get_time(), 'computed one-locus H')
 
