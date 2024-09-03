@@ -300,6 +300,8 @@ def compute_H2(
                     )
                     k += 1
 
+        print(utils.get_time(), f'computed H2 in window {w}')
+
     return num_pairs, num_H2
 
 
@@ -383,6 +385,8 @@ def compute_weighted_H2(
                         left_bound=vcf_left_bound
                     )
                 k += 1
+
+        print(utils.get_time(), f'computed H2 in window {w}')
                 
     return norm_constant, num_H2
 
@@ -454,9 +458,12 @@ def parse_H2(
     print(utils.get_time(), 'computed two-locus H')
 
     n = len(sample_ids)
-    stat_ids = [
-        (sample_ids[i], sample_ids[j]) for i in np.arange(n) for j in np.arange(i, n)
-    ]
+    if get_two_sample:
+        stat_ids = [
+            (sample_ids[i], sample_ids[j]) for i in np.arange(n) for j in np.arange(i, n)
+        ]
+    else:
+        stat_ids = np.array(sample_ids)
     stats = dict(
         ids=stat_ids,
         r_bins=bins,

@@ -102,7 +102,7 @@ class H2Spectrum:
                 if covs.ndim != 3:
                     #n_stats = file['H2_counts'].shape[1]
                     #covs = np.zeros((len(r_bins), n_stats, n_stats))
-                    covs = None
+                    covs = covs[:, np.newaxis, np.newaxis]
                     #n = per_window_H.shape[1]
                     #covs = covs.reshape(len(r_bins), n, n)
             else:
@@ -220,10 +220,14 @@ class H2Spectrum:
     def subset(self, sample_ids):
         # subset by sample id
         # sub_ids = self.expand_ids(sample_ids)
-        idx = np.array([
-            i for i in range(self.n)
-            if self.ids[i, 0] in sample_ids and self.ids[i, 1] in sample_ids
-        ])
+
+        if len(self.ids[0]) == 2:
+            idx = np.array([
+                i for i in range(self.n)
+                if self.ids[i, 0] in sample_ids and self.ids[i, 1] in sample_ids
+            ])
+        else:
+            idx = np.array([i for i in range(self.n) if self.ids[i] in sample_ids])
         return self.subset_idx(idx)
 
     def subset_idx(self, idx):

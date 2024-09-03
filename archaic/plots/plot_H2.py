@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument("--n_cols", type=int, default=5)
     parser.add_argument('--labels', nargs='*', default=None)
     parser.add_argument('--log_scale', type=int, default=0)
+    parser.add_argument('--use_H', type=int, default=1)
     parser.add_argument('--plot_H', type=int, default=1)
     parser.add_argument('--min_x', type=float, default=None)
     parser.add_argument('--plot_two_sample', type=int, default=1)
@@ -102,7 +103,13 @@ def main():
             if not args.plot_H:
                 data = data.remove_H()
                 spectrum = spectrum.remove_H()
-            ll = inference.get_ll(spectrum, data)
+                ll = inference.get_ll(spectrum, data)
+            elif not args.use_H:
+                _data = data.remove_H()
+                _spectrum = spectrum.remove_H()
+                ll = inference.get_ll(_spectrum, _data)
+            else:
+                ll = inference.get_ll(spectrum, data)
             ll_label = f', ll={np.round(ll, 0)}'
         else:
             ll_label = ''

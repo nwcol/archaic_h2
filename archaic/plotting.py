@@ -257,7 +257,11 @@ def plot_H_on_H2_spectrum(
 ):
     #
     ids = spectrum.ids
-    one_sample = np.where(ids[:, 0] == ids[:, 1])[0]
+    if len(ids[0]) == 2:
+        one_sample = np.where(ids[:, 0] == ids[:, 1])[0]
+    else:
+        one_sample = np.arange(len(ids))
+        ax2 = None
     H = spectrum.data[-1, one_sample]
     x1 = np.arange(len(H))
     if spectrum.covs is None:
@@ -289,11 +293,14 @@ def plot_H_on_H2_spectrum(
 
 def parse_label(label):
     # expects population identifiers of form np.array([labelx, labely])
-    x, y = label
-    if x == y:
-        _label = x[:3]
+    if len(label) == 2:
+        x, y = label
+        if x == y:
+            _label = x[:3]
+        else:
+            _label = f'{x[:3]}-{y[:3]}'
     else:
-        _label = f'{x[:3]}-{y[:3]}'
+        _label = label
     return _label
 
 

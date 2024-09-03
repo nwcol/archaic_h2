@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument('-H', '--use_H', type=int, default=0)
     parser.add_argument('--max_iter', nargs='*', type=int, default=[1000])
     parser.add_argument('--method', nargs='*', default=['Powell'])
-    parser.add_argument('-v', '--verbosity', type=int, default=1)
+    parser.add_argument('-v', '--verbosity', type=int, default=10)
     parser.add_argument('--perturb_graph', type=int, default=0)
     parser.add_argument('--cluster_id', default='')
     parser.add_argument('--process_id', default='')

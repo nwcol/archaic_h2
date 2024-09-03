@@ -7,7 +7,7 @@ approximately similar coalescent rates
 import argparse
 import demes
 import numpy as np
-from archaic import coalescent
+from archaic import simulation
 
 
 def get_args():
@@ -31,8 +31,12 @@ def main():
         ) / graph.generation_time
         out_times = epoch_times
     else:
-        pass
-    rates = coalescent.get_rate(graph, eval_times, args.sample_name)
+        eval_times = np.concatenate(
+            [epoch_times[:-1] + np.diff(epoch_times) / 2,
+             np.array([max_t + 1])]
+        )
+        out_times = epoch_times
+    rates = simulation.get_coalescent_rate(graph, args.sample_name, eval_times)
     Ne = 1 / (2 * rates)
     with open(args.out_fname, 'w') as file:
         file.write(
