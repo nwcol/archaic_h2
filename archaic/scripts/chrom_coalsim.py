@@ -18,6 +18,7 @@ def get_args():
     parser.add_argument("-u", "--u_fname", required=True)
     parser.add_argument("-r", "--r_fname", required=True)
     parser.add_argument("-c", "--contig_id", default="0")
+    parser.add_argument('-L', '--seq_length', type=int, default=None)
     return parser.parse_args()
 
 
@@ -31,6 +32,7 @@ def main():
         r_fname=args.r_fname,
         sampled_demes=args.sampled_demes,
         contig_id=args.contig_id,
+        L=args.seq_length
     )
     print(
         utils.get_time(),

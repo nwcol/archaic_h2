@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--method', nargs='*', default=['Powell'])
     parser.add_argument('-v', '--verbosity', type=int, default=10)
     parser.add_argument('--perturb_graph', type=int, default=0)
+    parser.add_argument('--sample_ids', nargs='*', default=[])
     parser.add_argument('--cluster_id', default='')
     parser.add_argument('--process_id', default='')
     return parser.parse_args()
@@ -32,6 +33,9 @@ def main():
     data = H2Spectrum.from_bootstrap_file(
         args.data_fname, graph=demes.load(args.graph_fname)
     )
+    if len(args.sample_ids) > 0:
+        data = data.subset(args.sample_ids)
+
     if len(args.method) != len(args.max_iter):
         raise ValueError('')
     tag = inference.get_tag(args.out_prefix, args.cluster_id, args.process_id)
