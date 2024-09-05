@@ -386,7 +386,7 @@ def compute_weighted_H2(
                     )
                 k += 1
 
-        print(utils.get_time(), f'computed H2 in window {w}')
+        print(utils.get_time(), f'computed H2 in window {z}')
                 
     return norm_constant, num_H2
 

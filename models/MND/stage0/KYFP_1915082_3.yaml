@@ -1,0 +1,30 @@
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -516.9059893308361,
+    max_iter: 1000, n_iter: 7, func_calls: 564, flag: 0, u: 1.1276e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 294541.3893889135, start_size: 13206.690184278139}
+- name: KhomaniSan
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 40591.631266225195}
+- name: Yoruba
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 0, start_size: 39519.29694621304}
+- name: OOA
+  start_time: 60000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 49076.09968233788, start_size: 885.3250899216632}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 7743.989261693536}
+- name: Papuan
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 1973.8324476646796}

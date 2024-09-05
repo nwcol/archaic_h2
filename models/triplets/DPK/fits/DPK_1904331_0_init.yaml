@@ -1,0 +1,32 @@
+time_units: years
+generation_time: 30
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 599001.3298072938, start_size: 10463.647483068988}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 78000, start_size: 7825.864336033026}
+- name: Introg
+  start_time: 220349.4593422749
+  ancestors: [Denisova]
+  epochs:
+  - {end_time: 50000, start_size: 3000.0}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 264033.74359882204, start_size: 24178.30447850004}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 21710.41139367706}
+- name: Papuan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 7539.93629877172}
+pulses:
+- sources: [Introg]
+  dest: Papuan
+  time: 50000
+  proportions: [0.016910307296471055]

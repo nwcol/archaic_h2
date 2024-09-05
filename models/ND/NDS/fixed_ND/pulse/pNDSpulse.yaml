@@ -1,0 +1,22 @@
+parameters:
+- name: TNDS
+  lower_bound: 1e6
+  upper_bound: 3e6
+  values:
+    - demes:
+        Superarchaic: start_time
+- name: NS
+  lower_bound: 1e3
+  upper_bound: 5e4
+  values:
+    - demes:
+        Superarchaic:
+          epochs:
+            0: start_size
+- name: pDS
+  lower_bound: 0.001
+  upper_bound: 0.05
+  values:
+    - pulses:
+        0:
+          proportions: 0

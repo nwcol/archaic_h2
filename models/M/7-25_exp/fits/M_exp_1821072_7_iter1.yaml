@@ -1,0 +1,38 @@
+description: copies the M 7-24_exp model but adjusts parameter bounds based on high-ll
+  fits, sets Stem1 epoch 1 start time to Stem1/Stem2 split time and parameterizes
+  Stem1 epoch 1 rather than epoch 0 Ne as was originally intended
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, fopt: -129.04182958630537, iters: 26, func_calls: 6016,
+    warnflag: 0}
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 923484.3888406564, start_size: 11000}
+  - {end_time: 58953.57937768431, start_size: 13937.481138760955}
+- name: Stem2
+  start_time: 923484.3888406564
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 58953.57937768431, start_size: 6044.85260098773}
+- name: KhomaniSan
+  start_time: 257811.55143621
+  ancestors: [Stem2, Stem1]
+  proportions: [0.3854462836118174, 0.6145537163881827]
+  epochs:
+  - {end_time: 0, start_size: 99999.99998735296, end_size: 20144.83541055036}
+- name: Yoruba
+  start_time: 58953.57937768431
+  ancestors: [Stem2, Stem1]
+  proportions: [0.4452983933458126, 0.5547016066541874]
+  epochs:
+  - {end_time: 0, start_size: 48010.319441433705, end_size: 88645.31955383823}
+- name: Han
+  start_time: 56485.5953384634
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 851.291786664447, end_size: 11392.036150063348}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 4.435855030380733e-06

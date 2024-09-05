@@ -1,0 +1,83 @@
+parameters:
+- name: T_MND
+  lower_bound: 5e5
+  upper_bound: 1e6
+  values:
+    - demes:
+        Ancestral: 
+          epochs:
+            0: end_time
+- name: T_OOA
+  lower_bound: 1e5 
+  upper_bound: 3e5
+  values:
+    - demes:
+        MHuman:
+          epochs:
+            0: end_time
+- name: T_sep
+  lower_bound: 60000
+  upper_bound: 3e5
+  values:
+    - demes:
+        Introg: start_time
+- name: N_A
+  lower_bound: 5e3
+  upper_bound: 4e4
+  values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: start_size
+- name: N_V
+  lower_bound: 100
+  upper_bound: 1e4
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: N_H
+  lower_bound: 1e3
+  upper_bound: 4e4
+  values:
+    - demes:
+        MHuman:
+          epochs:
+            0: start_size
+- name: N_K
+  lower_bound: 1e4
+  upper_bound: 6e4
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: N_F
+  lower_bound: 100
+  upper_bound: 1e4
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: f_HV
+  description: pulse proportion from MHuman -> Archaic 150kya
+  lower_bound: 0.01
+  upper_bound: 0.1
+  values:
+    - pulses:
+        0: 
+          proportions: 0
+- name: f_VF
+  description: pulse proportion from Archaic -> OOA 50kya
+  lower_bound: 0.01
+  upper_bound: 0.05
+  values:
+    - pulses:
+        1: 
+          proportions: 0
+
+constraints:
+- params: [T_MND, T_OOA]
+  constraint: greater_than

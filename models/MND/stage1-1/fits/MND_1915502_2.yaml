@@ -1,0 +1,52 @@
+description: Here, we hold modern human (Khomani-San, Yoruba, Papuan, French) parameters
+  and the ancestral NE constant and infer Ne, migration rate, and divergence times
+  between demes represented by the Denisova Denisovan and Vindija Neandertal
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -3472.9421845796414,
+    max_iter: 1000, n_iter: 23, func_calls: 1885, flag: 0, u: 1.1276e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 635364.7094080495, start_size: 13268}
+- name: ND
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 634761.8573940531, start_size: 230.45300019538115}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 2332.839589851284}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 78000, start_size: 2088.815299943835}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 290000, start_size: 13268}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 39838}
+- name: Yoruba
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 38893}
+- name: OOA
+  start_time: 60000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 40000, start_size: 1628}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 6147}
+- name: Papuan
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 1685}
+migrations:
+- demes: [Denisova, Vindija]
+  rate: 7.481051053480723e-06

@@ -111,7 +111,7 @@ def plot_H2_spectra(
                 ax.set_ylim(0, )
             if xlim:
                 ax.autoscale_view()
-                ax.set_xlim(xlim, )
+                ax.set_xlim(xlim, 1)
 
     # write the legend
     if labels is not None:

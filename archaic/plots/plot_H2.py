@@ -28,6 +28,7 @@ def get_args():
     parser.add_argument('--plot_H', type=int, default=1)
     parser.add_argument('--min_x', type=float, default=None)
     parser.add_argument('--plot_two_sample', type=int, default=1)
+    parser.add_argument('--ylim_0', type=int, default=1)
     return parser.parse_args()
 
 
@@ -140,7 +141,8 @@ def main():
         log_scale=args.log_scale,
         statistic='$H_2$',
         xlim=args.min_x,
-        plot_two_sample=args.plot_two_sample
+        plot_two_sample=args.plot_two_sample,
+        ylim_0=args.ylim_0
     )
 
     if args.title:

@@ -1,0 +1,104 @@
+parameters:
+- name: TND
+  lower_bound: 5e5
+  upper_bound: 1e6
+  values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: end_time
+- name: Tpulse
+  lower_bound: 1e5
+  upper_bound: 1e6
+  values:
+    - pulses:
+        0: time
+- name: TN1
+  lower_bound: 1.5e5
+  upper_bound: 4e5
+  values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: end_time
+- name: TN2
+  lower_bound: 8e4
+  upper_bound: 3e5
+  values:
+    - demes:
+        WestNeandertal:
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 5e3
+  upper_bound: 1.5e4
+  values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: start_size
+- name: ND
+  lower_bound: 100
+  upper_bound: 1e4
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 100
+  upper_bound: 1.5e4
+  values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: start_size
+        WestNeandertal:
+          epochs:
+            0: start_size
+- name: NAlt
+  lower_bound: 100
+  upper_bound: 5e3
+  values:
+    - demes:
+        Altai:
+          epochs:
+            0: start_size
+- name: NCha
+  lower_bound: 100
+  upper_bound: 5e3
+  values:
+    - demes:
+        Chagyrskaya:
+          epochs:
+            0: start_size
+- name: NVin
+  lower_bound: 100
+  upper_bound: 5e3
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: mDN
+  lower_bound: 1e-8
+  upper_bound: 1e-4
+  values:
+    - migrations:
+        0: rate
+        1: rate
+- name: mNN
+  lower_bound: 1e-7
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        2: rate
+        3: rate
+
+constraints:
+- params: [TND, TN1]
+  constraint: greater_than
+- params: [TN1, TN2]
+  constraint: greater_than
+- params: [TND, Tpulse]
+  constraint: greater_than

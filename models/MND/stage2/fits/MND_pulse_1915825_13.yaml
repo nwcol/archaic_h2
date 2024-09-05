@@ -1,0 +1,71 @@
+description: Here, we hold all parameters for sampled demes constant and introduce
+  introgressing Neandertal and Denisovan demes contributing small admixture pulses
+  into modern non-African humans.
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2507.2905971562914,
+    max_iter: 100, n_iter: 13, func_calls: 3594, flag: 0, u: 1.1276e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 636000, start_size: 13268}
+- name: ND
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 588401, start_size: 10276}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 2338}
+- name: INeandertal
+  start_time: 55000.00000003716
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 20000, start_size: 100.00000001142146}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 78000, start_size: 2111}
+- name: IDenisova
+  start_time: 425102.96130524937
+  ancestors: [Denisova]
+  epochs:
+  - {end_time: 20000, start_size: 100.00000000020461}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 290000, start_size: 13268}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 39838}
+- name: Yoruba
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 38893}
+- name: OOA
+  start_time: 57172.81461384412
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 51760.12823099351, start_size: 382.7762065268324}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 9910.852630812173}
+- name: Papuan
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 1860.589617847049}
+migrations:
+- demes: [Denisova, Vindija]
+  rate: 6.9e-06
+pulses:
+- sources: [INeandertal]
+  dest: OOA
+  time: 51769.4953891036
+  proportions: [0.01030062231124453]
+- sources: [IDenisova]
+  dest: Papuan
+  time: 30000.000000284643
+  proportions: [0.02000000089812329]

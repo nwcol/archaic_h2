@@ -1,0 +1,37 @@
+description: generic model describing the ancestry of one archaic, one African, and
+  one non-African individual
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -91.57980163186079,
+    max_iter: 200, n_iter: 20, func_calls: 2661, flag: 0}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 690751.1454659969, start_size: 12686.537882515748}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 50000, start_size: 3202.943496402374}
+- name: Introg
+  start_time: 50000.00000107786
+  ancestors: [Denisova]
+  epochs:
+  - {end_time: 40000, start_size: 3000.0}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 45500.57680964666, start_size: 21411.938147613724}
+- name: Yoruba
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 38456.220638392675}
+- name: Papuan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 1185.0758304786975}
+pulses:
+- sources: [Introg]
+  dest: Papuan
+  time: 40000
+  proportions: [0.014494838031127366]

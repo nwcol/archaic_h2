@@ -1,0 +1,35 @@
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -165.6999787105766,
+    max_iter: 200, n_iter: 27, func_calls: 4275, flag: 0}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 584146.6758527408, start_size: 14223.449660282111}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 78000, start_size: 2758.0773874205697}
+- name: Introg
+  start_time: 499999.9999999988
+  ancestors: [Denisova]
+  epochs:
+  - {end_time: 50000, start_size: 3000.0}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 100000.66719841052, start_size: 20736.207217689687}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 13140.78468236689}
+- name: Papuan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 2246.4649583654373}
+pulses:
+- sources: [Introg]
+  dest: Papuan
+  time: 50000
+  proportions: [0.01814849711520149]

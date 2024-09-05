@@ -1,0 +1,38 @@
+time_units: years
+generation_time: 30
+description: generic model describing the ancestry of one archaic, one African, and one non-African individual
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 7e5, start_size: 1e4}
+- name: ARCHAIC
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 50000, start_size: 3e3}
+- name: Introg
+  ancestors: [ARCHAIC]
+  start_time: 2e5
+  epochs: 
+  - {end_time: 40000, start_size: 3e3}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 7e4, start_size: 2e4}
+- name: AFRICAN
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 3e4}
+- name: OOAFRICAN
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 3e3}
+
+pulses:
+- sources: [MHuman]
+  dest: ARCHAIC
+  time: 300000
+  proportions: [0.05]
+- sources: [Introg]
+  dest: OOAFRICAN
+  time: 40000
+  proportions: [0.02]

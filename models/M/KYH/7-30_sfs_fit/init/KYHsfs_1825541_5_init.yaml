@@ -1,0 +1,33 @@
+description: Fixed OOA at 60kya and tweaked population size parameters
+time_units: years
+generation_time: 30
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 1394547.5159554377, start_size: 24369.138333304458}
+  - {end_time: 109958.55974344016, start_size: 23619.76821651465}
+- name: Stem2
+  start_time: 1394547.5159554377
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 109958.55974344016, start_size: 48689.83974963903}
+- name: KhomaniSan
+  start_time: 159783.29713625018
+  ancestors: [Stem2, Stem1]
+  proportions: [0.7299858962379667, 0.2700141037620333]
+  epochs:
+  - {end_time: 0, start_size: 94720.2102412316}
+- name: Yoruba
+  start_time: 109958.55974344016
+  ancestors: [Stem2, Stem1]
+  proportions: [0.21275991648098075, 0.7872400835190192]
+  epochs:
+  - {end_time: 0, start_size: 36901.10112996635}
+- name: Han
+  start_time: 55271.52180257703
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 9953.096416292115}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 3.1039210406015125e-06

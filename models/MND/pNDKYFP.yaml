@@ -1,0 +1,117 @@
+parameters:
+- name: TMND
+  lower_bound: 400000
+  upper_bound: 900000
+  values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: end_time
+- name: TND
+  lower_bound: 400000
+  upper_bound: 800000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: end_time
+- name: TKY
+  lower_bound: 110000
+  upper_bound: 250000
+  values:
+    - demes:
+        MHuman:
+          epochs:
+            0: end_time
+- name: TFP
+  lower_bound: 41000
+  upper_bound: 59000
+  values:
+    - demes:
+        OOA:
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 8000
+  upper_bound: 30000
+  values:
+    - demes:
+        Ancestral:
+          epochs:
+            0: start_size
+- name: NND
+  lower_bound: 100
+  upper_bound: 30000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: ND
+  lower_bound: 1000
+  upper_bound: 10000
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+- name: NMH
+  lower_bound: 5000
+  upper_bound: 30000
+  values:
+    - demes:
+        MHuman:
+          epochs:
+            0: start_size
+- name: NK
+  lower_bound: 10000
+  upper_bound: 50000
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 10000
+  upper_bound: 50000
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size
+- name: NOOA
+  lower_bound: 100
+  upper_bound: 5000
+  values:
+    - demes:
+        OOA:
+          epochs:
+            0: start_size
+- name: NF
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: NP
+  lower_bound: 100
+  upper_bound: 5000
+  values:
+    - demes:
+        Papuan:
+          epochs:
+            0: start_size
+
+constraints:
+- params: [TMND, TND]
+  constraint: greater_than

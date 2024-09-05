@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument("-s", "--weight_fname", required=True)
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument('--bins', default=None)
-    parser.add_argument('-w', '--window_fname')
+    parser.add_argument('-w', '--window_fname', default=None)
     return parser.parse_args()
 
 
@@ -31,8 +31,8 @@ def main():
         window_arr = np.loadtxt(args.window_fname)
         if window_arr.ndim == 1:
             window_arr = window_arr[np.newaxis]
-            windows = window_arr[:, :2]
-            bounds = window_arr[:, 2]
+        windows = window_arr[:, :2]
+        bounds = window_arr[:, 2]
     else:
         windows = None
         bounds = None

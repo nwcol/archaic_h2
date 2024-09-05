@@ -1,0 +1,57 @@
+description: delta is the S->ND pulse
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -429.2246950164895,
+    max_iter: 500, n_iter: 24, func_calls: 5837, flag: 0, u: 1.3023112204946014e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 899999.9999999327, start_size: 8467.501546996627}
+- name: Superarchaic
+  start_time: 2500000.0
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 100000.0, start_size: 27000.0}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 70000.0, start_size: 2000.0000000000427}
+- name: Neandertal
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 150000.000038763, start_size: 3984.2362493145656}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 120000.0, start_size: 1124.9971872016433}
+- name: WestNeandertal
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 85426.38386669545, start_size: 3984.2362493145656}
+- name: Chagyrskaya
+  ancestors: [WestNeandertal]
+  epochs:
+  - {end_time: 80000.0, start_size: 218.1282034101107}
+- name: Vindija
+  ancestors: [WestNeandertal]
+  epochs:
+  - {end_time: 50000.0, start_size: 1597.6923434828589}
+migrations:
+- demes: [Denisova, Neandertal]
+  rate: 4.197858003507245e-06
+- demes: [Denisova, Altai]
+  rate: 4.197858003507245e-06
+- demes: [Altai, WestNeandertal]
+  rate: 1.3127901724059325e-05
+- demes: [Vindija, Chagyrskaya]
+  rate: 1.3127901724059325e-05
+pulses:
+- sources: [Superarchaic]
+  dest: Ancestral
+  time: 1000000.0
+  proportions: [0.03]
+- sources: [Superarchaic]
+  dest: Denisova
+  time: 200000.0
+  proportions: [0.02]

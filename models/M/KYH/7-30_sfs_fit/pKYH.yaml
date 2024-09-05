@@ -1,0 +1,107 @@
+parameters:
+- name: T_12
+  lower_bound: 5e5
+  upper_bound: 2e6
+  values:
+    - demes:
+        Stem2: start_time
+        Stem1:
+          epochs:
+            0: end_time
+- name: T_K
+  lower_bound: 1e5
+  upper_bound: 3e5
+  values:
+    - demes:
+        KhomaniSan: start_time
+- name: T_Y
+  lower_bound: 5e4
+  upper_bound: 2e5
+  values:
+    - demes:
+        Stem1:
+          epochs:
+            1: end_time
+        Stem2:
+          epochs:
+            0: end_time
+        Yoruba: start_time
+- name: T_H
+  upper_bound: 1e5
+  lower_bound: 3e4
+  values:
+    - demes:
+        Han: start_time
+- name: N_A
+  lower_bound: 1e3
+  upper_bound: 3e4
+  values:
+    - demes:
+        Stem1:
+          epochs:
+            0: start_size
+- name: N_1
+  lower_bound: 2e3
+  upper_bound: 5e4
+  values:
+    - demes:
+        Stem1:
+          epochs:
+            1: start_size
+- name: N_2
+  lower_bound: 2e3
+  upper_bound: 5e4
+  values:
+    - demes:
+        Stem2:
+          epochs:
+            0: start_size
+- name: N_K
+  lower_bound: 1e4
+  upper_bound: 1e5
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: N_Y
+  lower_bound: 1e4
+  upper_bound: 1e5
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size
+- name: N_H
+  lower_bound: 100
+  upper_bound: 1e4
+  values:
+    - demes:
+        Han:
+          epochs:
+            0: start_size
+- name: f_K
+  lower_bound: 0.1
+  upper_bound: 0.9
+  values:
+    - demes:
+        KhomaniSan: 
+          proportions: 0
+- name: f_Y
+  lower_bound: 0.1
+  upper_bound: 0.9
+  values:
+    - demes:
+        Yoruba: 
+          proportions: 0
+- name: m_12
+  lower_bound: 1e-7
+  upper_bound: 1e-5
+  values:
+    - migrations:
+        0: rate
+constraints:
+  - params: [T_K, T_Y]
+    constraint: greater_than
+  - params: [T_Y, T_H]
+    constraint: greater_than

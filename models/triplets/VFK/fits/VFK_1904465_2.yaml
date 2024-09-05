@@ -1,0 +1,41 @@
+description: generic model describing the ancestry of one archaic, one African, and
+  one non-African individual
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -141.39574558126202,
+    max_iter: 200, n_iter: 32, func_calls: 6698, flag: 0}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 886091.6106390236, start_size: 9719.95956820714}
+- name: Vindija
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 55000, start_size: 2632.267537145669}
+- name: Introg
+  start_time: 299999.99999993155
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 50000, start_size: 3000.0}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 100000.00001150001, start_size: 28507.926871120406}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 14863.565699529341}
+- name: French
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 4012.601139477523}
+pulses:
+- sources: [MHuman]
+  dest: Vindija
+  time: 300000
+  proportions: [0.0999999999998796]
+- sources: [Introg]
+  dest: French
+  time: 50000
+  proportions: [0.01000000000742535]

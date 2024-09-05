@@ -1,0 +1,38 @@
+description: This model includes Yoruba, Khomani-San, and Han demes. It adds exponential
+  growth, parameterizes end population sizes for extant demes, and frees the OOA time.
+  Exponential growth is added to hopefully improve H fits.
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, fopt: -124.98885021936869, iters: 37, func_calls: 11332,
+    warnflag: 0}
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 1000000.0, start_size: 6773.063014987385}
+  - {end_time: 105972.74596122335, start_size: 8000}
+- name: Stem2
+  start_time: 1321915.3354711274
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 105972.74596122335, start_size: 8303.344021522624}
+- name: KhomaniSan
+  start_time: 257652.63954158413
+  ancestors: [Stem2, Stem1]
+  proportions: [0.5300998821659626, 0.4699001178340374]
+  epochs:
+  - {end_time: 0, start_size: 49999.999999999905, end_size: 36860.803688023414}
+- name: Yoruba
+  start_time: 105972.74596122335
+  ancestors: [Stem2, Stem1]
+  proportions: [0.40804924791394237, 0.5919507520860576]
+  epochs:
+  - {end_time: 0, start_size: 48405.92482356678, end_size: 74924.4168443153}
+- name: Han
+  start_time: 60400.10031257113
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 893.4924287217093, end_size: 12719.944593414219}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 9.927052356397876e-07

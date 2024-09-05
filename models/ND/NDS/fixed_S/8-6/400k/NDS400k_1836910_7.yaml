@@ -1,0 +1,55 @@
+description: I move the NDS split to 2.4Mya from 2.5Mya and adjust the bound on Neanderthal
+  divergence up, Denisova N down. tweaked other bounds as well. The S->D pulse is
+  at 400kya
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -172.83982630130885,
+    max_iter: 500, n_iter: 42, func_calls: 9389, flag: 0, u: 1.367309816095945e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 955018.8566598118, start_size: 9648.560226733456}
+- name: Superarchaic
+  start_time: 2500000.0
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 100000.0, start_size: 27000.0}
+- name: Denisova
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 70000.0, start_size: 2401.7287343863477}
+- name: Neandertal
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 150000.00000000288, start_size: 4352.294292822052}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 120000.0, start_size: 251.8260594355653}
+- name: WestNeandertal
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 104170.1279761539, start_size: 4352.294292822052}
+- name: Chagyrskaya
+  ancestors: [WestNeandertal]
+  epochs:
+  - {end_time: 80000.0, start_size: 262.90552213654905}
+- name: Vindija
+  ancestors: [WestNeandertal]
+  epochs:
+  - {end_time: 50000.0, start_size: 1284.7068561077283}
+migrations:
+- demes: [Denisova, Neandertal]
+  rate: 8.275715949159383e-06
+- demes: [Denisova, Altai]
+  rate: 8.275715949159383e-06
+- demes: [Altai, WestNeandertal]
+  rate: 0.0012292440421414587
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0012292440421414587
+pulses:
+- sources: [Superarchaic]
+  dest: Denisova
+  time: 400000.0
+  proportions: [0.02]

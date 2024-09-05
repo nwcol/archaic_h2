@@ -1,0 +1,46 @@
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: LBFGSB, objective_func: objective_H2, fopt: -2796.0051446475595,
+    max_iter: 1000, n_iter: 216, func_calls: 4335, flag: 0, u: 1.1276e-08}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 510227.63218025985, start_size: 14795.779889318774}
+- name: ND
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 508540.52713655453, start_size: 100.2806950579856}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 2769.6032137907882}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 78000, start_size: 2768.9461418463748}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 249999.633655995, start_size: 10605.92065670982}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 50000.0}
+- name: Yoruba
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 30660.50433554714}
+- name: OOA
+  start_time: 60000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 41000.0, start_size: 1411.6970108031935}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 8725.433031935852}
+- name: Papuan
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 1455.5574125647581}

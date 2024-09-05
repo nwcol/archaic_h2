@@ -1,0 +1,37 @@
+description: generic model describing the ancestry of one archaic, one African, and
+  one non-African individual
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -255.0030359670272,
+    max_iter: 200, n_iter: 14, func_calls: 1943, flag: 0}
+demes:
+- name: Ancestral
+  epochs:
+  - {end_time: 672685.527959633, start_size: 12382.432043089913}
+- name: Vindija
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 50000, start_size: 3108.959679002733}
+- name: Introg
+  start_time: 300000.0
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 50000, start_size: 3000.0}
+- name: MHuman
+  ancestors: [Ancestral]
+  epochs:
+  - {end_time: 248852.7820857448, start_size: 17525.96592334703}
+- name: KhomaniSan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 34823.39129193974}
+- name: Papuan
+  ancestors: [MHuman]
+  epochs:
+  - {end_time: 0, start_size: 5516.444186283803}
+pulses:
+- sources: [Introg]
+  dest: Papuan
+  time: 50000
+  proportions: [0.014757149244226626]

@@ -1,0 +1,37 @@
+description: copies the M 7-25 exponential-growth model, but parameterizes ancestral
+  Ne
+time_units: years
+generation_time: 30
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -128.77403896969776,
+    max_iter: 1000, n_iter: 77, func_calls: 20565, flag: 0}
+demes:
+- name: Stem1
+  epochs:
+  - {end_time: 923284.2655745352, start_size: 10918.009610064162}
+  - {end_time: 73527.44301473504, start_size: 3350.902790506282}
+- name: Stem2
+  start_time: 923284.2655745352
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 73527.44301473504, start_size: 16010.906255617916}
+- name: KhomaniSan
+  start_time: 240845.41982707765
+  ancestors: [Stem2, Stem1]
+  proportions: [0.6833899864646016, 0.3166100135353984]
+  epochs:
+  - {end_time: 0, start_size: 99999.99999999035, end_size: 17827.554394538864}
+- name: Yoruba
+  start_time: 73527.44301473504
+  ancestors: [Stem2, Stem1]
+  proportions: [0.705414682075519, 0.29458531792448095]
+  epochs:
+  - {end_time: 0, start_size: 12346.128022281404, end_size: 98026.72088733688}
+- name: Han
+  start_time: 43446.582906192096
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 0, start_size: 557.7668746189405, end_size: 12970.736670002063}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 1.0000786752906951e-07
