@@ -73,6 +73,14 @@ reading and writing data to file
 """
 
 
+def read_u_bedgraph(fname):
+    # read a .bedgraph file with regions in its 1st/2nd col and u in its 4th
+    regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)
+    u = np.loadtxt(fname, usecols=4, dtype=float)
+    edges = np.concatenate(([regions[0, 0]], regions[:, 1]))
+    return edges, u
+
+
 def read_mask_file(fname):
     #
     regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)

@@ -508,13 +508,18 @@ def parse_weighted_H2(
     r_map = utils.read_map_file(map_fname, mask_positions)
     print(utils.get_time(), "files loaded")
 
-    weight_file = np.load(weight_fname)
-    weight_positions = weight_file['positions']
-    _weights = weight_file[weight_name]
-    weights = _weights[np.searchsorted(weight_positions, mask_positions)]
-    if inverse_weight:
-        weights = 1 / weights
-    print(utils.get_time(), 'scale files loaded')
+    if weight_fname.endswith('.npz'):
+        weight_file = np.load(weight_fname)
+        weight_positions = weight_file['positions']
+        all_weights = weight_file[weight_name]
+        weights = all_weights[np.searchsorted(weight_positions, mask_positions)]
+        if inverse_weight:
+            weights = 1 / weights
+    else:
+        edges, mean_weights = utils.read_u_bedgraph(weight_fname)
+        idx = np.searchsorted(edges[1:], mask_positions)
+        weights = mean_weights[idx]
+    print(utils.get_time(), 'weight files loaded')
 
     # one-locus H
     num_sites, num_H = compute_weighted_H(

@@ -1,6 +1,7 @@
 """
 mostly wrappers for msprime.sim_ancestry
 """
+import gzip
 import demes
 import msprime
 import numpy as np
@@ -84,40 +85,49 @@ def set_up_u_map(positions, rates, window_size, L):
     return u_map
 
 
-def simulate_chrom(
+def simulate_chromosome(
     graph,
     out_fname,
-    u_fname=None,
-    r_fname=None,
+    u=None,
+    r=None,
     sampled_demes=None,
     contig_id=None,
     L=None
 ):
     # L 'stretches' both maps
+    # u, r can be floats or .bedgraph/.txt files holding rates
 
     try:
-        u_map = float(u_fname)
+        u_map = float(u)
+        print(utils.get_time(), f'using uniform u {u_map}')
     except:
-        coeff = 1.015e-7 / 2
-        file = np.load(u_fname)
-        u_map = set_up_u_map(file['positions'], file['rates'] * coeff, 1000, L)
+        edges, u = utils.read_u_bedgraph(u)
+        edges[-1] = L
+        u_map = msprime.RateMap(position=edges, rate=u)
+        print(utils.get_time(), 'loaded u-map')
 
     try:
-        r_map = float(r_fname)
+        r_map = float(r)
+        print(utils.get_time(), f'using uniform r {r_map}')
     except:
         r_map = msprime.RateMap.read_hapmap(
-            r_fname,
+            r,
             map_col=2,
             position_col=0,
             sequence_length=L
         )
+        print(utils.get_time(), 'loaded r-map')
 
     if isinstance(graph, str):
         graph = demes.load(graph)
+
     demography = msprime.Demography.from_demes(graph)
+
     if sampled_demes is None:
         sampled_demes = [d.name for d in graph.demes if d.end_time == 0]
+
     config = {s: 1 for s in sampled_demes}
+
     print(utils.get_time(), 'simulating ancestry')
     ts = msprime.sim_ancestry(
         samples=config,
