@@ -12,18 +12,15 @@ process = sys.argv[1]
 L = 250000000
 r = 1e-8
 
-warr = np.loadtxt('./windows.txt')
+warr = np.loadtxt('windows.txt')
 windows = warr[:, :2]
 bounds = warr[:, 2]
 
-graph_fname = './g.yaml'
-rmap_fname = './uniform_rmap.txt'
-umap_fname = './empirical_umap_1.bedgraph.gz'
-mask_fname = './strict-roulette_1.bed.gz'
-bins = np.loadtxt('./fine_bins.txt')
-
-sim_dir = ''
-stat_dir = ''
+graph_fname = 'g.yaml'
+rmap_fname = 'uniform_rmap.txt'
+umap_fname = 'empirical_umap_1.bedgraph.gz'
+mask_fname = 'roulette_isec_1.bed.gz'
+bins = np.loadtxt('fine_bins.txt')
 
 
 if __name__ == '__main__':
@@ -57,7 +54,7 @@ if __name__ == '__main__':
         windows=windows,
         bounds=bounds
     )
-    np.savez(f'{stat_dir}/empirical_u_weighted_{process}.npz', **dic1)
+    np.savez(f'empirical_u_{process}_weighted.npz', **dic1)
     dic2 = parsing.parse_H2(
         mask_fname,
         emp_vcf_fname,
@@ -66,11 +63,11 @@ if __name__ == '__main__':
         bounds=bounds,
         bins=bins,
     )
-    np.savez(f'{stat_dir}/empirical_u_unweighted_{process}.npz', **dic2)
+    np.savez(f'empirical_u_{process}_non_weighted.npz', **dic2)
     print(f'empirical-u simulation complete')
 
     # simulate with uniform u-map
-    unif_vcf_fname = f'{sim_dir}/uniform_u_{process}.vcf'
+    unif_vcf_fname = f'uniform_u_{process}.vcf'
     simulation.simulate_chromosome(
         graph,
         unif_vcf_fname,
@@ -88,7 +85,7 @@ if __name__ == '__main__':
         windows=windows,
         bounds=bounds
     )
-    np.savez(f'uniform_u_weighted_{process}.npz', **dic1)
+    np.savez(f'uniform_u_{process}_weighted.npz', **dic1)
     dic2 = parsing.parse_H2(
         mask_fname,
         unif_vcf_fname,
@@ -97,5 +94,5 @@ if __name__ == '__main__':
         bounds=bounds,
         bins=bins,
     )
-    np.savez(f'uniform_u_unweighted_{process}.npz', **dic2)
+    np.savez(f'uniform_u_{process}_non_weighted.npz', **dic2)
     print(f'uniform-u simulation {process} complete')
