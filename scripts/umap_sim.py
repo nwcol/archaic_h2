@@ -12,7 +12,7 @@ process = sys.argv[1]
 L = 250000000
 r = 1e-8
 
-warr = np.loadtxt('windows.txt')
+warr = np.loadtxt('blocks_1.txt')
 windows = warr[:, :2]
 bounds = warr[:, 2]
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
         bounds=bounds,
         bins=bins,
     )
-    np.savez(f'empirical_u_{process}_non_weighted.npz', **dic2)
+    np.savez(f'empirical_u_{process}_unif.npz', **dic2)
     print(f'empirical-u simulation complete')
 
     # simulate with uniform u-map
@@ -94,5 +94,5 @@ if __name__ == '__main__':
         bounds=bounds,
         bins=bins,
     )
-    np.savez(f'uniform_u_{process}_non_weighted.npz', **dic2)
+    np.savez(f'uniform_u_{process}_unif.npz', **dic2)
     print(f'uniform-u simulation {process} complete')

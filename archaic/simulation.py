@@ -101,8 +101,13 @@ def simulate_chromosome(
         u_map = float(u)
         print(utils.get_time(), f'using uniform u {u_map}')
     except:
-        edges, u = utils.read_u_bedgraph(u)
-        edges[-1] = L
+        coords, u = utils.read_u_bedgraph(u)
+        coords[0] = 0
+        if coords[-1] <= L:
+            edges = np.append(coords, L)
+        else:
+            u = u[coords < L]
+            edges = np.append(coords[coords < L], L)
         u_map = msprime.RateMap(position=edges, rate=u)
         print(utils.get_time(), 'loaded u-map')
 
@@ -110,12 +115,16 @@ def simulate_chromosome(
         r_map = float(r)
         print(utils.get_time(), f'using uniform r {r_map}')
     except:
-        r_map = msprime.RateMap.read_hapmap(
-            r,
-            map_col=2,
-            position_col=0,
-            sequence_length=L
-        )
+        coords, map_vals = utils.read_map_file(r)
+        map_rates = np.diff(map_vals) / np.diff(coords)  # cM/bp
+        map_rates /= 100
+        coords[0] = 0
+        if coords[-1] <= L:
+            edges = np.append(coords[:-1], L)
+        else:
+            map_rates = map_rates[coords[:-1] < L]
+            edges = np.append(coords[coords < L], L)
+        r_map = msprime.RateMap(position=edges, rate=map_rates)
         print(utils.get_time(), 'loaded r-map')
 
     if isinstance(graph, str):

@@ -12,12 +12,12 @@ recombination map math
 
 
 def map_function(r):
-    # r to cM
+    # Haldane's map function. transforms distance in r to cM
     return -50 * np.log(1 - 2 * r)
 
 
 def inverse_map_function(d):
-    # cM to r
+    # inverse of Haldane's map function. transforms distance in cM to r
     return (1 - np.exp(-d / 50)) / 2
 
 
@@ -77,8 +77,8 @@ def read_u_bedgraph(fname):
     # read a .bedgraph file with regions in its 1st/2nd col and u in its 4th
     regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)
     u = np.loadtxt(fname, usecols=4, dtype=float)
-    edges = np.concatenate(([regions[0, 0]], regions[:, 1]))
-    return edges, u
+    starts = regions[:, 0]
+    return starts, u
 
 
 def read_mask_file(fname):
@@ -138,11 +138,24 @@ def read_map_file(fname, positions=None, map_col='Map(cM)'):
             left=data[0, 1],
             right=data[-1, 1]
         )
+        assert np.all(r_map >= 0)
+        assert np.all(np.diff(r_map)) >= 0
     else:
-        r_map = data[:, 1]
-    assert np.all(r_map >= 0)
-    assert np.all(np.diff(r_map)) >= 0
+        r_map = (data[:, 0], data[:, 1])
     return r_map
+
+
+def read_map_rates(fname, rate_col='Rate(cM/Mb)'):
+    #
+    file = open(fname, 'r')
+    header = file.readline()
+    file.close()
+    cols = header.strip('\n').split('\t')
+    pos_idx = cols.index('Position(bp)')
+    rate_idx = cols.index(rate_col)
+    coords = np.loadtxt(fname, skiprows=1, usecols=pos_idx, dtype=int)
+    rates = np.loadtxt(fname, skiprows=1, usecols=rate_idx, dtype=float)
+    return coords, rates
 
 
 def read_fasta_file(fname, map_symbols=True):

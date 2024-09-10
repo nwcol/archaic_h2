@@ -40,7 +40,7 @@ def plot_H2_spectra(
     plot_H=True,
     colors=None,
     labels=None,
-    n_cols=5,
+    n_cols=4,
     alpha=0.05,
     ylim_0=True,
     xlim=None,
@@ -296,7 +296,7 @@ def parse_label(label):
     if len(label) == 2:
         x, y = label
         if x == y:
-            _label = x[:3]
+            _label = x
         else:
             _label = f'{x[:3]}-{y[:3]}'
     else:

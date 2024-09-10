@@ -1,0 +1,7 @@
+Bootstrap: docker
+From: python:3.11
+
+%post
+	python3 -m pip install scipy numpy demes demesdraw matplotlib msprime moments-popgen
+	python3 -m pip install git+https://github.com/nwcol/archaic.git
+

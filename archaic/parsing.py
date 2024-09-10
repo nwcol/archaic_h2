@@ -114,6 +114,9 @@ def compute_weighted_H(
 def compute_SFS(variant_file, ref_as_ancestral=False):
     # variants needs the ancestral allele field in info
     # ref_is_ancestral=True is for simulated data which lacks INFO=AA
+
+    # to-do: break this function up and add windowing so you can compute SFS
+    # in bootstrap blocks!!!!
     genotypes = variant_file.genotypes
     refs = variant_file.refs
     alts = variant_file.alts
@@ -160,12 +163,51 @@ computing two-locus statistics
 """
 
 
+def count_test(positions, rcoords, rmap, bins, left_bound=None):
+    #
+    # interpolate map values for each position
+    if left_bound is None:
+        left_bound = len(positions)
+
+    site_r = np.interp(
+        positions,
+        rcoords,
+        rmap,
+        left=rmap[0],
+        right=rmap[-1]
+    )
+    edges = np.zeros(len(bins))
+    idxs = np.arange(len(positions))
+
+    for i, b in enumerate(bins):
+        edges[i] = np.interp(
+            site_r[:left_bound] + b,
+            site_r,
+            idxs,
+            left=0,
+            right=len(positions) - 1
+        ).sum()
+
+    counts = np.diff(edges)
+
+    return edges
+
+
 def count_site_pairs(
     r_map,
     bins,
     left_bound=None
 ):
-    #
+    """
+    compute numbers of site pairs, binned by recombination distances
+
+    :param r_map: recombination map
+    :param bins: recombination distance bins. the unit/scale must match that
+        of r_map (typically this will be centiMorgans)
+    :param left_bound: optional. if provided, specifies the highest index
+        allowed for the left (lower-index) site in pair-counting
+    :return: vector of pair counts
+    """
     if len(r_map) < 2:
         return np.zeros(len(bins) - 1)
 
@@ -173,12 +215,15 @@ def count_site_pairs(
         left_bound = len(r_map)
     else:
         if left_bound > len(r_map):
-            print('f')
+            raise ValueError('left_bound index exceeds map length')
 
+    # this is a LARGE operation and may consume very large amounts of memory
     site_bins = r_map[:left_bound, np.newaxis] + bins[np.newaxis, :]
     bin_edges = np.searchsorted(r_map, site_bins)
-    too_low = bin_edges[:, 0] <= np.arange(left_bound)
-    bin_edges[too_low, 0] = np.arange(left_bound)[too_low] + 1
+
+    # this adjustment prevents pair over-counting and self-pairing
+    over_counts = bin_edges[:, 0] <= np.arange(left_bound)
+    bin_edges[over_counts, 0] = np.arange(left_bound)[over_counts] + 1
     num_pairs = np.diff(bin_edges.sum(0))
     return num_pairs
 
@@ -190,7 +235,21 @@ def count_weighted_site_pairs(
     left_bound=None,
     verbosity=1e6
 ):
-    #
+    """
+    compute numbers of site pairs binned by recombination distances, counting
+    each pair as the product of site weights
+
+    :param weights: weights associated with each site
+    :param r_map: recombination map
+    :param bins: recombination bins. unit must match r_map
+    :param left_bound: optional. if provided, specifies the highest index
+        allowed for the left (lower-index) site in pair-counting
+    :param verbosity: status printout interval
+    :return: vector of weighted pair counts
+    """
+    if len(weights) != len(r_map):
+        raise ValueError('weights and r_map have mismatched lengths')
+
     if len(r_map) < 2:
         return np.zeros(len(bins) - 1)
 
@@ -198,13 +257,21 @@ def count_weighted_site_pairs(
         left_bound = len(r_map)
     else:
         if left_bound > len(r_map):
-            print('f')
+            raise ValueError('left_bound index exceeds map length')
 
     site_bins = r_map[:left_bound, np.newaxis] + bins[np.newaxis, :]
     bin_edges = np.searchsorted(r_map, site_bins)
-    too_low = bin_edges[:, 0] <= np.arange(left_bound)
-    bin_edges[too_low, 0] = np.arange(left_bound)[too_low] + 1
-    cum_weights = np.concatenate([[0], np.cumsum(weights)])
+    # decrementing by 1 gives the proper indices for cum_weights below
+    bin_edges -= 1
+
+    # correction for pair over-counting
+    over_counts = bin_edges[:, 0] < np.arange(left_bound)
+    bin_edges[over_counts, 0] = np.arange(left_bound)[over_counts]
+
+    # for a site, we compute weighted counts by taking the product of the site
+    # weight with the difference in cumulative weight counts at bin edges
+    cum_weights = np.cumsum(weights)
+
     num_pairs = np.zeros(len(bins) - 1, dtype=float)
 
     for i in np.arange(left_bound):
@@ -214,7 +281,7 @@ def count_weighted_site_pairs(
                 if i > 0:
                     print(
                         utils.get_time(),
-                        f'weighted site pairs parsed at site {i}'
+                        f'weighted site pairs counted at site {i}'
                     )
     return num_pairs
 
@@ -664,17 +731,21 @@ SFS
 """
 
 
-def parse_SFS(mask_fnames, vcf_fnames, out_fname, ref_as_ancestral=False):
-    # takes many input files. assumes .vcfs are already masked!
+def parse_SFS(
+    mask_fname,
+    vcf_fname,
+    out_fname,
+    ref_as_ancestral=False):
+    #
+    """
     n_sites = 0
-    for mask_fname in mask_fnames:
-        mask = masks.read_mask_regions(mask_fname)
-        _n_sites = masks.get_n_sites(mask)
-        n_sites += _n_sites
-        print(
-            utils.get_time(),
-            f'{_n_sites} positions parsed from {mask_fname}'
-        )
+    mask = masks.read_mask_regions(mask_fname)
+    _n_sites = masks.get_n_sites(mask)
+    n_sites += _n_sites
+    print(
+        utils.get_time(),
+        f'{_n_sites} positions parsed from {mask_fname}'
+    )
     samples = one_locus.read_vcf_sample_names(vcf_fnames[0])
     n = len(samples)
     SFS = np.zeros([3] * n, dtype=np.int64)
@@ -697,6 +768,8 @@ def parse_SFS(mask_fnames, vcf_fnames, out_fname, ref_as_ancestral=False):
         SFS=SFS
     )
     np.savez(out_fname, **arrs)
+    """
+    return 0
 
 
 def parse_window_SFS():
