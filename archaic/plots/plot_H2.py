@@ -29,6 +29,7 @@ def get_args():
     parser.add_argument('--min_x', type=float, default=None)
     parser.add_argument('--plot_two_sample', type=int, default=1)
     parser.add_argument('--ylim_0', type=int, default=1)
+    parser.add_argument('--plot_labels', type=int, default=1)
     return parser.parse_args()
 
 
@@ -128,8 +129,11 @@ def main():
     colors = data_colors + list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
     #
 
-    if args.labels is not None:
-        labels = args.labels
+    if args.plot_labels:
+        if args.labels is not None:
+            labels = args.labels
+    else:
+        labels = None
 
     fig, axs = plotting.plot_H2_spectra(
         *spectra,

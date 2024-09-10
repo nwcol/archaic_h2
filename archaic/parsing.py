@@ -163,7 +163,38 @@ computing two-locus statistics
 """
 
 
-def count_test(positions, rcoords, rmap, bins, left_bound=None):
+def _count_site_pairs(positions, rcoords, rmap, bins, left_bound=None):
+    #
+    # interpolate map values for each position
+    if left_bound is None:
+        left_bound = len(positions)
+
+    site_r = np.interp(
+        positions,
+        rcoords,
+        rmap,
+        left=rmap[0],
+        right=rmap[-1]
+    )
+    coords_in_pos_idx = np.searchsorted(positions, rcoords)
+
+    edges = np.zeros(len(bins), dtype=int)
+
+    for i, b in enumerate(bins):
+        edges[i] = np.floor(np.interp(
+            site_r[:left_bound] + b,
+            rmap,
+            coords_in_pos_idx,
+            left=0,
+            right=len(positions) - 1
+        )).sum()
+
+    counts = np.diff(edges)
+
+    return counts
+
+
+def __count_test(positions, rcoords, rmap, bins, left_bound=None):
     #
     # interpolate map values for each position
     if left_bound is None:
