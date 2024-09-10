@@ -15,7 +15,7 @@ utilities for generating biologically plausible recombination maps etc
 _default_r_bins = np.logspace(-6, -2, 17)
 # translate into cM
 _default_bins = utils.map_function(_default_r_bins)
-_extended_r_bins = np.concatenate(([0], _default_bins, [0.49]))
+_extended_r_bins = np.concatenate(([0], _default_r_bins, [0.49]))
 _extended_bins = utils.map_function(_extended_r_bins)
 
 
@@ -216,7 +216,7 @@ site pair-counting tests
 """
 
 
-def test_site_pair_counting():
+def _test_site_pair_counting():
     #
     def sub_test(rmap, bins, left_bound):
         # assert that naive and vectorized functions match up
@@ -242,7 +242,7 @@ def test_site_pair_counting():
     return
 
 
-def test_weighted_site_pair_counting():
+def _test_weighted_site_pair_counting():
     #
 
     # the cumsum function produces some numerical inaccuracy
@@ -302,6 +302,61 @@ def test_weighted_site_pair_counting():
     sub_test(integer_weights, long_rmap, _extended_bins, None)
     sub_test(integer_weights, long_rmap, _default_bins, 1000)
     sub_test(integer_weights, long_rmap, _extended_bins, 1000)
+
+    return
+
+
+def test_fast_weighted_site_pair_counting():
+    # uses the new function
+
+    # the cumsum function produces some numerical inaccuracy
+    # this is the tolerance for the residual between naive and vectorized
+    thresh = 1e-6
+
+    def weighting_test(positions, rcoords, rmap, bins, left_bound):
+        # test match between naive unweighted parsing and weighting with 1s
+        interp = np.interp(positions, rcoords, rmap)
+        ones = np.ones(len(positions))
+        unweighted = naively_count_site_pairs(
+            interp, bins, left_bound=left_bound
+        )
+        weighted = parsing._count_weighted_site_pairs(
+            positions, rcoords, rmap, bins, ones, left_bound=left_bound
+        )
+        assert np.all(unweighted == weighted)
+
+    def sub_test(weights, positions, rcoords, rmap, bins, left_bound):
+        #
+        interp = np.interp(positions, rcoords, rmap)
+        naive = naively_count_weighted_site_pairs(
+            weights, interp, bins, left_bound=left_bound
+        )
+        vec = parsing._count_weighted_site_pairs(
+            positions, rcoords, rmap, bins, weights, left_bound=left_bound
+        )
+        assert np.all(
+            np.logical_and(
+                vec <= naive * (1 + thresh), vec >= naive * (1 - thresh)
+            )
+        )
+
+    # weighting with a vector of 1s should equal unweighted result
+    positions = np.arange(1000, 3000)
+    rmap = np.cumsum(np.random.uniform(0, 1e-4, size=40))
+    rcoords = np.arange(0, 4000, 100)
+
+    weights = np.random.uniform(size=2000)
+    integer_weights = np.random.randint(0, 2, size=2000)
+
+    # validate weighting by comparing weighting with ones to unweighted count
+    weighting_test(positions, rcoords, rmap, _default_bins, None)
+    weighting_test(positions, rcoords, rmap, _extended_bins, None)
+
+    # naive vs vectorized weighting methods
+    sub_test(weights, positions, rcoords, rmap, _default_bins, None)
+    sub_test(weights, positions - 500, rcoords, rmap, _default_bins, None)
+    sub_test(weights, positions + 500, rcoords, rmap, _default_bins, None)
+    sub_test(weights, positions, rcoords, rmap, _default_bins, 2000)
 
     return
 

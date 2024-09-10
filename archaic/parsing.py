@@ -163,9 +163,17 @@ computing two-locus statistics
 """
 
 
-def _count_site_pairs(positions, rcoords, rmap, bins, left_bound=None):
+def _count_site_pairs(
+    positions,
+    rcoords,
+    rmap,
+    bins,
+    left_bound=None
+):
     #
     # interpolate map values for each position
+    if len(rcoords) != len(rmap):
+        raise ValueError('rcoords length mismatches rmap')
     if left_bound is None:
         left_bound = len(positions)
 
@@ -181,22 +189,32 @@ def _count_site_pairs(positions, rcoords, rmap, bins, left_bound=None):
     edges = np.zeros(len(bins), dtype=int)
 
     for i, b in enumerate(bins):
-        edges[i] = np.floor(np.interp(
-            site_r[:left_bound] + b,
-            rmap,
-            coords_in_pos_idx,
-            left=0,
-            right=len(positions) - 1
-        )).sum()
+        edges[i] = np.floor(
+            np.interp(
+                site_r[:left_bound] + b,
+                rmap,
+                coords_in_pos_idx,
+                left=0,
+                right=len(positions) - 1
+            )
+        ).sum()
 
     counts = np.diff(edges)
 
     return counts
 
 
-def __count_test(positions, rcoords, rmap, bins, left_bound=None):
+def _count_weighted_site_pairs(
+    positions,
+    rcoords,
+    rmap,
+    bins,
+    weights,
+    left_bound=None
+):
     #
-    # interpolate map values for each position
+    if len(rcoords) != len(rmap):
+        raise ValueError('rcoords length mismatches rmap')
     if left_bound is None:
         left_bound = len(positions)
 
@@ -207,21 +225,25 @@ def __count_test(positions, rcoords, rmap, bins, left_bound=None):
         left=rmap[0],
         right=rmap[-1]
     )
-    edges = np.zeros(len(bins))
-    idxs = np.arange(len(positions))
+    coords_in_pos_idx = np.searchsorted(positions, rcoords)
+    cum_weights = np.cumsum(weights)
+    weighted_edges = np.zeros(len(bins), dtype=float)
 
     for i, b in enumerate(bins):
-        edges[i] = np.interp(
-            site_r[:left_bound] + b,
-            site_r,
-            idxs,
-            left=0,
-            right=len(positions) - 1
-        ).sum()
+        idx = np.ceil(
+            np.interp(
+                site_r[:left_bound] + b,
+                rmap,
+                coords_in_pos_idx,
+                left=1,
+                right=len(positions)
+            )
+        ).astype(int) - 1
+        weighted_edges[i] = np.dot(weights, cum_weights[idx])
 
-    counts = np.diff(edges)
+    weighted_counts = np.diff(weighted_edges)
 
-    return edges
+    return weighted_counts
 
 
 def count_site_pairs(
