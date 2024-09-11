@@ -4,7 +4,7 @@ import demes
 import numpy as np
 import sys
 
-from archaic import utils, parsing, simulation
+from archaic import util, parsing, simulation
 
 
 def get_args():

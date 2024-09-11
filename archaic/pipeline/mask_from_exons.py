@@ -10,7 +10,7 @@ add a flank of given length to each exonic region.
 import argparse
 import numpy as np
 from archaic import masks
-from archaic import utils
+from archaic import util
 
 
 def get_args():

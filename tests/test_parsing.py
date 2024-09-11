@@ -4,7 +4,7 @@ tests of numpy functions, especially searchsorted
 from bisect import bisect
 import numpy as np
 
-from archaic import utils, parsing
+from archaic import util, parsing
 
 
 """
@@ -14,9 +14,9 @@ utilities for generating biologically plausible recombination maps etc
 
 _default_r_bins = np.logspace(-6, -2, 17)
 # translate into cM
-_default_bins = utils.map_function(_default_r_bins)
+_default_bins = util.map_function(_default_r_bins)
 _extended_r_bins = np.concatenate(([0], _default_r_bins, [0.49]))
-_extended_bins = utils.map_function(_extended_r_bins)
+_extended_bins = util.map_function(_extended_r_bins)
 
 
 def get_constant_recombination_map(L, r):

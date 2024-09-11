@@ -6,7 +6,7 @@ import argparse
 import numpy as np
 from archaic import masks
 from archaic import two_locus
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -27,7 +27,7 @@ def main():
     masks.write_regions(regions, args.out_fname, args.chrom_num)
     n_sites = stop + 1 - start
     print(
-        utils.get_time(),
+        util.get_time(),
         f'map coverage mask for chrom {args.chrom_num} written; {n_sites} sites'
     )
     return 0

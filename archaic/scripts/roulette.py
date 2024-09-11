@@ -8,7 +8,7 @@ import gzip
 import numpy as np
 import sys
 
-from archaic import masks, utils
+from archaic import masks, util
 
 
 def get_args():
@@ -55,7 +55,7 @@ def read(fname, verbose=1e6):
 
             if i % (3 * verbose) == 0:
                 if i > 0:
-                    print(utils.get_time(), f'rate read at {i // 3} sites')
+                    print(util.get_time(), f'rate read at {i // 3} sites')
 
     positions = [np.array(pos, dtype=int) for pos in positions]
     mr = [np.array(rate, dtype=float) for rate in mr]
@@ -74,14 +74,14 @@ def main():
         idx = np.unique(position_blocks[i]) - 1
         coeff = 1.015e-7 / 2
         rate[idx] = sum_rate * coeff
-    print(utils.get_time(), 'rate processed')
+    print(util.get_time(), 'rate processed')
     np.savez_compressed(args.out_rate_fname, rate=rate)
-    print(utils.get_time(), 'rate saved')
+    print(util.get_time(), 'rate saved')
     positions = np.concatenate(position_blocks)
     mask = masks.Mask.from_positions(positions)
-    print(utils.get_time(), 'mask processed')
+    print(util.get_time(), 'mask processed')
     mask.write_bed_file(args.out_mask_fname)
-    print(utils.get_time(), 'mask saved')
+    print(util.get_time(), 'mask saved')
 
 
 if __name__ == '__main__':

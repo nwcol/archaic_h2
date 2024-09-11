@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -18,8 +18,8 @@ def main():
     sum_mu = 0
     num_sites = 0
     for mask_fname, rate_fname in zip(args.mask_fnames, args.rate_fnames):
-        mask = utils.read_mask_file(mask_fname)
-        bool_mask = utils.get_bool_mask(mask)
+        mask = util.read_mask_file(mask_fname)
+        bool_mask = util.get_bool_mask(mask)
         max_idx = len(bool_mask)
         num_sites += bool_mask.sum()
         rate_file = np.load(rate_fname)

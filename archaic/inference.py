@@ -6,7 +6,7 @@ import numpy as np
 import moments
 import scipy
 
-from archaic import utils
+from archaic import util
 from archaic.spectra import H2Spectrum
 
 
@@ -114,7 +114,7 @@ def fit_H2(
     if not use_H and data.has_H:
         data = data.remove_H()
     print(
-        utils.get_time(),
+        util.get_time(),
         f'fitting H2 to data for demes {data.sample_ids}'
     )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
@@ -211,7 +211,7 @@ def fit_SFS(
 ):
     #
     print(
-        utils.get_time(),
+        util.get_time(),
         f'fitting SFS to data for demes {data.pop_ids}'
     )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)
@@ -224,7 +224,7 @@ def fit_SFS(
         if L is None:
             raise ValueError('if you do not provide uL, you must provide L!')
         else:
-            print(utils.get_time(), f'fitting u as a free parameter')
+            print(util.get_time(), f'fitting u as a free parameter')
             fit_u = True
             pnames = np.append(pnames, 'u')
             p0 = np.append(p0, _init_u)
@@ -321,7 +321,7 @@ def fit_composite(
     if H2_data.has_H:
         H2_data = H2_data.remove_H()
     print(
-        utils.get_time(),
+        util.get_time(),
         f'fitting SFS and H2 to data for demes {H2_data.sample_ids}'
     )
     builder = moments.Demes.Inference._get_demes_dict(graph_fname)

@@ -5,7 +5,7 @@ import argparse
 
 import numpy as np
 
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -21,7 +21,7 @@ def get_args():
 def main():
     #
     args = get_args()
-    masks = [utils.read_mask_file(fname) for fname in args.mask_fnames]
+    masks = [util.read_mask_file(fname) for fname in args.mask_fnames]
     chrom_nums = [utils.read_mask_chrom_num(x) for x in args.mask_fnames]
     if len(np.unique(chrom_nums)) > 1:
         raise ValueError(
@@ -31,16 +31,16 @@ def main():
     intersect = utils.intersect_masks(*masks)
     if len(args.negative_mask_fnames) > 0:
         sub_masks = [
-            utils.read_mask_file(x) for x in args.negative_mask_fnames
+            util.read_mask_file(x) for x in args.negative_mask_fnames
         ]
-        sub_union = utils.add_masks(*sub_masks)
+        sub_union = util.add_masks(*sub_masks)
         intersect = utils.subtract_masks(intersect, sub_union)
     if args.min_length:
-        intersect = utils.filter_mask_by_length(intersect, args.min_length)
-    utils.write_mask_file(intersect, args.out_fname, chrom_num)
-    n_sites = utils.get_bool_mask(intersect).sum()
+        intersect = util.filter_mask_by_length(intersect, args.min_length)
+    util.write_mask_file(intersect, args.out_fname, chrom_num)
+    n_sites = util.get_bool_mask(intersect).sum()
     print(
-        utils.get_time(),
+        util.get_time(),
         f'intersect mask for chrom {chrom_num} written; {n_sites} sites'
     )
     return 0

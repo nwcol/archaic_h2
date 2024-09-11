@@ -6,7 +6,7 @@ import argparse
 import demes
 import msprime
 
-from archaic import utils, simulation
+from archaic import util, simulation
 
 
 def get_args():
@@ -35,7 +35,7 @@ def main():
         L=args.seq_length
     )
     print(
-        utils.get_time(),
+        util.get_time(),
         f'simulation completed and saved at {args.out_fname}'
     )
     return 0

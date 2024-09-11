@@ -3,7 +3,7 @@
 """
 import argparse
 
-from archaic import masks, utils
+from archaic import masks, util
 
 
 def get_args():

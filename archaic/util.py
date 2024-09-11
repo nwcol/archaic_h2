@@ -73,6 +73,37 @@ reading and writing data to file
 """
 
 
+def read_bedgraph(fname, sep='\t', fields=None):
+    # read a .bedgraph
+    if fname.endswith('.gz'):
+        open_func = gzip.open
+    else:
+        open_func = open
+    with open_func(fname, 'rb') as file:
+        header_line = file.readline().decode()
+
+    header = header_line.strip('\n').split(sep)
+    data_names = header[3:]
+    cols = tuple(range(3, len(header)))
+
+    regions = np.loadtxt(
+        fname,
+        skiprows=1,
+        dtype=int,
+        usecols=(1, 2)
+    )
+    data_cols = np.loadtxt(
+        fname,
+        skiprows=1,
+        usecols=cols,
+        dtype=float,
+        unpack=True,
+    )
+    data = dict(zip(data_names, data_cols))
+    # add field filter
+    return regions, data
+
+
 def read_u_bedgraph(fname):
     # read a .bedgraph file with regions in its 1st/2nd col and u in its 4th
     regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)

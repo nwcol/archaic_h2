@@ -7,7 +7,7 @@ import moments
 import msprime
 import numpy as np
 
-from archaic import inference, masks, two_locus, utils
+from archaic import inference, masks, two_locus, util
 from archaic.parsing import parse_H2, bootstrap_H2, parse_SFS
 from archaic.spectra import H2Spectrum
 

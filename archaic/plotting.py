@@ -10,7 +10,7 @@ import moments
 import numpy as np
 import scipy
 
-from archaic import utils, parsing
+from archaic import util, parsing
 
 
 """
@@ -401,7 +401,7 @@ def plot_parameters(
     # plot parameter clouds
     # truths is a vector of underlying true parameters
     n = len(names)
-    n_axs = utils.n_choose_2(n)
+    n_axs = util.n_choose_2(n)
     n_rows = int(np.ceil(n_axs / n_cols))
     fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(n_cols * 3.5, n_rows * 3),
@@ -411,7 +411,7 @@ def plot_parameters(
     for ax in axs[n_axs:]:
         ax.remove()
     colors = ['b', 'orange', 'g', 'r']
-    idxs = utils.get_pair_idxs(n)
+    idxs = util.get_pair_idxs(n)
     for k, (i, j) in enumerate(idxs):
         ax = axs[k]
         ax.set_xlabel(names[i])

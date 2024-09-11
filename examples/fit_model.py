@@ -9,7 +9,7 @@ writes optimization exit status to the output .yaml graph file in the
 import argparse
 import demes
 
-from archaic import inference, utils
+from archaic import inference, util
 from archaic.spectra import H2Spectrum
 
 
@@ -35,7 +35,7 @@ def main():
     data = H2Spectrum.from_bootstrap_file(
         args.data_fname, graph=demes.load(args.graph_fname)
     )
-    print(utils.get_time(), f'running inference for demes {data.sample_ids}')
+    print(util.get_time(), f'running inference for demes {data.sample_ids}')
 
     # run the inference
     inference.fit_H2(

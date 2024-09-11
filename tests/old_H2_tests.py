@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import msprime
 import numpy as np
 
-from archaic import utils, one_locus, two_locus, masks, simulation, parsing
+from archaic import util, one_locus, two_locus, masks, simulation, parsing
 from archaic.spectra import H2Spectrum
 
 

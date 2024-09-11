@@ -4,7 +4,7 @@ Fit a demes model to H2 data
 import argparse
 import demes
 
-from archaic import inference, utils
+from archaic import inference, util
 from archaic.spectra import H2Spectrum
 
 

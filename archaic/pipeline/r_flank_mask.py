@@ -5,7 +5,7 @@ distance threshold
 import argparse
 import numpy as np
 
-from archaic import two_locus, masks, utils
+from archaic import two_locus, masks, util
 
 
 def get_args():
@@ -31,7 +31,7 @@ def main():
     map_vals = two_locus.get_r_map(args.map_fname, map_coords)
     cM_thresh = two_locus.map_function(args.r_thresh)
     print(
-        utils.get_time(),
+        util.get_time(),
         f'flank set at {cM_thresh} cM'
     )
     # construct thresh mask

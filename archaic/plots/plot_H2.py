@@ -2,6 +2,7 @@
 Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
 """
 import argparse
+from bokeh.palettes import TolRainbow, Set1, Inferno
 import demes
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -120,13 +121,16 @@ def main():
         labels.append(f'{basename}{ll_label}')
         n_graphs += 1
 
-    if n_datas < 8:
-        data_colors = ['b', 'orange', 'g', 'r', 'purple', 'brown', 'm', 'g']
-        data_colors[:n_datas]
-    else:
-        data_colors = list(cm.terrain(np.linspace(0, 0.85, n_datas)))
+    #if n_datas < 8:
+        #data_colors = ['b', 'orange', 'g', 'r', 'purple', 'brown', 'm', 'g']
+        #data_colors[:n_datas]
+    #else:
+    data_colors = list(cm.terrain(np.linspace(0, 0.85, n_datas)))
+    #data_colors = list(Set1[max(n_datas, 3)][:n_datas])
+    exp_colors = list(Inferno[max(n_graphs, 3)][:n_graphs])
+    #colors = data_colors + list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
 
-    colors = data_colors + list(cm.gnuplot(np.linspace(0, 0.9, n_graphs)))
+    colors = data_colors + exp_colors
     #
 
     if args.plot_labels:

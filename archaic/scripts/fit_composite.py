@@ -6,7 +6,7 @@ import demes
 import moments
 import numpy as np
 
-from archaic import inference, utils
+from archaic import inference, util
 from archaic.spectra import H2Spectrum
 
 
@@ -62,7 +62,7 @@ def main():
     SFS_data, L = inference.read_SFS(args.SFS_fname, pop_ids)
 
     print(
-        utils.get_time(),
+        util.get_time(),
         f'running inference for demes {H2_data.sample_ids}'
     )
     for i, method in enumerate(args.method):

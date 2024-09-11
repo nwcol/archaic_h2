@@ -8,7 +8,7 @@ import gzip
 import numpy as np
 from archaic import masks
 from archaic import one_locus
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -36,7 +36,7 @@ def main():
         for i, pos in enumerate(positions):
             line = f'{chrom}\t{pos}\t{alleles[i]}\n'.encode()
             file.write(line)
-    print(utils.get_time(), f'annotation saved at {args.out_fname}')
+    print(util.get_time(), f'annotation saved at {args.out_fname}')
     return 0
 
 

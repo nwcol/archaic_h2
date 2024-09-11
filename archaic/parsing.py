@@ -4,7 +4,7 @@ Functions for parsing statistics from .vcf files
 import numpy as np
 import time
 
-from archaic import utils
+from archaic import util
 
 
 _default_bins = np.logspace(-6, -2, 17)
@@ -42,7 +42,7 @@ def compute_H(
     _, n_samples, __ = genotype_arr.shape
 
     if get_two_sample:
-        n_stats = n_samples + utils.n_choose_2(n_samples)
+        n_stats = n_samples + util.n_choose_2(n_samples)
     else:
         n_stats = n_samples
 
@@ -85,7 +85,7 @@ def compute_weighted_H(
     vcf_weights = weights[np.searchsorted(positions, vcf_positions)]
     num_sites = np.zeros(len(windows))
     _, n_samples, __ = genotype_arr.shape
-    num_H = np.zeros((len(windows), utils.n_choose_2(n_samples) + n_samples))
+    num_H = np.zeros((len(windows), util.n_choose_2(n_samples) + n_samples))
 
     for w, window in enumerate(windows):
         start, end = np.searchsorted(positions, window)
@@ -151,7 +151,7 @@ def compute_SFS(variant_file, ref_as_ancestral=False):
             SFS_idx = None
         SFS[SFS_idx] += 1
     print(
-        utils.get_time(),
+        util.get_time(),
         f'{n_triallelic} multiallelic sites, '
         f'{n_mismatch} sites lacking ancestral allele'
     )
@@ -212,7 +212,7 @@ def _count_weighted_site_pairs(
     weights,
     left_bound=None
 ):
-    #
+    # currently inaccurate
     if len(rcoords) != len(rmap):
         raise ValueError('rcoords length mismatches rmap')
     if left_bound is None:
@@ -278,6 +278,10 @@ def count_site_pairs(
     over_counts = bin_edges[:, 0] <= np.arange(left_bound)
     bin_edges[over_counts, 0] = np.arange(left_bound)[over_counts] + 1
     num_pairs = np.diff(bin_edges.sum(0))
+    print(
+        util.get_time(),
+        f'site pair counts computed for {left_bound} loci'
+    )
     return num_pairs
 
 
@@ -333,9 +337,13 @@ def count_weighted_site_pairs(
             if i % verbosity == 0:
                 if i > 0:
                     print(
-                        utils.get_time(),
+                        util.get_time(),
                         f'weighted site pairs counted at site {i}'
                     )
+    print(
+        util.get_time(),
+        f'weighted site pair counts computed for {left_bound} loci'
+    )
     return num_pairs
 
 
@@ -363,13 +371,13 @@ def compute_H2(
         bins = _default_bins
 
     # convert bins in r into bins in cM
-    bins = utils.map_function(bins)
+    bins = util.map_function(bins)
 
     vcf_r_map = r_map[np.searchsorted(positions, vcf_positions)]
     _, n_samples, __ = genotype_arr.shape
 
     if get_two_sample:
-        n_stats = n_samples + utils.n_choose_2(n_samples)
+        n_stats = n_samples + util.n_choose_2(n_samples)
     else:
         n_stats = n_samples
 
@@ -420,7 +428,7 @@ def compute_H2(
                     )
                     k += 1
 
-        print(utils.get_time(), f'computed H2 in window {w}')
+        print(util.get_time(), f'computed H2 in window {w}')
 
     return num_pairs, num_H2
 
@@ -446,14 +454,14 @@ def compute_weighted_H2(
     if bins is None:
         bins = _default_bins
 
-    bins = utils.map_function(bins)
+    bins = util.map_function(bins)
 
     vcf_r_map = r_map[np.searchsorted(positions, vcf_positions)]
     vcf_weights = weights[np.searchsorted(positions, vcf_positions)]
     _, n_samples, __ = genotype_arr.shape
     norm_constant = np.zeros((len(windows), len(bins) - 1))
     num_H2 = np.zeros(
-        (len(windows), utils.n_choose_2(n_samples) + n_samples, len(bins) - 1)
+        (len(windows), util.n_choose_2(n_samples) + n_samples, len(bins) - 1)
     )
 
     for z, (window, bound) in enumerate(zip(windows, bounds)):
@@ -506,7 +514,7 @@ def compute_weighted_H2(
                     )
                 k += 1
 
-        print(utils.get_time(), f'computed H2 in window {z}')
+        print(util.get_time(), f'computed H2 in window {z}')
                 
     return norm_constant, num_H2
 
@@ -522,10 +530,10 @@ def parse_H(
     windows
 ):
     # from file
-    mask_regions = utils.read_mask_file(mask_fname)
-    mask_positions = utils.get_mask_positions(mask_regions)
+    mask_regions = util.read_mask_file(mask_fname)
+    mask_positions = util.get_mask_positions(mask_regions)
     sample_ids, vcf_positions, genotype_arr = \
-        utils.read_vcf_genotypes(vcf_fname, mask_regions)
+        util.read_vcf_genotypes(vcf_fname, mask_regions)
     num_sites, num_H = compute_H(
         mask_positions,
         genotype_arr,
@@ -549,12 +557,12 @@ def parse_H2(
         bins = _default_bins
 
     t0 = time.time()
-    mask_regions = utils.read_mask_file(mask_fname)
-    mask_positions = utils.get_mask_positions(mask_regions)
+    mask_regions = util.read_mask_file(mask_fname)
+    mask_positions = util.get_mask_positions(mask_regions)
     sample_ids, vcf_positions, genotype_arr = \
-        utils.read_vcf_genotypes(vcf_fname, mask_regions)
-    r_map = utils.read_map_file(map_fname, mask_positions)
-    print(utils.get_time(), 'loaded files')
+        util.read_vcf_genotypes(vcf_fname, mask_regions)
+    r_map = util.read_map_file(map_fname, mask_positions)
+    print(util.get_time(), 'loaded files')
 
     num_sites, num_H = compute_H(
         mask_positions,
@@ -563,7 +571,7 @@ def parse_H2(
         windows=windows,
         get_two_sample=get_two_sample
     )
-    print(utils.get_time(), 'computed one-locus H')
+    print(util.get_time(), 'computed one-locus H')
 
     num_pairs, num_H2 = compute_H2(
         mask_positions,
@@ -575,7 +583,7 @@ def parse_H2(
         bounds=bounds,
         get_two_sample=get_two_sample
     )
-    print(utils.get_time(), 'computed two-locus H')
+    print(util.get_time(), 'computed two-locus H')
 
     n = len(sample_ids)
     if get_two_sample:
@@ -596,9 +604,9 @@ def parse_H2(
     )
 
     t = np.round(time.time() - t0, 0)
-    chrom_num = utils.read_vcf_contig(vcf_fname)
+    chrom_num = util.read_vcf_contig(vcf_fname)
     print(
-        utils.get_time(),
+        util.get_time(),
         f'{len(mask_positions)} sites on '
         f'chromosome {chrom_num} parsed in\t{t} s'
     )
@@ -610,36 +618,60 @@ def parse_weighted_H2(
     vcf_fname,
     map_fname,
     weight_fname,
-    bins,
+    bins=None,
     windows=None,
     bounds=None,
-    weight_name='rates',
     inverse_weight=True
 ):
     #
-    if bins is None:
+    if isinstance(bins, np.ndarray):
+        pass
+    elif isinstance(bins, str):
+        bins = np.loadtxt(bins)
+    else:
+        print(util.get_time(), 'parsing with default bins')
         bins = _default_bins
 
-    t0 = time.time()
-    mask_regions = utils.read_mask_file(mask_fname)
-    mask_positions = utils.get_mask_positions(mask_regions)
-    sample_ids, vcf_positions, genotype_arr = \
-        utils.read_vcf_genotypes(vcf_fname, mask_regions)
-    r_map = utils.read_map_file(map_fname, mask_positions)
-    print(utils.get_time(), "files loaded")
+    if isinstance(windows, np.ndarray):
+        if windows.ndim == 1:
+            windows = windows[np.newaxis]
+        if windows.shape[1] == 3:
+            bounds = windows[:, 2]
+            windows = windows[:, :2]
+    elif isinstance(windows, str):
+        window_arr = np.loadtxt(windows)
+        if window_arr.ndim == 1:
+            window_arr = window_arr[np.newaxis]
+        windows = window_arr[:, :2]
+        bounds = window_arr[:, 2]
+    else:
+        windows = None
 
+    print(windows, bounds)
+
+    t0 = time.time()
+    mask_regions = util.read_mask_file(mask_fname)
+    mask_positions = util.get_mask_positions(mask_regions)
+    sample_ids, vcf_positions, genotype_arr = \
+        util.read_vcf_genotypes(vcf_fname, mask_regions)
+    r_map = util.read_map_file(map_fname, mask_positions)
+    print(util.get_time(), "files loaded")
+
+    # load weight file
+    # this could be changed for sure....
     if weight_fname.endswith('.npz'):
         weight_file = np.load(weight_fname)
         weight_positions = weight_file['positions']
-        all_weights = weight_file[weight_name]
+        all_weights = weight_file['rates']
         weights = all_weights[np.searchsorted(weight_positions, mask_positions)]
     else:
-        edges, mean_weights = utils.read_u_bedgraph(weight_fname)
-        idx = np.searchsorted(edges[1:], mask_positions)
-        weights = mean_weights[idx]
+        regions, data = util.read_bedgraph(weight_fname)
+        # assign a mutation rate to each point
+        idx = np.searchsorted(regions[:, 1], mask_positions)
+        weights = data['u'][idx]
     if inverse_weight:
-        weights = 1 / weights
-    print(utils.get_time(), 'weight files loaded')
+        weights = weights ** -1
+    print(util.get_time(), 'weight files loaded')
 
     # one-locus H
     num_sites, num_H = compute_weighted_H(
@@ -649,7 +681,7 @@ def parse_weighted_H2(
         weights,
         windows=windows
     )
-    print(utils.get_time(), 'one-locus H computed')
+    print(util.get_time(), 'one-locus H computed')
 
     # two-locus H
     num_pairs, num_H2 = compute_weighted_H2(
@@ -662,7 +694,7 @@ def parse_weighted_H2(
         windows=windows,
         bounds=bounds
     )
-    print(utils.get_time(), 'two-locus H computed')
+    print(util.get_time(), 'two-locus H computed')
 
     n = len(sample_ids)
     stat_ids = [
@@ -674,13 +706,15 @@ def parse_weighted_H2(
         n_site_pairs=num_pairs,
         H2_counts=num_H2,
         r_bins=bins,
-        ids=stat_ids
+        ids=stat_ids,
+        windows=windows,
+        bounds=bounds
     )
 
     t = np.round(time.time() - t0, 0)
-    chrom_num = utils.read_vcf_contig(vcf_fname)
+    chrom_num = util.read_vcf_contig(vcf_fname)
     print(
-        utils.get_time(),
+        util.get_time(),
         f'{len(mask_positions)} sites on '
         f'chromosome {chrom_num} parsed in\t{t} s'
     )
@@ -796,7 +830,7 @@ def parse_SFS(
     _n_sites = masks.get_n_sites(mask)
     n_sites += _n_sites
     print(
-        utils.get_time(),
+        util.get_time(),
         f'{_n_sites} positions parsed from {mask_fname}'
     )
     samples = one_locus.read_vcf_sample_names(vcf_fnames[0])
@@ -811,7 +845,7 @@ def parse_SFS(
             raise ValueError(f'sample mismatch: {samples}, {_samples}')
         SFS += _SFS
         print(
-            utils.get_time(),
+            util.get_time(),
             f'{_SFS.sum()} variants parsed to SFS '
             f'on chrom {variants.chrom_num}'
         )
@@ -848,7 +882,7 @@ def compute_cross_arm_H2(chrom_dict, cen_idx):
     num_pairs = \
         chrom_dict[sites][:cen_idx].sum() * chrom_dict[sites][cen_idx:].sum()
 
-    expected_num_pairs = utils.n_choose_2(chrom_dict[sites].sum())
+    expected_num_pairs = util.n_choose_2(chrom_dict[sites].sum())
     assert num_pairs + chrom_dict[pairs].sum() == expected_num_pairs
 
     return num_H2, num_pairs
@@ -860,7 +894,7 @@ def compute_cross_chrom_H2(chrom_dicts):
     sites = 'n_sites'
 
     n_chroms = len(chrom_dicts)
-    n_pairs = utils.n_choose_2(n_chroms)
+    n_pairs = util.n_choose_2(n_chroms)
     _, n_stats = chrom_dicts[0]['H_counts'].shape
     num_H2 = np.zeros((n_pairs, n_stats))
     num_pairs = np.zeros(n_pairs)

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import moments
 import numpy as np
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -28,7 +28,7 @@ def main():
     sfs = moments.Spectrum(archive['SFS'], pop_ids=samples)
     z_lim = sfs.max()
     n = len(samples)
-    n_axs = utils.n_choose_2(n)
+    n_axs = util.n_choose_2(n)
     cols = 5
     rows = int(np.ceil(n_axs / cols))
     fig, axs = plt.subplots(

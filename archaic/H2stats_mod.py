@@ -5,7 +5,7 @@ import demes
 import numpy as np
 import moments
 
-from archaic import utils, parsing
+from archaic import util, parsing
 
 
 class H2Spectrum:
@@ -426,7 +426,7 @@ class H2stats(np.ndarray):
         _num_pairs = 'num_pairs'
 
         if _num_H2 in file:
-
+            pass
         return cls(arr, sample_ids=sample_ids, covs=covs, bins=bins)
 
     @classmethod

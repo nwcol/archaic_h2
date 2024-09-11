@@ -7,7 +7,7 @@ import argparse
 import demes
 import numpy as np
 from archaic import inference
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -25,7 +25,7 @@ def main():
     
     r = np.logspace(-6, -2, 50)
     pairs = utils.get_pairs(args.sample_names)
-    pair_names = utils.get_pair_names(args.sample_names)
+    pair_names = util.get_pair_names(args.sample_names)
     graph1 = demes.load(args.graph_fname1)
     E_H1, E_H21 = inference.get_H_stats(
         graph1, args.sample_names, pairs, r, args.u, num_method="midpoint"

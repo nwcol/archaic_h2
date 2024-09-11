@@ -6,7 +6,7 @@ and .vcf files. .vcf files must have 'AA' field in INFO
 
 import argparse
 from archaic import parsing
-from archaic import utils
+from archaic import util
 
 
 def get_args():

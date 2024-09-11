@@ -8,7 +8,7 @@ import demes
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-from archaic import inference, plotting, utils
+from archaic import inference, plotting, util
 from archaic.spectra import H2Spectrum
 
 

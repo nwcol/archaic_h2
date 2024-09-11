@@ -3,7 +3,7 @@ Write a mask file recording the positions covered in a .vcf file
 """
 import argparse
 
-from archaic import utils
+from archaic import util
 
 
 def get_args():
@@ -21,7 +21,7 @@ def main():
     positions, chrom_num = masks.read_vcf_positions(args.vcf_fname)
     regions = utils.positions_to_regions(positions)
     masks.write_regions(regions, args.out_fname, chrom_num)
-    print(utils.get_time(), f'mask written at {args.out_fname}')
+    print(util.get_time(), f'mask written at {args.out_fname}')
     return 0
 
 

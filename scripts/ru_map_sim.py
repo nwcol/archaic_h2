@@ -6,7 +6,7 @@ import demes
 import numpy as np
 import sys
 
-from archaic import utils, parsing, simulation
+from archaic import util, parsing, simulation
 
 
 cluster = sys.argv[1]
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     map_span = utils.read_map_file(rmap_fname, [0, L])
     mean_r_cM = (map_span[1] - map_span[0]) / L
     mean_r = mean_r_cM / 100
-    print(utils.get_time(), 'mean r across map: {mean_r}')
+    print(util.get_time(), 'mean r across map: {mean_r}')
     # create a uniform r-map file
     unif_rmap_fname = f'unif_rmap_{n}.txt'
     with open(unif_rmap_fname, 'w') as file:
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                 L=L
             )
             vcf_fnames.append(vcf_fname)
-            print(utils.get_time(), f'saved simulation at {vcf_fname}')
+            print(util.get_time(), f'saved simulation at {vcf_fname}')
 
     # parse statistics from simulated chromosomes
     for vcf_fname in vcf_fnames:
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             weighted_fname = f'{base_name}_{rname}r_weighted.npz'
             np.savez(weighted_fname, **weighted_u_stats)
             print(
-                utils.get_time(),
+                util.get_time(),
                 f'weighted u stats with rmap {rname} @ {weighted_fname}'
             )
 
@@ -102,6 +102,6 @@ if __name__ == '__main__':
             unif_fname = f'{base_name}_{rname}r_normal.npz'
             np.savez(unif_fname, **unif_u_stats)
             print(
-                utils.get_time(),
+                util.get_time(),
                 f'unif u stats with rmap {rname} @ {unif_fname}'
             )

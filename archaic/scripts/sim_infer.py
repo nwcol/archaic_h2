@@ -6,7 +6,7 @@ import demes
 import msprime
 import numpy as np
 
-from archaic import inference, masks, two_locus, utils
+from archaic import inference, masks, two_locus, util
 from archaic.parsing import parse_H2, bootstrap_H2, parse_SFS
 from archaic.spectra import H2Spectrum
 
@@ -95,7 +95,7 @@ def coalsim(
             position_transform=increment1
         )
     print(
-        utils.get_time(),
+        util.get_time(),
         f'{int(L)} sites simulated and saved at {out_fname}'
     )
     return 0
