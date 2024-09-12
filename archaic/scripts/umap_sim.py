@@ -18,17 +18,20 @@ def get_args():
     parser.add_argument('--windows', required=True)
     parser.add_argument('--tag', default='')
     parser.add_argument('--bins')
+    parser.add_argument('--cluster_id', default=None)
+    parser.add_argument('--process_id', default=None)
     return parser.parse_args()
 
 
 def main():
 
     args = get_args()
-
+    c = '' if args.cluster_id is None else f'{args.cluster_id}-'
+    p = '' if args.process_id is None else f'{args.process_id}'
     if len(args.tag) > 0:
         tag = f'{args.tag}_'
     else:
-        tag = ''
+        tag = f'{c}{p}'
 
     bins = np.loadtxt(args.bins)
     win_arr = np.loadtxt(args.windows)
@@ -55,7 +58,7 @@ def main():
         r=args.r,
         L=args.L
     )
-    flat_vcf = f'{tag}_flat_u.vcf'
+    flat_vcf = f'{tag}flat_u.vcf'
     simulation.simulate_chromosome(
         graph,
         flat_vcf,
