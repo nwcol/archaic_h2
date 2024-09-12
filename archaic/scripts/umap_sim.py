@@ -26,7 +26,7 @@ def main():
     args = get_args()
 
     if len(args.tag) > 0:
-        tag = f'_{args.tag}'
+        tag = f'{args.tag}_'
     else:
         tag = ''
 
@@ -47,7 +47,7 @@ def main():
     print(f'mean u in mask: {mean_u}')
 
     # simulate with empirical u-map and parse the simulated data
-    emp_vcf = f'{tag}_emp_u.vcf'
+    emp_vcf = f'{tag}emp_u.vcf'
     simulation.simulate_chromosome(
         graph,
         emp_vcf,
@@ -55,14 +55,14 @@ def main():
         r=args.r,
         L=args.L
     )
-    #flat_vcf = f'{tag}_flat_u.vcf'
-    #simulation.simulate_chromosome(
-    #    graph,
-    #    flat_vcf,
-    #    u=mean_u,
-    #    r=args.r,
-    #    L=args.L
-    #)
+    flat_vcf = f'{tag}_flat_u.vcf'
+    simulation.simulate_chromosome(
+        graph,
+        flat_vcf,
+        u=mean_u,
+        r=args.r,
+        L=args.L
+    )
     dic1 = parsing.parse_weighted_H2(
         args.mask_fname,
         emp_vcf,
