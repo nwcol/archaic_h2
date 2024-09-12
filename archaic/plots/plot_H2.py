@@ -31,6 +31,7 @@ def get_args():
     parser.add_argument('--plot_two_sample', type=int, default=1)
     parser.add_argument('--ylim_0', type=int, default=1)
     parser.add_argument('--plot_labels', type=int, default=1)
+    parser.add_argument('--compute_ll', type=int, default=1)
     return parser.parse_args()
 
 
@@ -102,20 +103,20 @@ def main():
             graph, _sample_ids, r, args.u, r_bins=r_bins
         )
         if len(args.data_fnames) > 0 and np.any(spectra[0].covs > 0):
-            data = spectra[0]
-            if not args.plot_H:
-                data = data.remove_H()
-                spectrum = spectrum.remove_H()
-                ll = inference.get_ll(spectrum, data)
-            elif not args.use_H:
-                _data = data.remove_H()
-                _spectrum = spectrum.remove_H()
-                ll = inference.get_ll(_spectrum, _data)
-            else:
-                ll = inference.get_ll(spectrum, data)
-            ll_label = f', ll={np.round(ll, 0)}'
-        else:
             ll_label = ''
+            if args.compute_ll:
+                data = spectra[0]
+                if not args.plot_H:
+                    data = data.remove_H()
+                    spectrum = spectrum.remove_H()
+                    ll = inference.get_ll(spectrum, data)
+                elif not args.use_H:
+                    _data = data.remove_H()
+                    _spectrum = spectrum.remove_H()
+                    ll = inference.get_ll(_spectrum, _data)
+                else:
+                    ll = inference.get_ll(spectrum, data)
+                ll_label = f', ll={np.round(ll, 0)}'
         spectra.append(spectrum)
         basename = graph_fname.split('/')[-1]
         labels.append(f'{basename}{ll_label}')

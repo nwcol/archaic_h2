@@ -16,8 +16,6 @@ def get_args():
     parser.add_argument('-r', required=True)
     parser.add_argument('--mask_fname', required=True)
     parser.add_argument('--windows', required=True)
-    parser.add_argument('--cluster_id', default='0')
-    parser.add_argument('--process_id', default='0')
     parser.add_argument('--tag', default='')
     parser.add_argument('--bins')
     return parser.parse_args()
@@ -27,13 +25,15 @@ def main():
 
     args = get_args()
 
-    tag = f'{args.tag}_{args.cluster_id}_{args.process_id}'
+    if len(args.tag) > 0:
+        tag = f'_{args.tag}'
+    else:
+        tag = ''
 
     bins = np.loadtxt(args.bins)
-    win_arr = np.loadtxt('blocks_1.txt')
+    win_arr = np.loadtxt(args.windows)
     windows = win_arr[:, :2]
     bounds = win_arr[:, 2]
-    cent_bounds = np.full(len(bounds), bounds[-1])
 
     graph = demes.load(args.g)
 
@@ -63,27 +63,25 @@ def main():
     #    r=args.r,
     #    L=args.L
     #)
-
-    for name, _bounds in zip(['bounded', 'not_bounded'], [bounds, cent_bounds]):
-        dic1 = parsing.parse_weighted_H2(
-            args.mask_fname,
-            emp_vcf,
-            args.r,
-            args.u,
-            bins=bins,
-            windows=windows,
-            bounds=_bounds
-        )
-        np.savez(f'{tag}-weighted-{name}.npz', **dic1)
-        dic2 = parsing.parse_H2(
-            args.mask_fname,
-            emp_vcf,
-            args.r,
-            windows=windows,
-            bounds=_bounds,
-            bins=bins,
-        )
-        np.savez(f'{tag}-flat-{name}.npz', **dic2)
+    dic1 = parsing.parse_weighted_H2(
+        args.mask_fname,
+        emp_vcf,
+        args.r,
+        args.u,
+        bins=bins,
+        windows=windows,
+        bounds=bounds
+    )
+    np.savez(f'{tag}weighted.npz', **dic1)
+    dic2 = parsing.parse_H2(
+        args.mask_fname,
+        emp_vcf,
+        args.r,
+        windows=windows,
+        bounds=bounds,
+        bins=bins,
+    )
+    np.savez(f'{tag}flat.npz', **dic2)
 
 
 if __name__ == '__main__':

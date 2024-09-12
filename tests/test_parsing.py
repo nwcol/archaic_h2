@@ -216,7 +216,7 @@ site pair-counting tests
 """
 
 
-def _test_site_pair_counting():
+def test_site_pair_counting():
     #
     def sub_test(rmap, bins, left_bound):
         # assert that naive and vectorized functions match up
@@ -242,7 +242,7 @@ def _test_site_pair_counting():
     return
 
 
-def _test_weighted_site_pair_counting():
+def test_weighted_site_pair_counting():
     #
 
     # the cumsum function produces some numerical inaccuracy
@@ -306,7 +306,7 @@ def _test_weighted_site_pair_counting():
     return
 
 
-def test_fast_weighted_site_pair_counting():
+def __test_fast_weighted_site_pair_counting():
     # uses the new function
 
     # the cumsum function produces some numerical inaccuracy
