@@ -4,7 +4,7 @@ import demes
 import numpy as np
 import sys
 
-from archaic import util, parsing, simulation
+from archaic import util, parsing, simulation, weighting_tests
 
 
 def get_args():
@@ -29,9 +29,9 @@ def main():
     c = '' if args.cluster_id is None else f'{args.cluster_id}-'
     p = '' if args.process_id is None else f'{args.process_id}'
     if len(args.tag) > 0:
-        tag = f'{args.tag}_'
+        tag = f'{args.tag}_{c}{p}_'
     else:
-        tag = f'{c}{p}'
+        tag = f'{c}{p}_'
 
     bins = np.loadtxt(args.bins)
     win_arr = np.loadtxt(args.windows)
@@ -58,6 +58,7 @@ def main():
         r=args.r,
         L=args.L
     )
+    """
     flat_vcf = f'{tag}flat_u.vcf'
     simulation.simulate_chromosome(
         graph,
@@ -66,17 +67,22 @@ def main():
         r=args.r,
         L=args.L
     )
-    dic1 = parsing.parse_weighted_H2(
-        args.mask_fname,
-        emp_vcf,
-        args.r,
-        args.u,
-        bins=bins,
-        windows=windows,
-        bounds=bounds
-    )
-    np.savez(f'{tag}weighted.npz', **dic1)
-    dic2 = parsing.parse_H2(
+    """
+    for func in ['bin_weighted', 'chrom_weighted_uu', 'chrom_weighted_u2']:
+        dic = weighting_tests.parse_weighted_H2(
+            args.mask_fname,
+            emp_vcf,
+            args.r,
+            args.u,
+            bins=bins,
+            windows=windows,
+            bounds=bounds,
+            c_func=func
+        )
+        np.savez(f'{tag}{func}.npz', **dic)
+
+    # flat u-map
+    dic = parsing.parse_H2(
         args.mask_fname,
         emp_vcf,
         args.r,
@@ -84,7 +90,7 @@ def main():
         bounds=bounds,
         bins=bins,
     )
-    np.savez(f'{tag}flat.npz', **dic2)
+    np.savez(f'{tag}flat.npz', **dic)
 
 
 if __name__ == '__main__':

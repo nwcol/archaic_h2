@@ -994,6 +994,12 @@ def compute_cross_chrom_H2(chrom_dicts):
 
 
 """
+
+"""
+
+
+
+"""
 new weighted H2 funcs (temporary arrangement)
 
 the idea here is to normalize bin H2 using the average u * u product

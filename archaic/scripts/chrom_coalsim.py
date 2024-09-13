@@ -25,11 +25,11 @@ def get_args():
 def main():
     #
     args = get_args()
-    simulation.simulate_chrom(
+    simulation.simulate_chromosome(
         args.graph_fname,
         args.out_fname,
-        u_fname=args.u_fname,
-        r_fname=args.r_fname,
+        u=args.u_fname,
+        r=args.r_fname,
         sampled_demes=args.sampled_demes,
         contig_id=args.contig_id,
         L=args.seq_length

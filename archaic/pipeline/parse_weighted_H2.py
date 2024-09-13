@@ -4,7 +4,7 @@
 import argparse
 import numpy as np
 
-from archaic import parsing
+from archaic import parsing, weighting_tests
 
 
 def get_args():
@@ -17,19 +17,21 @@ def get_args():
     parser.add_argument("-o", "--out_fname", required=True)
     parser.add_argument('--bins', default=None)
     parser.add_argument('-w', '--windows', default=None)
+    parser.add_argument('--denom_func', default='')
     return parser.parse_args()
 
 
 def main():
     #
     args = get_args()
-    dic = parsing.parse_weighted_H2(
+    dic = weighting_tests.parse_weighted_H2(
         args.mask_fname,
         args.vcf_fname,
         args.map_fname,
         args.weight_fname,
         bins=args.bins,
-        windows=args.windows
+        windows=args.windows,
+        c_func=args.denom_func
     )
     np.savez(args.out_fname, **dic)
     return 0
