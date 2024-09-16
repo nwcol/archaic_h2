@@ -4,7 +4,7 @@ tests of numpy functions, especially searchsorted
 from bisect import bisect
 import numpy as np
 
-from archaic import util, parsing
+from archaic import util, counting
 
 
 """
@@ -221,7 +221,7 @@ def test_site_pair_counting():
     def sub_test(rmap, bins, left_bound):
         # assert that naive and vectorized functions match up
         naive = naively_count_site_pairs(rmap, bins, left_bound=left_bound)
-        vec = parsing.count_site_pairs(rmap, bins, left_bound=left_bound)
+        vec = counting.count_site_pairs(rmap, bins, left_bound=left_bound)
         assert np.all(naive == vec)
 
     short_rmap = get_random_rmap(2_000, upper=5e-6)
@@ -255,7 +255,7 @@ def test_weighted_site_pair_counting():
         unweighted = naively_count_site_pairs(
             rmap, bins, left_bound=left_bound
         )
-        weighted = parsing.count_weighted_site_pairs(
+        weighted = counting.count_weighted_site_pairs(
             ones, rmap, bins, left_bound=left_bound
         )
         assert np.all(unweighted == weighted)
@@ -265,7 +265,7 @@ def test_weighted_site_pair_counting():
         naive = naively_count_weighted_site_pairs(
             weights, rmap, bins, left_bound=left_bound
         )
-        vec = parsing.count_weighted_site_pairs(
+        vec = counting.count_weighted_site_pairs(
             weights, rmap, bins, left_bound=left_bound
         )
         assert np.all(
@@ -320,7 +320,7 @@ def __test_fast_weighted_site_pair_counting():
         unweighted = naively_count_site_pairs(
             interp, bins, left_bound=left_bound
         )
-        weighted = parsing._count_weighted_site_pairs(
+        weighted = counting._count_weighted_site_pairs(
             positions, rcoords, rmap, bins, ones, left_bound=left_bound
         )
         assert np.all(unweighted == weighted)
@@ -331,7 +331,7 @@ def __test_fast_weighted_site_pair_counting():
         naive = naively_count_weighted_site_pairs(
             weights, interp, bins, left_bound=left_bound
         )
-        vec = parsing._count_weighted_site_pairs(
+        vec = counting._count_weighted_site_pairs(
             positions, rcoords, rmap, bins, weights, left_bound=left_bound
         )
         assert np.all(
@@ -361,6 +361,35 @@ def __test_fast_weighted_site_pair_counting():
     return
 
 
+def test_interpolated_site_pair_counting():
+    #
+    def sub_test(positions, rcoords, rmap, bins, left_bound):
+        #
+        position_rmap = np.interp(positions, rcoords, rmap)
+        naive = naively_count_site_pairs(
+            position_rmap, bins, left_bound=left_bound
+        )
+        vec = counting._count_site_pairs(
+            positions, rcoords, rmap, bins, left_bound=left_bound
+        )
+        assert np.all(naive == vec)
+
+    positions = np.arange(1000, 3000)
+    rmap = np.cumsum(np.random.uniform(0, 1e-4, size=40))
+    rcoords = np.arange(0, 4000, 100)
+
+    sub_test(positions, rcoords, rmap, _default_bins, None)
+    sub_test(positions, rcoords, rmap, _extended_bins, None)
+    sub_test(positions, rcoords, rmap, _default_bins, 500)
+    sub_test(positions, rcoords, rmap, _default_bins, 1500)
+    sub_test(positions, rcoords, rmap, _extended_bins, 500)
+
+    sub_test(positions, rcoords, rmap, _default_bins, None)
+    sub_test(positions, rcoords, rmap, _extended_bins, None)
+    sub_test(positions, rcoords, rmap, _default_bins, 500)
+    sub_test(positions, rcoords, rmap, _extended_bins, 1700)
+
+    return
 
 
 """

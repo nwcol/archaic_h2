@@ -4,10 +4,13 @@ Functions for parsing statistics from .vcf files
 import numpy as np
 import time
 
-from archaic import util, temp
+from archaic import util, counting
 
 
 _default_bins = np.logspace(-6, -2, 17)
+_fine_bins = np.concatenate(
+    ([0], np.logspace(-7, -1, 31), np.logspace(-1, -0.3015, 6)[1:])
+)
 
 
 """
@@ -29,14 +32,11 @@ def compute_H(
     genotype_arr,
     vcf_positions,
     windows=None,
-    sample_mask=None,
     get_two_sample=True
 ):
     # compute H across a chromosome in one or more windows
     if windows is None:
         windows = np.array([[positions[0], positions[-1] + 1]])
-    if sample_mask is not None:
-        genotype_arr = genotype_arr[:, sample_mask]
 
     n_sites = np.diff(np.searchsorted(positions, windows))[:, 0]
     _, n_samples, __ = genotype_arr.shape
@@ -69,46 +69,6 @@ def compute_H(
                     k += 1
 
     return n_sites, num_H
-
-
-def compute_weighted_H(
-    positions,
-    genotype_arr,
-    vcf_positions,
-    weights,
-    windows=None
-):
-    # scale local H by the average mutation rate. scale is proportional to u
-    if windows is None:
-        windows = np.array([[positions[0], positions[-1] + 1]])
-
-    vcf_weights = weights[np.searchsorted(positions, vcf_positions)]
-    num_sites = np.zeros(len(windows))
-    _, n_samples, __ = genotype_arr.shape
-    num_H = np.zeros((len(windows), util.n_choose_2(n_samples) + n_samples))
-
-    for w, window in enumerate(windows):
-        start, end = np.searchsorted(positions, window)
-        num_sites[w] = weights[start:end].sum()
-
-        vcf_start, vcf_end = np.searchsorted(vcf_positions, window)
-        win_vcf_weights = vcf_weights[vcf_start:vcf_end]
-        k = 0
-
-        for i in range(n_samples):
-            for j in range(i, n_samples):
-                if i == j:
-                    gts = genotype_arr[vcf_start:vcf_end, i]
-                    indicator = gts[:, 0] != gts[:, 1]
-                    num_H[w, k] = win_vcf_weights[indicator].sum()
-                else:
-                    gts_i = genotype_arr[vcf_start:vcf_end, i]
-                    gts_j = genotype_arr[vcf_start:vcf_end, j]
-                    site_H = get_two_sample_site_H(gts_i, gts_j)
-                    num_H[w, k] = (win_vcf_weights * site_H).sum()
-                k += 1
-
-    return num_sites, num_H
 
 
 def compute_SFS(variant_file, ref_as_ancestral=False):
@@ -163,217 +123,29 @@ computing two-locus statistics
 """
 
 
-def _count_site_pairs(
-    positions,
-    rcoords,
-    rmap,
-    bins,
-    left_bound=None
-):
-    #
-    # interpolate map values for each position
-    if len(rcoords) != len(rmap):
-        raise ValueError('rcoords length mismatches rmap')
-    if left_bound is None:
-        left_bound = len(positions)
-
-    site_r = np.interp(
-        positions,
-        rcoords,
-        rmap,
-        left=rmap[0],
-        right=rmap[-1]
-    )
-    coords_in_pos_idx = np.searchsorted(positions, rcoords)
-
-    edges = np.zeros(len(bins), dtype=int)
-
-    for i, b in enumerate(bins):
-        edges[i] = np.floor(
-            np.interp(
-                site_r[:left_bound] + b,
-                rmap,
-                coords_in_pos_idx,
-                left=0,
-                right=len(positions) - 1
-            )
-        ).sum()
-
-    counts = np.diff(edges)
-
-    return counts
-
-
-def _count_weighted_site_pairs(
-    positions,
-    rcoords,
-    rmap,
-    bins,
-    weights,
-    left_bound=None
-):
-    # currently inaccurate
-    if len(rcoords) != len(rmap):
-        raise ValueError('rcoords length mismatches rmap')
-    if left_bound is None:
-        left_bound = len(positions)
-
-    site_r = np.interp(
-        positions,
-        rcoords,
-        rmap,
-        left=rmap[0],
-        right=rmap[-1]
-    )
-    coords_in_pos_idx = np.searchsorted(positions, rcoords)
-    cum_weights = np.cumsum(weights)
-    weighted_edges = np.zeros(len(bins), dtype=float)
-
-    for i, b in enumerate(bins):
-        idx = np.ceil(
-            np.interp(
-                site_r[:left_bound] + b,
-                rmap,
-                coords_in_pos_idx,
-                left=1,
-                right=len(positions)
-            )
-        ).astype(int) - 1
-        weighted_edges[i] = np.dot(weights, cum_weights[idx])
-
-    weighted_counts = np.diff(weighted_edges)
-
-    return weighted_counts
-
-
-def count_site_pairs(
-    r_map,
-    bins,
-    left_bound=None
-):
-    """
-    compute numbers of site pairs, binned by recombination distances
-
-    :param r_map: recombination map
-    :param bins: recombination distance bins. the unit/scale must match that
-        of r_map (typically this will be centiMorgans)
-    :param left_bound: optional. if provided, specifies the highest index
-        allowed for the left (lower-index) site in pair-counting
-    :return: vector of pair counts
-    """
-    if len(r_map) < 2:
-        return np.zeros(len(bins) - 1)
-
-    if not left_bound:
-        left_bound = len(r_map)
-    else:
-        if left_bound > len(r_map):
-            raise ValueError('left_bound index exceeds map length')
-
-    # this is a LARGE operation and may consume very large amounts of memory
-    site_bins = r_map[:left_bound, np.newaxis] + bins[np.newaxis, :]
-    bin_edges = np.searchsorted(r_map, site_bins)
-
-    # this adjustment prevents pair over-counting and self-pairing
-    over_counts = bin_edges[:, 0] <= np.arange(left_bound)
-    bin_edges[over_counts, 0] = np.arange(left_bound)[over_counts] + 1
-    num_pairs = np.diff(bin_edges.sum(0))
-    print(
-        util.get_time(),
-        f'site pair counts computed for {left_bound} loci'
-    )
-    return num_pairs
-
-
-def count_weighted_site_pairs(
-    weights,
-    r_map,
-    bins,
-    left_bound=None,
-    verbosity=1e6
-):
-    """
-    compute numbers of site pairs binned by recombination distances, counting
-    each pair as the product of site weights
-
-    :param weights: weights associated with each site
-    :param r_map: recombination map
-    :param bins: recombination bins. unit must match r_map
-    :param left_bound: optional. if provided, specifies the highest index
-        allowed for the left (lower-index) site in pair-counting
-    :param verbosity: status printout interval
-    :return: vector of weighted pair counts
-    """
-    if len(weights) != len(r_map):
-        raise ValueError('weights and r_map have mismatched lengths')
-
-    if len(r_map) < 2:
-        return np.zeros(len(bins) - 1)
-
-    if not left_bound:
-        left_bound = len(r_map)
-    else:
-        if left_bound > len(r_map):
-            raise ValueError('left_bound index exceeds map length')
-
-    site_bins = r_map[:left_bound, np.newaxis] + bins[np.newaxis, :]
-    bin_edges = np.searchsorted(r_map, site_bins)
-    # decrementing by 1 gives the proper indices for cum_weights below
-    bin_edges -= 1
-
-    # correction for pair over-counting
-    over_counts = bin_edges[:, 0] < np.arange(left_bound)
-    bin_edges[over_counts, 0] = np.arange(left_bound)[over_counts]
-
-    # for a site, we compute weighted counts by taking the product of the site
-    # weight with the difference in cumulative weight counts at bin edges
-    cum_weights = np.cumsum(weights)
-
-    num_pairs = np.zeros(len(bins) - 1, dtype=float)
-
-    for i in np.arange(left_bound):
-        if weights[i] > 0:
-            num_pairs += weights[i] * np.diff(cum_weights[bin_edges[i]])
-            if i % verbosity == 0:
-                if i > 0:
-                    print(
-                        util.get_time(),
-                        f'weighted site pairs counted at site {i}'
-                    )
-    print(
-        util.get_time(),
-        f'weighted site pair counts computed for {left_bound} loci'
-    )
-    return num_pairs
-
-
 def compute_H2(
     positions,
     genotype_arr,
-    vcf_positions,
+    genotype_positions,
     r_map,
     bins=None,
     windows=None,
-    bounds=None,
-    sample_mask=None,
     get_two_sample=True
 ):
     # across a chromosome
     # num pairs has shape (n_windows, n_bins)
     # num H2 has shape (n_windows, n_samples + n_pairs, n_bins)
     if windows is None:
-        windows = np.array([[positions[0], positions[-1] + 1]])
-    if bounds is None:
-        bounds = np.array([positions[-1] + 1])
-    if sample_mask is not None:
-        genotype_arr = genotype_arr[:, sample_mask]
+        windows = np.array(
+            [[positions[0], positions[-1] + 1], positions[-1] + 1]
+        )
     if bins is None:
         bins = _default_bins
 
     # convert bins in r into bins in cM
     bins = util.map_function(bins)
 
-    vcf_r_map = r_map[np.searchsorted(positions, vcf_positions)]
+    vcf_r_map = r_map[np.searchsorted(positions, genotype_positions)]
     _, n_samples, __ = genotype_arr.shape
 
     if get_two_sample:
@@ -384,21 +156,21 @@ def compute_H2(
     num_pairs = np.zeros((len(windows), len(bins) - 1))
     num_H2 = np.zeros((len(windows), n_stats, len(bins) - 1))
 
-    for w, (window, bound) in enumerate(zip(windows, bounds)):
-        start = np.searchsorted(positions, window[0])
-        right_bound = np.searchsorted(positions, bound)
-        left_bound = np.searchsorted(positions[start:], window[1])
+    for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
+        start = np.searchsorted(positions, w_start)
+        right_bound = np.searchsorted(positions, w_r_end)
+        left_bound = np.searchsorted(positions[start:], w_l_end)
 
-        num_pairs[w] = count_site_pairs(
+        num_pairs[w] = counting.count_site_pairs(
             r_map[start:right_bound], bins, left_bound=left_bound
         )
 
         # these index vcf positions / genotypes
-        vcf_start = np.searchsorted(vcf_positions, window[0])
-        vcf_rbound = np.searchsorted(vcf_positions, bound)
-        vcf_lbound = np.searchsorted(vcf_positions[vcf_start:], window[1])
+        vcf_start = np.searchsorted(genotype_positions, w_start)
+        vcf_rbound = np.searchsorted(genotype_positions, w_r_end)
+        vcf_lbound = np.searchsorted(genotype_positions[vcf_start:], w_l_end)
 
-        win_vcf_positions = vcf_positions[vcf_start:vcf_rbound]
+        win_vcf_positions = genotype_positions[vcf_start:vcf_rbound]
         win_vcf_r_map = vcf_r_map[vcf_start:vcf_rbound]
         win_genotype_arr = genotype_arr[vcf_start:vcf_rbound]
 
@@ -412,8 +184,8 @@ def compute_H2(
                     H_idx = np.nonzero(site_H)[0]
                     H_r_map = win_vcf_r_map[H_idx]
                     H_positions = win_vcf_positions[H_idx]
-                    H_lbound = np.searchsorted(H_positions, window[1])
-                    num_H2[w, k] = count_site_pairs(
+                    H_lbound = np.searchsorted(H_positions, w_l_end)
+                    num_H2[w, k] = counting.count_site_pairs(
                         H_r_map, bins, left_bound=H_lbound
                     )
                     k += 1
@@ -423,7 +195,7 @@ def compute_H2(
                     gts_i = win_genotype_arr[:, i]
                     gts_j = win_genotype_arr[:, j]
                     site_H = get_two_sample_site_H(gts_i, gts_j)
-                    num_H2[w, k] = count_weighted_site_pairs(
+                    num_H2[w, k] = counting.count_weighted_site_pairs(
                         site_H, win_vcf_r_map, bins, left_bound=vcf_lbound
                     )
                     k += 1
@@ -436,136 +208,34 @@ def compute_H2(
 def compute_weighted_H2(
     positions,
     genotype_arr,
-    vcf_positions,
+    genotype_pos,
     r_map,
-    weights,
+    u_map,
     bins=None,
-    windows=None,
-    bounds=None,
-    sample_mask=None
+    windows=None
 ):
-
-    if windows is None:
-        windows = np.array([[positions[0], positions[-1] + 1]])
-    if bounds is None:
-        bounds = np.array([positions[-1] + 1])
-    if sample_mask is not None:
-        genotype_arr = genotype_arr[:, sample_mask]
-    if bins is None:
-        bins = _default_bins
 
     bins = util.map_function(bins)
 
-    vcf_r_map = r_map[np.searchsorted(positions, vcf_positions)]
-    vcf_weights = weights[np.searchsorted(positions, vcf_positions)]
+    vcf_r_map = r_map[np.searchsorted(positions, genotype_pos)]
     _, n_samples, __ = genotype_arr.shape
-    norm_constant = np.zeros((len(windows), len(bins) - 1))
-    num_H2 = np.zeros(
-        (len(windows), util.n_choose_2(n_samples) + n_samples, len(bins) - 1)
-    )
+    n_stats = util.n_choose_2(n_samples) + n_samples
+    num_H2 = np.zeros((len(windows), n_stats, len(bins) - 1))
 
-    for z, (window, bound) in enumerate(zip(windows, bounds)):
-        start = np.searchsorted(positions, window[0])
-        right_bound = np.searchsorted(positions, bounds[z])
-        left_bound = np.searchsorted(positions[start:], window[1])
-
-        norm_constant[z] = count_weighted_site_pairs(
-            weights[start:right_bound],
-            r_map[start:right_bound],
-            bins,
-            left_bound=left_bound
-        )
-
-        vcf_start = np.searchsorted(vcf_positions, window[0])
-        vcf_rbound = np.searchsorted(vcf_positions, bound)
-        vcf_lbound = np.searchsorted(vcf_positions[vcf_start:], window[1])
-
-        win_vcf_positions = vcf_positions[vcf_start:vcf_rbound]
-        win_vcf_r_map = vcf_r_map[vcf_start:vcf_rbound]
-        win_vcf_weights = vcf_weights[vcf_start:vcf_rbound]
-        win_genotype_arr = genotype_arr[vcf_start:vcf_rbound]
-
-        k = 0
-
-        for i in range(n_samples):
-            for j in range(i, n_samples):
-                if i == j:
-                    gts = win_genotype_arr[:, i]
-                    site_H = gts[:, 0] != gts[:, 1]
-                    sample_lbound = np.searchsorted(
-                        win_vcf_positions[site_H], window[1]
-                    )
-                    num_H2[z, k] = count_weighted_site_pairs(
-                        win_vcf_weights[site_H],
-                        win_vcf_r_map[site_H],
-                        bins,
-                        left_bound=sample_lbound
-                    )
-                else:
-                    gts_i = win_genotype_arr[:, i]
-                    gts_j = win_genotype_arr[:, j]
-                    site_H = get_two_sample_site_H(gts_i, gts_j)
-                    pair_weights = site_H * win_vcf_weights
-                    num_H2[z, k] = count_weighted_site_pairs(
-                        pair_weights,
-                        win_vcf_r_map,
-                        bins,
-                        left_bound=vcf_lbound
-                    )
-                k += 1
-
-        print(util.get_time(), f'computed H2 in window {z}')
-                
-    return norm_constant, num_H2
-
-
-def _compute_weighted_H2_method1(
+    denom = counting.compute_chrom_averaged_u_weight(
         positions,
-        genotype_arr,
-        vcf_positions,
+        u_map,
         r_map,
-        weights,
-        bins=None,
-        windows=None,
-        bounds=None,
-        sample_mask=None
-):
-    # new version
-    if windows is None:
-        windows = np.array([[positions[0], positions[-1] + 1]])
-    if bounds is None:
-        bounds = np.array([positions[-1] + 1])
-    if sample_mask is not None:
-        genotype_arr = genotype_arr[:, sample_mask]
-    if bins is None:
-        bins = _default_bins
-
-    bins = util.map_function(bins)
-
-    vcf_r_map = r_map[np.searchsorted(positions, vcf_positions)]
-    _, n_samples, __ = genotype_arr.shape
-    norm_constant = np.zeros((len(windows), len(bins) - 1))
-    num_H2 = np.zeros(
-        (len(windows), util.n_choose_2(n_samples) + n_samples, len(bins) - 1)
+        bins,
+        windows
     )
 
-    for z, (window, bound) in enumerate(zip(windows, bounds)):
-        start = np.searchsorted(positions, window[0])
-        right_bound = np.searchsorted(positions, bounds[z])
-        left_bound = np.searchsorted(positions[start:], window[1])
+    for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
+        vcf_start = np.searchsorted(genotype_pos, w_start)
+        vcf_rbound = np.searchsorted(genotype_pos, w_r_end)
+        vcf_lbound = np.searchsorted(genotype_pos[vcf_start:], w_l_end)
 
-        norm_constant[z] = temp.vec_func(
-            weights[start:right_bound],
-            r_map[start:right_bound],
-            bins,
-            l_lim=left_bound
-        )
-
-        vcf_start = np.searchsorted(vcf_positions, window[0])
-        vcf_rbound = np.searchsorted(vcf_positions, bound)
-        vcf_lbound = np.searchsorted(vcf_positions[vcf_start:], window[1])
-
-        win_vcf_positions = vcf_positions[vcf_start:vcf_rbound]
+        win_vcf_positions = genotype_pos[vcf_start:vcf_rbound]
         win_vcf_r_map = vcf_r_map[vcf_start:vcf_rbound]
         win_genotype_arr = genotype_arr[vcf_start:vcf_rbound]
 
@@ -577,9 +247,9 @@ def _compute_weighted_H2_method1(
                     gts = win_genotype_arr[:, i]
                     site_H = gts[:, 0] != gts[:, 1]
                     sample_lbound = np.searchsorted(
-                        win_vcf_positions[site_H], window[1]
+                        win_vcf_positions[site_H], w_l_end
                     )
-                    num_H2[z, k] = count_site_pairs(
+                    num_H2[w, k] = counting.count_site_pairs(
                         win_vcf_r_map[site_H],
                         bins,
                         left_bound=sample_lbound
@@ -588,7 +258,7 @@ def _compute_weighted_H2_method1(
                     gts_i = win_genotype_arr[:, i]
                     gts_j = win_genotype_arr[:, j]
                     site_H = get_two_sample_site_H(gts_i, gts_j)
-                    num_H2[z, k] = count_weighted_site_pairs(
+                    num_H2[w, k] = counting.count_weighted_site_pairs(
                         site_H,
                         win_vcf_r_map,
                         bins,
@@ -596,9 +266,9 @@ def _compute_weighted_H2_method1(
                     )
                 k += 1
 
-        print(util.get_time(), f'computed H2 in window {z}')
+        print(util.get_time(), f'computed H2 in window {w}')
 
-    return norm_constant, num_H2
+    return denom, num_H2
 
 
 """
@@ -630,15 +300,34 @@ def parse_H2(
     vcf_fname,
     map_fname,
     windows=None,
-    bounds=None,
     bins=None,
     get_two_sample=True
 ):
     #
-    if bins is None:
+    # setup bins
+    if isinstance(bins, np.ndarray):
+        pass
+    elif isinstance(bins, str):
+        bins = np.loadtxt(bins, dtype=float)
+    else:
+        print(util.get_time(), 'parsing with default bins')
         bins = _default_bins
 
+    # setup windows
+    if isinstance(windows, np.ndarray):
+        if windows.ndim == 1:
+            windows = windows[np.newaxis]
+        assert windows.shape[1] == 3
+    elif isinstance(windows, str):
+        windows = np.loadtxt(windows, dtype=int)
+        if windows.ndim == 1:
+            windows = windows[np.newaxis]
+        assert windows.shape[1] == 3
+    else:
+        windows = None
+
     t0 = time.time()
+
     mask_regions = util.read_mask_file(mask_fname)
     mask_positions = util.get_mask_positions(mask_regions)
     sample_ids, vcf_positions, genotype_arr = \
@@ -650,7 +339,7 @@ def parse_H2(
         mask_positions,
         genotype_arr,
         vcf_positions,
-        windows=windows,
+        windows=windows[:, :2],
         get_two_sample=get_two_sample
     )
     print(util.get_time(), 'computed one-locus H')
@@ -662,7 +351,6 @@ def parse_H2(
         r_map,
         bins=bins,
         windows=windows,
-        bounds=bounds,
         get_two_sample=get_two_sample
     )
     print(util.get_time(), 'computed two-locus H')
@@ -671,7 +359,8 @@ def parse_H2(
     if get_two_sample:
         stat_ids = [
             (sample_ids[i], sample_ids[j])
-            for i in np.arange(n) for j in np.arange(i, n)
+            for i in np.arange(n)
+            for j in np.arange(i, n)
         ]
     else:
         stat_ids = np.array(sample_ids)
@@ -679,7 +368,6 @@ def parse_H2(
         ids=stat_ids,
         r_bins=bins,
         windows=windows,
-        bounds=bounds,
         n_sites=num_sites,
         H_counts=num_H,
         n_site_pairs=num_pairs,
@@ -699,14 +387,25 @@ def parse_H2(
 def parse_weighted_H2(
     mask_fname,
     vcf_fname,
-    map_fname,
-    weight_fname,
+    rmap_fname,
+    umap_fname,
     bins=None,
-    windows=None,
-    bounds=None,
-    inverse_weight=False
+    windows=None
 ):
-    #
+    """
+
+    :param mask_fname:
+    :param vcf_fname:
+    :param rmap_fname:
+    :param umap_fname:
+    :param bins:
+    :param windows: array with shape (n_windows, 3). the 0th and 1st columns
+        hold minimum and maximum positions for left loci and the 2nd column
+        holds maximum positions for the right locus. if shape[1] is 2, we
+        assume that the maximum position in the windows is the bound
+    :return:
+    """
+    # setup bins
     if isinstance(bins, np.ndarray):
         pass
     elif isinstance(bins, str):
@@ -715,43 +414,43 @@ def parse_weighted_H2(
         print(util.get_time(), 'parsing with default bins')
         bins = _default_bins
 
+    # setup windows
     if isinstance(windows, np.ndarray):
         if windows.ndim == 1:
             windows = windows[np.newaxis]
-        if windows.shape[1] == 3:
-            bounds = windows[:, 2]
-            windows = windows[:, :2]
+        assert windows.shape[1] == 3
     elif isinstance(windows, str):
-        window_arr = np.loadtxt(windows, dtype=int)
-        if window_arr.ndim == 1:
-            window_arr = window_arr[np.newaxis]
-        windows = window_arr[:, :2]
-        bounds = window_arr[:, 2]
+        windows = np.loadtxt(windows, dtype=int)
+        if windows.ndim == 1:
+            windows = windows[np.newaxis]
+        assert windows.shape[1] == 3
     else:
         windows = None
 
     t0 = time.time()
+
     mask_regions = util.read_mask_file(mask_fname)
     mask_positions = util.get_mask_positions(mask_regions)
     sample_ids, vcf_positions, genotype_arr = \
         util.read_vcf_genotypes(vcf_fname, mask_regions)
-    r_map = util.read_map_file(map_fname, mask_positions)
+    r_map = util.read_map_file(rmap_fname, mask_positions)
     print(util.get_time(), "files loaded")
 
-    # load weight file
-    # this could be improved
-    if weight_fname.endswith('.npz'):
-        weight_file = np.load(weight_fname)
-        weight_positions = weight_file['positions']
-        all_weights = weight_file['rates']
-        weights = all_weights[np.searchsorted(weight_positions, mask_positions)]
-    else:
-        regions, data = util.read_bedgraph(weight_fname)
+    # load a .npy file
+    if umap_fname.endswith('.npy'):
+        full_umap = np.load(umap_fname)
+        # the umap is 0-indexed
+        umap = full_umap[mask_positions - 1]
+    # load a .bedgraph file containing region-averaged mutation rates
+    elif umap_fname.endswith('.bedgraph'):
+        regions, data = util.read_bedgraph(umap_fname)
         # assign a mutation rate to each point
         idx = np.searchsorted(regions[:, 1], mask_positions)
-        weights = data['u'][idx]
-    if inverse_weight:
-        weights = weights ** -1
+        umap = data['u'][idx]
+    else:
+        raise ValueError(
+            'you must provide a .npy or .bedgraph mutation rate file'
+        )
     print(util.get_time(), 'weight files loaded')
 
     # one-locus H
@@ -759,28 +458,27 @@ def parse_weighted_H2(
         mask_positions,
         genotype_arr,
         vcf_positions,
-        #weights,
-        windows=windows
+        windows=windows[:, :2]  # one-locus windows
     )
     print(util.get_time(), 'one-locus H computed')
 
     # two-locus H (H2)
-    num_pairs, num_H2 = _compute_weighted_H2(
+    num_pairs, num_H2 = compute_weighted_H2(
         mask_positions,
         genotype_arr,
         vcf_positions,
         r_map,
-        weights,
+        umap,
         bins=bins,
-        windows=windows,
-        bounds=bounds
+        windows=windows
     )
     print(util.get_time(), 'two-locus H computed')
 
     n = len(sample_ids)
     stat_ids = [
         (sample_ids[i], sample_ids[j])
-        for i in np.arange(n) for j in np.arange(i, n)
+        for i in np.arange(n)
+        for j in np.arange(i, n)
     ]
     ret = dict(
         n_sites=num_sites,
@@ -789,8 +487,7 @@ def parse_weighted_H2(
         H2_counts=num_H2,
         r_bins=bins,
         ids=stat_ids,
-        windows=windows,
-        bounds=bounds
+        windows=windows
     )
 
     t = np.round(time.time() - t0, 0)
@@ -991,169 +688,3 @@ def compute_cross_chrom_H2(chrom_dicts):
             k += 1
 
     return num_pairs, num_H2
-
-
-"""
-
-"""
-
-
-
-"""
-new weighted H2 funcs (temporary arrangement)
-
-the idea here is to normalize bin H2 using the average u * u product
-from all counted site pairs across the chromosome
-"""
-
-
-def _compute_weighted_H2(
-    positions,
-    genotype_arr,
-    genotype_pos,
-    r_map,
-    u_map,
-    bins=None,
-    windows=None,
-    bounds=None
-):
-
-    bins = util.map_function(bins)
-
-    vcf_r_map = r_map[np.searchsorted(positions, genotype_pos)]
-    _, n_samples, __ = genotype_arr.shape
-    denom = np.zeros((len(windows), len(bins) - 1))
-    num_H2 = np.zeros((len(windows), util.n_choose_2(n_samples) + n_samples, len(bins) - 1))
-
-    ### compute mean product of u for all site pairs
-    uu_bound = bounds[0]
-    uu_idx_bound = np.searchsorted(positions, uu_bound)
-    uu_bar = compute_mean_prod(u_map, bound=uu_idx_bound)
-    ###
-
-    for z, (window, bound) in enumerate(zip(windows, bounds)):
-        start = np.searchsorted(positions, window[0])
-        right_bound = np.searchsorted(positions, bounds[z])
-        left_bound = np.searchsorted(positions[start:], window[1])
-
-        denom[z] = _count_weighted_pairs(
-            uu_bar,
-            u_map[start:right_bound],
-            r_map[start:right_bound],
-            bins,
-            l_lim=left_bound,
-            verbosity=1e6
-        )
-
-        vcf_start = np.searchsorted(genotype_pos, window[0])
-        vcf_rbound = np.searchsorted(genotype_pos, bound)
-        vcf_lbound = np.searchsorted(genotype_pos[vcf_start:], window[1])
-
-        win_vcf_positions = genotype_pos[vcf_start:vcf_rbound]
-        win_vcf_r_map = vcf_r_map[vcf_start:vcf_rbound]
-        win_genotype_arr = genotype_arr[vcf_start:vcf_rbound]
-
-        k = 0
-
-        for i in range(n_samples):
-            for j in range(i, n_samples):
-                if i == j:
-                    gts = win_genotype_arr[:, i]
-                    site_H = gts[:, 0] != gts[:, 1]
-                    sample_lbound = np.searchsorted(
-                        win_vcf_positions[site_H], window[1]
-                    )
-                    num_H2[z, k] = count_site_pairs(
-                        win_vcf_r_map[site_H],
-                        bins,
-                        left_bound=sample_lbound
-                    )
-                else:
-                    gts_i = win_genotype_arr[:, i]
-                    gts_j = win_genotype_arr[:, j]
-                    site_H = get_two_sample_site_H(gts_i, gts_j)
-                    num_H2[z, k] = count_weighted_site_pairs(
-                        site_H,
-                        win_vcf_r_map,
-                        bins,
-                        left_bound=vcf_lbound
-                    )
-                k += 1
-
-        print(util.get_time(), f'computed H2 in window {z}')
-
-    return denom, num_H2
-
-
-def compute_mean_prod(u_map, bound=None):
-    # compute the average product u_left * u_right across all site pairs
-    if bound is None:
-        u_map_0 = u_map
-        u_map_1 = None
-    else:
-        if bound < len(u_map):
-            u_map_0 = u_map[:bound]
-            u_map_1 = u_map[bound:]
-            print(len(u_map_0), len(u_map_1))
-        else:
-            u_map_0 = u_map
-            u_map_1 = None
-
-    n_sites_0 = len(u_map_0)
-    cum_u_0 = np.cumsum(u_map_0)
-    sum_prods = 0
-    num_pairs = 0
-
-    for i, u in enumerate(u_map_0):
-        sum_prods += u * (cum_u_0[-1] - cum_u_0[i])
-        num_pairs += n_sites_0 - i - 1
-
-    if u_map_1 is not None:
-        n_sites_1 = len(u_map_1)
-        cum_u_1 = np.cumsum(u_map_1)
-
-        for i, u in enumerate(u_map_1):
-            sum_prods += u * (cum_u_1[-1] - cum_u_1[i])
-            num_pairs += n_sites_1 - i - 1
-
-    mean_prod = sum_prods / num_pairs
-    return mean_prod
-
-
-def _count_weighted_pairs(
-    uu_bar,
-    u_map,
-    r_map,
-    bins,
-    l_lim=None,
-    verbosity=1e6
-):
-    # computes the denominator for a weighted H2 statistic in bins for window
-    # the denominator is the sum over site pairs indexed by l, r of
-    # (u_l * u_r) / (uu_bar) where uu is the mean product of mutation rates
-    # across the chromosome
-    if uu_bar == 0:
-        raise ValueError('uu_bar cannot equal 0')
-    if not l_lim:
-        l_lim = len(r_map)
-
-    site_bins = r_map[:l_lim, np.newaxis] + bins[np.newaxis, :]
-    bin_edges = np.searchsorted(r_map, site_bins)
-    bin_edges -= 1
-
-    cum_u = np.cumsum(u_map)
-
-    sum_lr = np.zeros(len(bins) - 1, dtype=float)
-
-    for i, l_u in enumerate(u_map[:l_lim]):
-        if l_u > 0:
-            sum_lr += l_u * np.diff(cum_u[bin_edges[i]])
-
-            if i % verbosity == 0:
-                if i > 0:
-                    print(
-                        util.get_time(),
-                        f'weighted site pairs counted at site {i}'
-                    )
-
-    return sum_lr / uu_bar

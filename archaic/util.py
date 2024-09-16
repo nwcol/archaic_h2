@@ -67,7 +67,6 @@ def get_time():
     return "[" + datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S") + "]"
 
 
-
 """
 reading and writing data to file
 """
@@ -150,8 +149,11 @@ def write_mask_file(regions, out_fname, chrom_num, write_header=False):
 
 def read_map_file(fname, positions=None, map_col='Map(cM)'):
     #
-    file = open(fname, 'r')
-    header = file.readline()
+    if fname.endswith('.gz'):
+        file = gzip.open(fname, 'rb')
+    else:
+        file = open(fname, 'rb')
+    header = file.readline().decode()
     file.close()
     cols = header.strip('\n').split('\t')
     pos_idx = cols.index('Position(bp)')
