@@ -35,6 +35,18 @@ Plotting H2
 """
 
 
+def plot_curve(bins, statistic, ax=None, color='black'):
+    #
+    if not ax:
+        fig, ax = plt.subplots(figsize=(6, 4), layout='constrained')
+    ax.plot(bins[1:], statistic, color=color)
+    ax.set_ylim(0, )
+    ax.set_xscale('log')
+    ax.set_xlabel('$r$')
+    format_ticks(ax)
+    return ax
+
+
 def plot_H2_spectra(
     *args,
     plot_H=True,
@@ -74,9 +86,9 @@ def plot_H2_spectra(
     if log_scale:
         width = 2.8
     else:
-        width = 2.2
+        width = 3 #2.2
     fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * width, n_rows * 1.8),
+        n_rows, n_cols, figsize=(n_cols * width, n_rows * 2.5), #1.8
         layout="constrained"
     )
     axs = axs.flat
@@ -617,10 +629,3 @@ def plot_distribution(
     ax.grid(alpha=0.2)
     ax.legend(fontsize=8)
     return ax
-
-
-
-chrs = [np.load(
-    f'/home/nick/Projects/archaic/statistics/arms/arm_H2_{i}.npz'
-) for i in range(1, 23)]
-mean = parsing.sum_H2(*chrs)

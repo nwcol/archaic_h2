@@ -1,0 +1,99 @@
+chromosome 10
+num sites 48617068
+avg u 1.1238e-08
+
+
+chromosome 11
+num sites 51940675
+avg u 1.1166e-08
+
+
+chromosome 12
+num sites 51517575
+avg u 1.0794e-08
+
+
+chromosome 13
+num sites 48365515
+avg u 1.0819e-08
+
+
+chromosome 14
+num sites 36361161
+avg u 1.0918e-08
+
+
+chromosome 15
+num sites 31165517
+avg u 1.1222e-08
+
+
+chromosome 16
+num sites 26855711
+avg u 1.3094e-08
+
+
+chromosome 17
+num sites 18166754
+avg u 1.1336e-08
+
+
+chromosome 18
+num sites 33373505
+avg u 1.1037e-08
+
+
+chromosome 19
+num sites 6402809
+avg u 1.2022e-08
+
+
+chromosome 1
+num sites 74027163
+avg u 1.0878e-08
+
+
+chromosome 2
+num sites 105449296
+avg u 1.1063e-08
+
+
+chromosome 3
+num sites 85837395
+avg u 1.0903e-08
+
+
+chromosome 4
+num sites 88839440
+avg u 1.0846e-08
+
+
+chromosome 5
+num sites 80979556
+avg u 1.0945e-08
+
+
+chromosome 6
+num sites 74338329
+avg u 1.0805e-08
+
+
+chromosome 7
+num sites 59304308
+avg u 1.1163e-08
+
+
+chromosome 8
+num sites 64841682
+avg u 1.175e-08
+
+
+chromosome 9
+num sites 45779788
+avg u 1.1694e-08
+
+
+[2024-09-25 13:02:06] read mutation rate in 19 files
+num sites 1032163247
+avg u 1.1118e-08
+

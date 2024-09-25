@@ -111,11 +111,11 @@ class H2Spectrum:
             H = file['H_counts'].sum(0) / file['n_sites'].sum()
             data = np.vstack([H2.T, H[np.newaxis]])
         elif 'H2' in file:
-            H2 = file['H2']
-            H = file['H']
-            data = np.vstack([H2.T, H[np.newaxis]])
+            data = file['H2']
+            if 'H' in file:
+                H = file['H']
+                data = np.vstack([data.T, H[np.newaxis]])
             covs = None
-
 
         spectrum = cls(
             data, r_bins, ids, covs=covs, has_H=True

@@ -124,7 +124,7 @@ def fit_H2(
     constraints = moments.Demes.Inference._set_up_constraints(options, pnames)
 
     if u is None:
-        print(utils.get_time(), f'fitting u as a free parameter')
+        print(util.get_time(), f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
         p0 = np.append(p0, _init_u)
@@ -333,7 +333,7 @@ def fit_composite(
     if L is None:
         raise ValueError('you must provide an L argument')
     if u is None:
-        print(utils.get_time(), f'fitting u as a free parameter')
+        print(util.get_time(), f'fitting u as a free parameter')
         fit_u = True
         pnames = np.append(pnames, 'u')
         p0 = np.append(p0, _init_u)
@@ -578,7 +578,7 @@ def print_start(pnames, p0):
 
 def print_status(n_calls, ll, p):
     #
-    t = utils.get_time()
+    t = util.get_time()
     _n = f'{n_calls:<6}'
     if isinstance(ll, float):
         _ll = f'{np.round(ll, 2):>10}'

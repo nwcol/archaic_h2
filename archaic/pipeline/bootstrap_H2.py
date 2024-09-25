@@ -1,11 +1,10 @@
 """
 Bootstrap some H2 archive files
 """
-
-
 import argparse
 import numpy as np
-from archaic import parsing
+
+from archaic import parsing, util
 
 
 def get_args():
@@ -39,6 +38,10 @@ def main():
             ids[ids == old] = new
         dic['ids'] = ids
     np.savez(args.out_fname, **dic)
+    print(
+        util.get_time(),
+        f'bootstrapped {len(args.in_fnames)} files'
+    )
     return 0
 
 

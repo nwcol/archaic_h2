@@ -441,8 +441,10 @@ def parse_weighted_H2(
         full_umap = np.load(umap_fname)
         # the umap is 0-indexed
         umap = full_umap[mask_positions - 1]
+        if np.any(np.isnan(umap)):
+            raise ValueError('nans in mutation map!')
     # load a .bedgraph file containing region-averaged mutation rates
-    elif umap_fname.endswith('.bedgraph'):
+    elif umap_fname.endswith('.bedgraph') or umap_fname.endswith('.bedgraph.gz'):
         regions, data = util.read_bedgraph(umap_fname)
         # assign a mutation rate to each point
         idx = np.searchsorted(regions[:, 1], mask_positions)

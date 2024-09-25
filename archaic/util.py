@@ -113,7 +113,14 @@ def read_u_bedgraph(fname):
 
 def read_mask_file(fname):
     #
-    regions = np.loadtxt(fname, usecols=(1, 2), dtype=int)
+    open_func = gzip.open if fname.endswith('.gz') else open
+
+    with open_func(fname, 'rb') as file:
+        split_line = file.readline().decode().split('\t')
+        skiprows = 0 if split_line[1].isnumeric() else 1
+
+    regions = np.loadtxt(fname, usecols=(1, 2), dtype=int, skiprows=skiprows)
+
     if regions.ndim == 1:
         regions = regions[np.newaxis]
     return regions
@@ -122,6 +129,8 @@ def read_mask_file(fname):
 def read_mask_chrom_num(fname):
     # return the chromosome number as int, absent any alphabetic characters
     chrom_nums = np.loadtxt(fname, usecols=(0), dtype=str)
+    if chrom_nums.ndim == 0:
+        chrom_nums = np.array([chrom_nums])
     if chrom_nums[0] == 'chrom':
         chrom_nums = chrom_nums[1:]
     unique_nums = np.unique(chrom_nums)
@@ -158,23 +167,25 @@ def read_map_file(fname, positions=None, map_col='Map(cM)'):
     cols = header.strip('\n').split('\t')
     pos_idx = cols.index('Position(bp)')
     map_idx = cols.index(map_col)
-    data = np.loadtxt(fname, skiprows=1, usecols=(pos_idx, map_idx))
+    rcoords, rvals = np.loadtxt(
+        fname, skiprows=1, usecols=(pos_idx, map_idx), unpack=True
+    )
     if positions is not None:
-        if positions[0] < data[0, 0]:
+        if positions[0] < rcoords[0]:
             print(get_time(), 'positions below map start!')
-        if positions[-1] > data[-1, 0]:
+        if positions[-1] > rcoords[-1]:
             print(get_time(), 'positions above map end!')
         r_map = np.interp(
             positions,
-            data[:, 0],
-            data[:, 1],
-            left=data[0, 1],
-            right=data[-1, 1]
+            rcoords,
+            rvals,
+            left=rcoords[0],
+            right=rcoords[-1]
         )
         assert np.all(r_map >= 0)
         assert np.all(np.diff(r_map)) >= 0
     else:
-        r_map = (data[:, 0], data[:, 1])
+        r_map = (rcoords, rvals)
     return r_map
 
 
@@ -415,7 +426,7 @@ def get_bool_mask(mask):
 
 def get_bool_mask_0(regions):
     # get a 0-indexed boolean mask representing mask coverage
-    bool_mask = np.zeros(regions.max())
+    bool_mask = np.zeros(regions.max(), dtype=bool)
     for start, end in regions:
         bool_mask[start:end] = True
     assert bool_mask[-1] == True
@@ -436,7 +447,8 @@ def get_mask_from_bool(bool_mask):
     starts = np.where(jumps == 1)[0]
     stops = np.where(jumps == -1)[0]
     regions = np.stack([starts, stops], axis=1)
-    assert np.all(regions > 0)
+    assert np.all(regions[:, 0] >= 0)
+    assert np.all(regions[:, 1] > 0)
     return regions
 
 
@@ -453,6 +465,33 @@ def add_mask_flank(mask, flank):
     flanked = mask + flanks
     flanked[flanked < 0] = 0
     ret = collapse_mask(flanked)
+    return ret
+
+
+def add_mask_flank_cM(mask, rcoords, rvals, flank):
+    # extend masks by a given map distance
+    # if the mask extends beyond the end of rcoords, the highest position
+    # in the returned mask will be rcoords[-1]
+    r_mask = np.interp(
+        mask,
+        rcoords,
+        rvals
+    )
+    ret = np.zeros((len(mask), 2), dtype=int)
+
+    for i, (r_start, r_end) in enumerate(r_mask):
+        # interpolate region edges
+        _start, _end = np.interp(
+            [r_start - flank, r_end + flank],
+            rvals,
+            rcoords
+        )
+        ret[i] = [_start, _end]
+
+    ret[ret < 0] = 0
+    # get rid of any overlap by merging overlapping regions
+    ret = collapse_mask(ret)
+
     return ret
 
 

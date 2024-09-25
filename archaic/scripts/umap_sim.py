@@ -4,7 +4,7 @@ import demes
 import numpy as np
 import sys
 
-from archaic import util, parsing, simulation, weighting_tests
+from archaic import util, parsing, simulation
 
 
 def get_args():
@@ -34,10 +34,7 @@ def main():
         tag = f'{c}{p}_'
 
     bins = np.loadtxt(args.bins)
-    win_arr = np.loadtxt(args.windows)
-    windows = win_arr[:, :2]
-    bounds = win_arr[:, 2]
-
+    windows = np.loadtxt(args.windows)
     graph = demes.load(args.g)
 
     # measure mean r, u in the empirical maps
@@ -58,39 +55,32 @@ def main():
         r=args.r,
         L=args.L
     )
-    """
-    flat_vcf = f'{tag}flat_u.vcf'
+    unif_vcf = f'{tag}flat_u.vcf'
     simulation.simulate_chromosome(
         graph,
-        flat_vcf,
+        unif_vcf,
         u=mean_u,
         r=args.r,
         L=args.L
     )
-    """
-    for func in ['bin_weighted', 'chrom_weighted_uu', 'chrom_weighted_u2']:
-        dic = weighting_tests.parse_weighted_H2(
+    for name, vcf_fname in zip(['empirical_u', 'unif_u'], [emp_vcf, unif_vcf]):
+        dic = parsing.parse_weighted_H2(
             args.mask_fname,
-            emp_vcf,
+            vcf_fname,
             args.r,
             args.u,
             bins=bins,
-            windows=windows,
-            bounds=bounds,
-            c_func=func
+            windows=windows
         )
-        np.savez(f'{tag}{func}.npz', **dic)
-
-    # flat u-map
-    dic = parsing.parse_H2(
-        args.mask_fname,
-        emp_vcf,
-        args.r,
-        windows=windows,
-        bounds=bounds,
-        bins=bins,
-    )
-    np.savez(f'{tag}flat.npz', **dic)
+        np.savez(f'{tag}{name}-weighted.npz', **dic)
+        dic = parsing.parse_H2(
+            args.mask_fname,
+            vcf_fname,
+            args.r,
+            windows=windows,
+            bins=bins
+        )
+        np.savez(f'{tag}{name}-flat.npz', **dic)
 
 
 if __name__ == '__main__':
