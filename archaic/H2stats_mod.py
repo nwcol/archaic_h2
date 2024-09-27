@@ -8,7 +8,7 @@ import moments
 from archaic import util, parsing
 
 
-class H2Spectrum:
+class H2stats:
 
     def __init__(
         self,
@@ -333,7 +333,7 @@ class Test(np.ndarray):
 
 
 
-class H2stats(np.ndarray):
+class __H2stats(np.ndarray):
     """
     """
     # shape (n_stats, n_bins)

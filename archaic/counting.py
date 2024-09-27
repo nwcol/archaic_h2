@@ -5,76 +5,7 @@ heterozygosity from data
 import numpy as np
 from collections import namedtuple
 
-import matplotlib.pyplot as plt
-from matplotlib import cm
-import matplotlib.ticker as mticker
-from matplotlib.lines import Line2D
-
 from archaic import util
-
-
-"""
-aux functions for testing
-"""
-
-
-_bins = np.array([0, 1e-6, 1e-5, 1e-4, 1e-3])
-
-
-def make_rmap(res=10, L=1e+3, r=1e-6):
-    #
-    coords = np.arange(0, L + res, res, dtype=int)
-    vals = np.cumsum(
-        np.concatenate(([0], np.random.uniform(0, 2 * r * res, len(coords) - 1)))
-    )
-    return mapping(coords, vals)
-
-
-"""
-conventional pair-counting functions
-"""
-
-
-mapping = namedtuple('mapping', ['coords', 'vals'])
-
-
-def _integrate(rmap, obj_mapping, bins):
-    #
-    # modify coords using obj_mapping values
-    obj = rmap.coords
-
-    _edges = np.interp(
-        rmap.vals[:-1, np.newaxis] + bins[np.newaxis],
-        rmap.vals,
-        obj,
-        right=obj[-1] + 1,
-    )
-    edges = np.ceil(_edges)
-
-    # this is the critical part
-    fac = np.diff(rmap.coords) \
-          - np.searchsorted(rmap.vals, rmap.vals[:, None] + bins[None])
-    ret = np.diff(fac * edges, axis=1).sum(0)
-
-    #counts = (gaps[:, None] * np.diff(edges[:-1], axis=1)).sum(0)
-
-    return ret
-
-
-def plot(positions, site_r, bins, stop=10):
-    #
-    colors = list(cm.gnuplot(np.linspace(0, 0.95, len(bins) - 1)))
-
-    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
-
-    for i in range(stop):
-        pos = positions[i]
-        idxs = np.searchsorted(site_r[i + 1:], site_r[i] + bins)
-
-        for k in range(len(bins) - 1):
-            y = positions[idxs[[k, k + 1]]] / 2
-            x = pos + y
-            ax.plot(x, y, color=colors[k], marker='D', markersize=4)
 
 
 def _count_site_pairs(

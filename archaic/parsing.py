@@ -130,7 +130,8 @@ def compute_H2(
     r_map,
     bins=None,
     windows=None,
-    get_two_sample=True
+    get_two_sample=True,
+    get_denominator=True
 ):
     # across a chromosome
     # num pairs has shape (n_windows, n_bins)
@@ -157,13 +158,15 @@ def compute_H2(
     num_H2 = np.zeros((len(windows), n_stats, len(bins) - 1))
 
     for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
-        start = np.searchsorted(positions, w_start)
-        right_bound = np.searchsorted(positions, w_r_end)
-        left_bound = np.searchsorted(positions[start:], w_l_end)
 
-        num_pairs[w] = counting.count_site_pairs(
-            r_map[start:right_bound], bins, left_bound=left_bound
-        )
+        if get_denominator:
+            start = np.searchsorted(positions, w_start)
+            right_bound = np.searchsorted(positions, w_r_end)
+            left_bound = np.searchsorted(positions[start:], w_l_end)
+
+            num_pairs[w] = counting.count_site_pairs(
+                r_map[start:right_bound], bins, left_bound=left_bound
+            )
 
         # these index vcf positions / genotypes
         vcf_start = np.searchsorted(genotype_positions, w_start)
@@ -212,7 +215,8 @@ def compute_weighted_H2(
     r_map,
     u_map,
     bins=None,
-    windows=None
+    windows=None,
+    get_denominator=True
 ):
 
     bins = util.map_function(bins)
@@ -222,13 +226,16 @@ def compute_weighted_H2(
     n_stats = util.n_choose_2(n_samples) + n_samples
     num_H2 = np.zeros((len(windows), n_stats, len(bins) - 1))
 
-    denom = counting.compute_chrom_averaged_u_weight(
-        positions,
-        u_map,
-        r_map,
-        bins,
-        windows
-    )
+    if get_denominator:
+        denom = counting.compute_chrom_averaged_u_weight(
+            positions,
+            u_map,
+            r_map,
+            bins,
+            windows
+        )
+    else:
+        denom = np.zeros((len(windows), len(bins) - 1))
 
     for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
         vcf_start = np.searchsorted(genotype_pos, w_start)
@@ -301,7 +308,8 @@ def parse_H2(
     map_fname,
     windows=None,
     bins=None,
-    get_two_sample=True
+    get_two_sample=True,
+    get_denominator=True
 ):
     #
     # setup bins
@@ -351,7 +359,8 @@ def parse_H2(
         r_map,
         bins=bins,
         windows=windows,
-        get_two_sample=get_two_sample
+        get_two_sample=get_two_sample,
+        get_denominator=get_denominator
     )
     print(util.get_time(), 'computed two-locus H')
 
@@ -390,7 +399,8 @@ def parse_weighted_H2(
     rmap_fname,
     umap_fname,
     bins=None,
-    windows=None
+    windows=None,
+    get_denominator=True
 ):
     """
 
@@ -472,7 +482,8 @@ def parse_weighted_H2(
         r_map,
         umap,
         bins=bins,
-        windows=windows
+        windows=windows,
+        get_denominator=get_denominator
     )
     print(util.get_time(), 'two-locus H computed')
 
@@ -502,13 +513,17 @@ def parse_weighted_H2(
     return ret
 
 
-def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
+def bootstrap_H2(
+    dics,
+    n_iters=1000,
+    bin_slice=None
+):
     # carry out bootstraps to get H, H2 distributions.
     # takes dictionaries as args
     n_sites = np.concatenate([dic['n_sites'] for dic in dics])
     H_counts = np.concatenate([dic['H_counts'] for dic in dics])
-    n_site_pairs = np.concatenate([dic['n_site_pairs'] for dic in dics])
     H2_counts = np.concatenate([dic['H2_counts'] for dic in dics])
+    num_pairs = np.concatenate([dic['n_site_pairs'] for dic in dics])
 
     if bin_slice is None:
         n_windows, n, n_bins = H2_counts.shape
@@ -519,7 +534,7 @@ def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
         r_bins = dics[0]['r_bins'][start:stop + 2]
         print(f'r_bins sliced to {r_bins}')
         n_bins = len(r_bins) - 1
-        n_site_pairs = n_site_pairs[:, start:stop + 1]
+        num_pairs = num_pairs[:, start:stop + 1]
         H2_counts = H2_counts[:, :, start:stop + 1]
 
     H_dist = np.zeros((n_iters, n))
@@ -527,7 +542,7 @@ def bootstrap_H2(dics, n_iters=1000, bin_slice=None):
     for i in range(n_iters):
         sample = np.random.randint(n_windows, size=n_windows)
         H_dist[i] = H_counts[sample].sum(0) / n_sites[sample].sum()
-        H2_dist[i] = H2_counts[sample].sum(0) / n_site_pairs[sample].sum(0)
+        H2_dist[i] = H2_counts[sample].sum(0) / num_pairs[sample].sum(0)
 
     H2_cov = np.zeros((n_bins, n, n))
     for i in range(n_bins):
