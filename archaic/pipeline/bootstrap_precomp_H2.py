@@ -29,7 +29,7 @@ def main():
         if 'chr' not in fname:
             raise ValueError('you must include chr in filename')
 
-        num = int(fname.split('chr')[1].split('_')[0])
+        num = int(fname.split('chr')[1].split('_')[0].strip('.npz'))
         assert num in range(23)
         denom_files[num] = np.load(fname)
 
@@ -40,7 +40,7 @@ def main():
         if 'chr' not in fname:
             raise ValueError('you must include chr in filename')
 
-        num = int(fname.split('chr')[1].split('_')[0])
+        num = int(fname.split('chr')[1].split('_')[0].strip('.npz'))
         assert num in denom_files
         file = dict(np.load(fname))
 

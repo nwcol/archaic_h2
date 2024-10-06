@@ -115,22 +115,36 @@ def compute_weight_facs(positions, rmap, umap, bins, windows, mean_u=None):
     # compute the normalizing factor for the u-weighted H2 statistic
     num_windows = len(windows)
     num_bins = len(bins) - 1
-    num_pairs = np.zeros((num_windows, num_bins))
+    #num_pairs = np.zeros((num_windows, num_bins))
     u_prods = np.zeros((num_windows, num_bins))
     for w, (start, end, bound) in enumerate(windows):
         lrstart = np.searchsorted(positions, start)
         rlim = np.searchsorted(positions, bound)
         llim = np.searchsorted(positions[lrstart:], end)
-        num_pairs[w] = count_num_pairs(rmap[lrstart:rlim], bins, llim=llim)
-        u_prods[w] = compute_u_prod_sums(
+        #num_pairs[w] = count_num_pairs(rmap[lrstart:rlim], bins, llim=llim)
+        u_prods[w] = compute_uu_sums(
             rmap[lrstart:rlim], umap[lrstart:rlim], bins, llim=llim
         )
-    tot_prod = u_prods.sum()
-    tot_pairs = num_pairs.sum()
-    mean_prod = tot_prod / tot_pairs
-    facs = u_prods / mean_prod
-    print(mean_prod)
-    print(facs)
+    #tot_prod = u_prods.sum()
+    #tot_pairs = num_pairs.sum()
+    # mean_prod = tot_prod / tot_pairs
+    #facs = u_prods / mean_prod
+    #print('tot_prod', tot_prod)
+    #print('tot_pairs', tot_pairs)
+    #facs = u_prods * tot_pairs / tot_prod
+
+
+
+    tot_uu = get_chromosome_uu(umap)
+    num_sites = len(umap)
+    tot_num_pairs = num_sites * (num_sites - 1) // 2
+    mean_uu = tot_uu / tot_num_pairs
+    facs = u_prods / mean_uu
+
+    print('tot uu', tot_uu)
+    print('tot num sites', tot_num_pairs)
+    print('mean uu', mean_uu)
+
 
     """
     tot_u_prods = bin_u_prods.sum()
@@ -145,7 +159,7 @@ def compute_weight_facs(positions, rmap, umap, bins, windows, mean_u=None):
     return facs
 
 
-def compute_u_prod_sums(rmap, umap, bins, llim=None, verbosity=1e6):
+def compute_uu_sums(rmap, umap, bins, llim=None, verbosity=1e6):
     """
     """
     # compute sums of products of left * right locus mutation rates
@@ -165,3 +179,10 @@ def compute_u_prod_sums(rmap, umap, bins, llim=None, verbosity=1e6):
     products = ma.array(_products, mask=_products == 0)
     return products
  
+
+def get_chromosome_uu(umap):
+    # get the total sum of u * u site products on a chromosome
+    cum_umap = np.cumsum(umap)
+    cum_uvals = cum_umap[-1] - cum_umap
+    tot_uu = (cum_uvals * umap).sum()
+    return tot_uu

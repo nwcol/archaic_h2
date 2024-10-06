@@ -242,7 +242,8 @@ def compute_weighted_H2(
         denom = dev.compute_weight_facs(
             positions, r_map, u_map, bins, windows
         )
-
+    else:
+        denom = np.zeros((len(windows), len(bins) - 1))
 
 
     for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
