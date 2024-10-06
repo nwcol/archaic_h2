@@ -4,7 +4,7 @@ Functions for parsing statistics from .vcf files
 import numpy as np
 import time
 
-from archaic import util, counting
+from archaic import util, counting, dev
 
 
 _default_bins = np.logspace(-6, -2, 17)
@@ -226,6 +226,7 @@ def compute_weighted_H2(
     n_stats = util.n_choose_2(n_samples) + n_samples
     num_H2 = np.zeros((len(windows), n_stats, len(bins) - 1))
 
+    """
     if get_denominator:
         denom = counting.compute_chrom_averaged_u_weight(
             positions,
@@ -236,6 +237,13 @@ def compute_weighted_H2(
         )
     else:
         denom = np.zeros((len(windows), len(bins) - 1))
+    """
+    if get_denominator:
+        denom = dev.compute_weight_facs(
+            positions, r_map, u_map, bins, windows
+        )
+
+
 
     for w, (w_start, w_l_end, w_r_end) in enumerate(windows):
         vcf_start = np.searchsorted(genotype_pos, w_start)
@@ -253,23 +261,19 @@ def compute_weighted_H2(
                 if i == j:
                     gts = win_genotype_arr[:, i]
                     site_H = gts[:, 0] != gts[:, 1]
-                    sample_lbound = np.searchsorted(
-                        win_vcf_positions[site_H], w_l_end
-                    )
-                    num_H2[w, k] = counting.count_site_pairs(
-                        win_vcf_r_map[site_H],
-                        bins,
-                        left_bound=sample_lbound
+                    H_idx = np.nonzero(site_H)[0]
+                    H_r_map = win_vcf_r_map[H_idx]
+                    H_positions = win_vcf_positions[H_idx]
+                    H_lbound = np.searchsorted(H_positions, w_l_end)
+                    num_H2[w, k] = dev.count_num_pairs(
+                        H_r_map, bins, llim=H_lbound
                     )
                 else:
                     gts_i = win_genotype_arr[:, i]
                     gts_j = win_genotype_arr[:, j]
                     site_H = get_two_sample_site_H(gts_i, gts_j)
                     num_H2[w, k] = counting.count_weighted_site_pairs(
-                        site_H,
-                        win_vcf_r_map,
-                        bins,
-                        left_bound=vcf_lbound
+                        site_H, win_vcf_r_map, bins, left_bound=vcf_lbound
                     )
                 k += 1
 
@@ -563,48 +567,56 @@ def bootstrap_H2(
     return stats
 
 
-def sum_H2(*args, fancy=True):
-    # sum a number of dictionaries together
-    _ids = 'ids'
-    _r_bins = 'r_bins'
-    _n_sites = 'n_sites'
-    _n_site_pairs = 'n_site_pairs'
-    _n_H = 'H_counts'
-    _n_H2 = 'H2_counts'
-    stats = [_n_sites, _n_site_pairs, _n_H, _n_H2]
-
-    template = args[0]
-
-    ids = template[_ids]
-    r_bins = template[_r_bins]
+def get_mean_H2(*args, fancy=True):
+    # take the mean over a number of dictionaries
+    dic = args[0]
+    ids = dic['ids']
+    r_bins = dic['r_bins']
     for dic in args:
-        if np.any(ids != dic[_ids]):
+        if np.any(ids != dic['ids']):
             raise ValueError(f'id mismatch in {dic}')
-        if np.any(r_bins != dic[_r_bins]):
+        if np.any(r_bins != dic['r_bins']):
             raise ValueError(f'r bin mismatch in {dic}')
+        for key in dic:
+            if isinstance(dic[key], np.ndarray):
+                if dic[key].dtype is int or dic[key].dtype is float:
+                    assert not np.any(np.isnan(dic[key]))
 
-    ret = {_n_sites: [], _n_site_pairs: [], _n_H: [], _n_H2: []}
+    num_pairs = np.vstack([dic['n_site_pairs'] for dic in args])
+    if dic['n_sites'].ndim == 0:
+        num_sites = np.array([dic['n_sites'] for dic in args])
+    else:
+        num_sites = np.concatenate([dic['n_sites'] for dic in args])
 
-    for dic in args:
-        for stat in stats:
-            ret[stat].append(dic[stat])
+    num_H2 = np.vstack([dic['H2_counts'] for dic in args])
+    num_H = np.vstack([dic['H_counts'] for dic in args])
 
+    mean_H = num_H.sum(0) / num_sites.sum(0)
+    mean_H2 = num_H2.sum(0) / num_pairs.sum(0)
 
-    for stat in [_n_site_pairs, _n_H, _n_H2]:
-        ret[stat] = np.vstack(ret[stat])
-    for stat in [_n_sites]:
-        ret[stat] = np.concatenate(ret[stat])
+    win_H = np.divide(num_H, num_sites[:, np.newaxis], where=num_sites[:, np.newaxis] > 0)
+    stderr_H = np.std(win_H, axis=0)
 
-    ret[_ids] = ids
-    ret[_r_bins] = r_bins
+    H2mask = num_pairs[:, np.newaxis] > 0
+    win_H2 = np.divide(num_H2, num_pairs[:, np.newaxis], where=H2mask)
+    stderr_H2 = np.std(win_H2, axis=0, where=H2mask)
 
-    if fancy:
-        ret['window_H'] = ret[_n_H] / ret[_n_sites][:, np.newaxis]
-        ret['window_H2'] = ret[_n_H2] / ret[_n_site_pairs][:, np.newaxis, :]
-        ret['H'] = ret[_n_H].sum(0) / ret[_n_sites].sum(0)
-        ret['H2'] = ret[_n_H2].sum(0) / ret[_n_site_pairs].sum(0)
-        ret['std_H'] = np.std(ret['window_H'], axis=0)
-        ret['std_H2'] = np.std(ret['window_H2'], axis=0)
+    #if fancy:
+        #ret['window_H'] = ret['H_counts'] / ret['n_sites'][:, np.newaxis]
+        #ret['window_H2'] = ret['H2_counts'] / ret['n_site_pairs'][:, np.newaxis, :]
+        #ret['H'] = ret['H_counts'].sum(0) / ret['n_sites'].sum(0)
+        # ret['H2'] = ret['H2_counts'].sum(0) / ret['n_site_pairs'].sum(0)
+        #ret['std_H'] = np.std(ret['window_H'], axis=0)
+        #ret['std_H2'] = np.std(ret['window_H2'], axis=0)
+
+    ret = dict(
+        ids=ids,
+        r_bins=r_bins,
+        H=mean_H,
+        H2=mean_H2,
+        std_H=stderr_H,
+        std_H2=stderr_H2
+    )
 
     return ret
 

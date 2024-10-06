@@ -1,137 +1,167 @@
-import numpy as np
-from collections import namedtuple
 
-import matplotlib.pyplot as plt
-from matplotlib import cm
-import matplotlib.ticker as mticker
-from matplotlib.lines import Line2D
+from bisect import bisect
+import numpy as np
+import numpy.ma as ma
 
 from archaic import util
 
 
-_bins = np.array([0, 1e-6, 1e-5, 1e-4, 1e-3])
+def _count_num_pairs(rmap, bins, llim=None):
+    """
+    given a recombination map, bin each pair of mapped sites by looping over
+    the map. 
+    
+    this is a 'naive' function intended for testing against vectorized and 
+    considerably faster pair-counting functions. 
+
+    r_map and bins must have the same linear scale; typically this will be the
+    centimorgan (cM). where it is useful to count site pairs whose left
+    (lower-indexed) site is below some position, a left_bound may be applied;
+    this is an index of r_map and counting ceases when it is reached.
+
+    :param r_map: list or 1d array representing linear recombination map
+    :param bins: list or 1d array of recombination-distance bin edges
+    :param left_bound: optional, default None. imposes a maximum index on the
+        left locus
+    :return: 1d array of shape (len(bins) - 1) holding site pair counts
+    """
+    if not llim:
+        llim = len(rmap)
+    num_bins = len(bins) - 1
+    num_pairs = np.zeros(len(bins) - 1, dtype=int)
+    for i, rl in enumerate(rmap[:llim]):
+        for rr in rmap[i + 1:]:
+            distance = rr - rl
+            bin_idx = bisect(bins, distance) - 1
+            if bin_idx < num_bins:
+                if bin_idx >= 0:
+                    num_pairs[bin_idx] += 1
+    num_pairs = ma.array(num_pairs, mask=num_pairs == 0)
+    return num_pairs
 
 
-mapping = namedtuple('mapping', ['coords', 'vals'])
+def _get_num_pairs_arr(rmap, bins, llim=None):
+    """
+    """
+    if not llim:
+        llim = len(rmap)
+    num_bins = len(bins) - 1
+    nums_arr = np.zeros((llim, len(bins) - 1), dtype=int)
+    for i, rl in enumerate(rmap[:llim]):
+        for rr in rmap[i + 1:]:
+            distance = rr - rl
+            bin_idx = bisect(bins, distance) - 1
+            if bin_idx < num_bins:
+                if bin_idx >= 0:
+                    nums_arr[i, bin_idx] += 1
+    return nums_arr
 
 
-def make_rmap(res=10, L=1e+3, r=1e-6):
-    #
-    coords = np.arange(0, L + res, res, dtype=int)
-    vals = np.cumsum(
-        np.concatenate(([0], np.random.uniform(0, 2 * r * res, len(coords) - 1)))
-    )
-    return mapping(coords, vals)
+def _count_sums_prods(umap, rmap, bins, llim=None):
+    """
+    
+    """
+    if len(umap) != len(rmap):
+        raise ValueError('umap and rmap have mismatched lengths')
+    if not llim:
+        llim = len(rmap) 
+    num_bins = len(bins) - 1
+    sums_prods = np.zeros(len(bins) - 1, dtype=float)
+    for i, (rl, ul) in enumerate(zip(rmap[:llim], umap[:llim])):
+        for rr, ur in zip(rmap[i + 1:], umap[i + 1:]):
+            distance = rr - rl
+            bin_idx = bisect(bins, distance) - 1
+            if bin_idx < num_bins:
+                if bin_idx >= 0:
+                    sums_prods[bin_idx] += ul * ur
+    sums_prods = ma.array(sums_prods, mask=sums_prods == 0)
+    return sums_prods
 
 
-rmap = make_rmap()
-positions = np.arange(1001)
-site_r = np.interp(
-    positions,
-    rmap.coords,
-    rmap.vals
-)
+def count_num_pairs(rmap, bins, llim=None, verbosity=1e6):
+    """
+    get counts of site pairs binned by their recombination distance. 
+
+    :param rmap: 1d array of recombination map values for each locus, in cM
+    :param bins: 1d array of recombination bin edges, in cM
+    :param llim: optional, default None. if provided, imposes a maximum index
+        for the left locus
+    """
+    if not llim:
+        llim = len(rmap)
+    cumulative_nums = np.zeros(len(bins), dtype=int)
+    for i, rl in enumerate(rmap[:llim]):
+        edges = np.searchsorted(rmap[i + 1:], rl + bins)
+        cumulative_nums += edges
+        if i % verbosity == 0 and i > 0:
+            print(util.get_time(), f'num pairs computed at site {i}')
+    _num_pairs = np.diff(cumulative_nums)
+    num_pairs = ma.array(_num_pairs, mask=_num_pairs == 0)
+    return num_pairs
 
 
-def _count_site_pairs(
-    positions,
-    rcoords,
-    rmap,
-    bins,
-    left_bound=None
-):
-    # uses interpolation rather than searchsorting. currently WIP and not a
-    # high priority
-    if len(rcoords) != len(rmap):
-        raise ValueError('rcoords length mismatches rmap')
-    if left_bound is None:
-        left_bound = len(positions)
-    # interpolate r-map values
-    site_r = np.interp(
-        positions,
-        rcoords,
-        rmap,
-        left=rmap[0],
-        right=rmap[-1]
-    )
-    coords_in_pos_idx = np.searchsorted(positions, rcoords)
-    coords_in_pos_idx[coords_in_pos_idx == len(positions)] -= 1
-    edges = np.zeros(len(bins), dtype=int)
+def compute_weight_facs(positions, rmap, umap, bins, windows, mean_u=None):
+    """
+    compute the denominator for the weighted H2 statistic, which is scaled by
+    the average product of mutation rates in each bin.
 
-    for i, b in enumerate(bins):
-        edges[i] = np.floor(
-            np.interp(
-                site_r[:left_bound] + b,
-                rmap,
-                coords_in_pos_idx,
-                left=0,
-                right=len(positions) - 1
-            )
-        ).sum()
+    :param rmap: 1d array holding the recombination map in cM
+    :param umap: 1d array of mutation map values
+    :param bins: 1d array of recombination distance bin edges, in cM
+    :param llim: optional, default None. maximum index for left loci
+    :param mean_u: optional, default None. if provided, the square of this
+        quantity is treated as the across-bins average mutation rate product
+    """
+    # compute the normalizing factor for the u-weighted H2 statistic
+    num_windows = len(windows)
+    num_bins = len(bins) - 1
+    num_pairs = np.zeros((num_windows, num_bins))
+    u_prods = np.zeros((num_windows, num_bins))
+    for w, (start, end, bound) in enumerate(windows):
+        lrstart = np.searchsorted(positions, start)
+        rlim = np.searchsorted(positions, bound)
+        llim = np.searchsorted(positions[lrstart:], end)
+        num_pairs[w] = count_num_pairs(rmap[lrstart:rlim], bins, llim=llim)
+        u_prods[w] = compute_u_prod_sums(
+            rmap[lrstart:rlim], umap[lrstart:rlim], bins, llim=llim
+        )
+    tot_prod = u_prods.sum()
+    tot_pairs = num_pairs.sum()
+    mean_prod = tot_prod / tot_pairs
+    facs = u_prods / mean_prod
+    print(mean_prod)
+    print(facs)
 
-    counts = np.diff(edges)
-
-    return counts
-
-
-
-
-
-
-def _integrate(rmap, objmap, bins):
-    #
-    obj = np.cumsum(rmap.coords)
-
-    edges0 = np.interp(
-        rmap.vals,
-        rmap.vals + bins[0],
-        obj,
-        right=obj[-1] + 1,
-    )
-    edges1 = np.interp(
-        rmap.vals,
-        rmap.vals + bins[1],
-        obj,
-        right=obj[-1] + 1,
-    )
-    ret = np.ceil(edges1) - np.ceil(edges0)
-    return
+    """
+    tot_u_prods = bin_u_prods.sum()
+    bin_u_prod_means = bin_u_prods / num_pairs
+    if not mean_u:
+        mean_u_prod = tot_u_prods / num_pairs.sum() 
+    else:
+        mean_u_prod = mean_u ** 2
+    u_ratio = mean_u_prod / bin_u_prod_means
+    facs = num_pairs * u_ratio
+    """
+    return facs
 
 
-def __integrate(rmap, obj_mapping, bins):
-    #
-    # modify coords using obj_mapping values
-    obj = rmap.coords
-
-    _edges = np.interp(
-        rmap.vals[:-1, np.newaxis] + bins[np.newaxis],
-        rmap.vals,
-        obj,
-        right=obj[-1] + 1,
-    )
-    edges = np.ceil(_edges)
-
-    # this is the critical part
-    fac = np.diff(rmap.coords) \
-          - np.searchsorted(rmap.vals, rmap.vals[:, None] + bins[None])
-    ret = np.diff(fac * edges, axis=1).sum(0)
-
-    #counts = (gaps[:, None] * np.diff(edges[:-1], axis=1)).sum(0)
-
-    return ret
-
-
-def plot(positions, site_r, bins, stop=10):
-    #
-    colors = list(cm.gnuplot(np.linspace(0, 0.95, len(bins) - 1)))
-
-    fig, ax = plt.subplots(figsize=(8, 6), layout='constrained')
-
-    for i in range(stop):
-        pos = positions[i]
-        idxs = np.searchsorted(site_r[i + 1:], site_r[i] + bins)
-
-        for k in range(len(bins) - 1):
-            y = positions[idxs[[k, k + 1]]] / 2
-            x = pos + y
-            ax.plot(x, y, color=colors[k], marker='D', markersize=4)
+def compute_u_prod_sums(rmap, umap, bins, llim=None, verbosity=1e6):
+    """
+    """
+    # compute sums of products of left * right locus mutation rates
+    if len(umap) != len(rmap):
+        raise ValueError('rmap length mismatches umap')
+    if not llim:
+        llim = len(rmap)
+    cum_umap = np.cumsum(umap)
+    cum_products = np.zeros(len(bins), dtype=float)
+    for i, (rl, ul) in enumerate(zip(rmap[:llim], umap[:llim])):
+        if ul > 0:
+            edges = np.searchsorted(rmap[i + 1:], rl + bins)
+            cum_products += ul * cum_umap[i:][edges]
+            if i % verbosity == 0 and i > 0:
+                print(util.get_time(), f'u prods computed at site {i}')
+    _products = np.diff(cum_products)
+    products = ma.array(_products, mask=_products == 0)
+    return products
+ 

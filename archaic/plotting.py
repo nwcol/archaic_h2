@@ -127,7 +127,7 @@ def plot_H2_spectra(
 
     # write the legend
     if labels is not None:
-        y = 1 / n_rows * 0.35
+        y = n_rows * 0.70
         legend_elements = [
             Line2D([0], [0], color=colors[i], lw=2, label=labels[i])
             for i in range(len(labels))

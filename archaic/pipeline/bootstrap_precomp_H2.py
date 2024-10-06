@@ -1,5 +1,6 @@
 """
-uses a separate denominator file
+uses a separate denominator file. every input file has to have 'chrX_' in its
+name
 """
 import argparse
 import numpy as np
@@ -20,16 +21,48 @@ def get_args():
 
 
 def main():
-    # call the bootstrap function in the parsing module
+
     args = get_args()
+
+    denom_files = dict()
+    for fname in args.denominator_fnames:
+        if 'chr' not in fname:
+            raise ValueError('you must include chr in filename')
+
+        num = int(fname.split('chr')[1].split('_')[0])
+        assert num in range(23)
+        denom_files[num] = np.load(fname)
+
+    print(util.get_time(), f'loaded {len(denom_files)} denominator files')
+
+    in_files = []
+    for fname in args.in_fnames:
+        if 'chr' not in fname:
+            raise ValueError('you must include chr in filename')
+
+        num = int(fname.split('chr')[1].split('_')[0])
+        assert num in denom_files
+        file = dict(np.load(fname))
+
+        for count in ['n_site_pairs']:
+            if not np.all(file[count] == 0):
+                print(f'overriding pair-counts in data from {fname}')
+            assert file[count].shape == denom_files[num][count].shape
+            file[count] = denom_files[num][count]
+
+        in_files.append(file)
+
+    print(util.get_time(), f'loaded {len(in_files)} input files')
+
+
     if args.bin_slice is None:
         bin_slice = None
     else:
         start, end = args.bin_slice.split('-')
         bin_slice = (int(start), int(end))
-    files = [np.load(fname) for fname in args.in_fnames]
+
     dic = parsing.bootstrap_H2(
-        files, n_iters=args.n_iters, bin_slice=bin_slice
+        in_files, n_iters=args.n_iters, bin_slice=bin_slice
     )
     if len(args.name_map) > 0:
         ids = dic['ids']

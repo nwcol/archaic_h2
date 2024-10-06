@@ -7,6 +7,17 @@ import numpy as np
 from archaic import util, parsing
 
 
+# these define the simulation/parsing configuration
+sim_configs = [
+    ('unif-u', 'unif-r'),
+    ('emp-u', 'emp-r')
+]
+parse_configs = [
+    ('unif-u', 'unif-r'),
+    ('emp-u', 'emp-r')
+]
+
+
 def get_args():
     #
     parser = argparse.ArgumentParser()
@@ -19,7 +30,10 @@ def get_args():
     parser.add_argument('--bins')
     parser.add_argument('--cluster_id', default=None)
     parser.add_argument('--process_id', default=None)
+    parser.add_argument('--count_site_pairs', type=int, default=0)
+    parser.add_argument('--dtwf_time', type=int, default=100)
     return parser.parse_args()
+
 
 
 def simulate(
@@ -30,6 +44,7 @@ def simulate(
     L=None,
     sampled_demes=None,
     contig_id=None,
+    dtwf_time=None
 ):
     # L 'stretches' both maps
     # u, r can be floats or .bedgraph/.txt files holding rates
@@ -79,6 +94,16 @@ def simulate(
 
     config = {s: 1 for s in sampled_demes}
 
+    if dtwf_time > 0:
+        model = [
+            msprime.DiscreteTimeWrightFisher(duration=int(dtwf_time)),
+            msprime.StandardCoalescent()
+        ]
+        print(util.get_time(), f'using DTWF model for first {dtwf_time} g')
+    else:
+        model = msprime.StandardCoalescent()
+        print(util.get_time(), 'using standard Hudson coalescent model')
+
     print(util.get_time(), 'simulating ancestry')
     ts = msprime.sim_ancestry(
         samples=config,
@@ -88,10 +113,7 @@ def simulate(
         discrete_genome=True,
         record_provenance=False,
         sequence_length=L,
-        model=[
-            msprime.DiscreteTimeWrightFisher(duration=100),
-            msprime.StandardCoalescent()
-        ]
+        model=model
     )
     print(util.get_time(), 'simulating mutation')
     mts = msprime.sim_mutations(
@@ -160,6 +182,10 @@ def main():
 
     for u_map, u_type in zip([mean_u, args.umap], ['unif-u', 'emp-u']):
         for r_map, r_type in zip([mean_r, args.rmap], ['unif-r', 'emp-r']):
+
+            if (u_type, r_type) not in sim_configs:
+                continue
+
             designation = f'{u_type}-{r_type}'
             designations.append(designation)
             fname = f'{tag}_{designation}.vcf'
@@ -168,33 +194,37 @@ def main():
                 fname,
                 u=u_map,
                 r=r_map,
-                L=positions[-1]
+                L=positions[-1],
+                dtwf_time=args.dtwf_time
             )
             sim_fnames.append(fname)
 
     # then parse
     for sim_fname, designation in zip(sim_fnames, designations):
         for rmap, r_type in zip([unif_rmap, args.rmap], ['unif-r', 'emp-r']):
-            dic = parsing.parse_weighted_H2(
-                args.mask,
-                sim_fname,
-                rmap,
-                args.umap,
-                bins=bins,
-                windows=windows,
-                get_denominator=False
-            )
-            np.savez(f'{tag}_{designation}_emp-u-{r_type}.npz', **dic)
 
-            dic = parsing.parse_H2(
-                args.mask,
-                sim_fname,
-                rmap,
-                windows=windows,
-                bins=bins,
-                get_denominator=False
-            )
-            np.savez(f'{tag}_{designation}_unif-u-{r_type}.npz', **dic)
+            if ('emp-u', r_type) in parse_configs:
+                dic = parsing.parse_weighted_H2(
+                    args.mask,
+                    sim_fname,
+                    rmap,
+                    args.umap,
+                    bins=bins,
+                    windows=windows,
+                    get_denominator=args.count_site_pairs
+                )
+                np.savez(f'{tag}_{designation}_emp-u-{r_type}.npz', **dic)
+
+            if ('unif-u', r_type) in parse_configs:
+                dic = parsing.parse_H2(
+                    args.mask,
+                    sim_fname,
+                    rmap,
+                    windows=windows,
+                    bins=bins,
+                    get_denominator=args.count_site_pairs
+                )
+                np.savez(f'{tag}_{designation}_unif-u-{r_type}.npz', **dic)
 
 
 if __name__ == '__main__':

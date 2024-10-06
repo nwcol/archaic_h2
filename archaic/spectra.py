@@ -115,7 +115,9 @@ class H2Spectrum:
             if 'H' in file:
                 H = file['H']
                 data = np.vstack([data.T, H[np.newaxis]])
-            covs = None
+            covs = np.zeros((len(data), len(ids), len(ids)))
+            if 'std_H2' in file:
+                covs[:-1, np.arange(len(ids)), np.arange(len(ids))] = (file['std_H2'] ** 2).T
 
         spectrum = cls(
             data, r_bins, ids, covs=covs, has_H=True

@@ -102,9 +102,9 @@ def main():
         spectrum = H2Spectrum.from_graph(
             graph, _sample_ids, r, args.u, r_bins=r_bins
         )
-        if len(args.data_fnames) > 0 and np.any(spectra[0].covs > 0):
-            ll_label = ''
-            if args.compute_ll:
+        ll_label = ''
+        if args.compute_ll:
+            if len(args.data_fnames) > 0 and np.any(spectra[0].covs > 0):
                 data = spectra[0]
                 if not args.plot_H:
                     data = data.remove_H()

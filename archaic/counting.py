@@ -1,11 +1,26 @@
 """
-houses the pair-counting functions that underlie the estimation of two-locus
-heterozygosity from data
+houses the site pair counting functions that underlie the estimation of the
+two-locus heterozygosity
 """
+from bisect import bisect
 import numpy as np
-from collections import namedtuple
+import numpy.ma as ma
 
 from archaic import util
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def _count_site_pairs(

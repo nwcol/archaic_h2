@@ -179,8 +179,8 @@ def read_map_file(fname, positions=None, map_col='Map(cM)'):
             positions,
             rcoords,
             rvals,
-            left=rcoords[0],
-            right=rcoords[-1]
+            left=rvals[0],
+            right=rvals[-1]
         )
         assert np.all(r_map >= 0)
         assert np.all(np.diff(r_map)) >= 0
