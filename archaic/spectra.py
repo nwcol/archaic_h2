@@ -79,6 +79,7 @@ class H2Spectrum:
     @classmethod
     def from_file(cls, fname, sample_ids=None, graph=None):
         # placeholder. covs are just along windows. masks nan as zero
+        has_H = False
         file = np.load(fname)
         r_bins = file['r_bins']
         ids = file['ids']
@@ -87,45 +88,49 @@ class H2Spectrum:
             if np.any(np.isnan(per_window_H2)):
                 print('setting nan to zero in windowed H2 array')
                 per_window_H2[np.isnan(per_window_H2)] = 0
-            per_window_H = file['H_counts'] / file['n_sites'][:, np.newaxis]
-            # unlikely to happen
-            if np.any(np.isnan(per_window_H)):
-                print('setting nan to zero in windowed H array')
-                per_window_H[np.isnan(per_window_H)] = 0
-
-            if per_window_H2.ndim == 3 and per_window_H2.shape[2] > 1:
-                covs = np.array(
-                    [np.cov(per_window_H2[:, :, i], rowvar=False)
-                     for i in range(per_window_H2.shape[2])]
-                    + [np.cov(per_window_H, rowvar=False)]
-                )
-                if covs.ndim != 3:
-                    #n_stats = file['H2_counts'].shape[1]
-                    #covs = np.zeros((len(r_bins), n_stats, n_stats))
-                    covs = covs[:, np.newaxis, np.newaxis]
-                    #n = per_window_H.shape[1]
-                    #covs = covs.reshape(len(r_bins), n, n)
+            if 'H_counts' in file:
+                per_window_H = file['H_counts'] / file['n_sites'][:, np.newaxis]
+                has_H = True
+            if has_H:
+                if np.any(np.isnan(per_window_H)):
+                    print('setting nan to zero in windowed H array')
+                    per_window_H[np.isnan(per_window_H)] = 0
+                if per_window_H2.ndim == 3 and per_window_H2.shape[2] > 1:
+                    covs = np.array(
+                        [np.cov(per_window_H2[:, :, i], rowvar=False)
+                        for i in range(per_window_H2.shape[2])]
+                        + [np.cov(per_window_H, rowvar=False)]
+                    )
             else:
-                covs = None
+                covs = np.array([np.cov(per_window_H2[:, :, i], rowvar=False)
+                    for i in range(per_window_H2.shape[2])])
+            if covs.ndim != 3:
+                covs = covs[:, np.newaxis, np.newaxis]
             H2 = file['H2_counts'].sum(0) / file['n_site_pairs'].sum(0)
-            H = file['H_counts'].sum(0) / file['n_sites'].sum()
-            data = np.vstack([H2.T, H[np.newaxis]])
+            if has_H:
+                H = file['H_counts'].sum(0) / file['n_sites'].sum()
+                data = np.vstack([H2.T, H[np.newaxis]])
+            else:
+                data = H2.T
         elif 'H2' in file:
             data = file['H2']
             if 'H' in file:
                 H = file['H']
                 data = np.vstack([data.T, H[np.newaxis]])
+                has_H = True
             covs = np.zeros((len(data), len(ids), len(ids)))
             if 'std_H2' in file:
                 covs[:-1, np.arange(len(ids)), np.arange(len(ids))] = (file['std_H2'] ** 2).T
-
+            elif 'covs' in file:
+                covs = file['covs']
         spectrum = cls(
-            data, r_bins, ids, covs=covs, has_H=True
+            data, r_bins, ids, covs=covs, has_H=has_H
         )
         if sample_ids is not None:
             spectrum = spectrum.subset(sample_ids)
         elif graph is not None:
             spectrum = spectrum.subset_to_graph(graph)
+        print(spectrum.data.shape)
         return spectrum
 
 

@@ -1,6 +1,0 @@
-time_units: generations
-demes:
-- name: X
-  epochs:
-  - {end_time: 2000, start_size: 1e4}
-  - {end_time: 0, start_size: 1e4, end_size: 1e5}

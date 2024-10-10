@@ -525,8 +525,9 @@ def bootstrap_H2(
 ):
     # carry out bootstraps to get H, H2 distributions.
     # takes dictionaries as args
-    n_sites = np.concatenate([dic['n_sites'] for dic in dics])
-    H_counts = np.concatenate([dic['H_counts'] for dic in dics])
+    if 'n_sites' in dics[0]:
+        n_sites = np.concatenate([dic['n_sites'] for dic in dics])
+        H_counts = np.concatenate([dic['H_counts'] for dic in dics])
     H2_counts = np.concatenate([dic['H2_counts'] for dic in dics])
     num_pairs = np.concatenate([dic['n_site_pairs'] for dic in dics])
 
@@ -546,8 +547,9 @@ def bootstrap_H2(
     H2_dist = np.zeros((n_iters, n, n_bins))
     for i in range(n_iters):
         sample = np.random.randint(n_windows, size=n_windows)
-        H_dist[i] = H_counts[sample].sum(0) / n_sites[sample].sum()
         H2_dist[i] = H2_counts[sample].sum(0) / num_pairs[sample].sum(0)
+        if 'n_sites' in dics[0]:
+            H_dist[i] = H_counts[sample].sum(0) / n_sites[sample].sum()
 
     H2_cov = np.zeros((n_bins, n, n))
     for i in range(n_bins):
