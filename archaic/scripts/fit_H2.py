@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument('-u', '--u', type=float, default=None)
     parser.add_argument('-H', '--use_H', type=int, default=0)
     parser.add_argument('--max_iters', nargs='*', type=int, default=[1000])
-    parser.add_argument('--method', nargs='*', default=['Powell'])
+    parser.add_argument('--method', nargs='*', default='Powell')
     parser.add_argument('-v', '--verbosity', type=int, default=10)
     parser.add_argument('--perturb_graph', type=int, default=0)
     return parser.parse_args()
@@ -31,7 +31,7 @@ def main():
         args.data_fname, graph=demes.load(args.graph_fname)
     )
     if args.perturb_graph:
-        graph_fname = f'{args.out_fname.replace('.yaml', '')}_init.yaml'
+        graph_fname = f'{args.out_fname.replace(".yaml", "")}_init.yaml'
         inference.perturb_graph(
             args.graph_fname, args.options_fname, out_fname=graph_fname
         )
