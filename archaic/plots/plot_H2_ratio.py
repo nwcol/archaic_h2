@@ -124,7 +124,8 @@ def main():
         sci=False,
         statistic='$H_2/H^2$',
         plot_two_sample=args.plot_two_sample,
-        ratio_yticks=True
+        ratio_yticks=False,
+        ylim_0=False
     )
 
     if args.title:
