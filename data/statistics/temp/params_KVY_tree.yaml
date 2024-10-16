@@ -1,0 +1,67 @@
+# 8 parameters
+parameters:
+- name: TNMH
+  lower_bound: 400000
+  upper_bound: 1000000
+  values:
+  - demes:
+      Anc:
+        epochs:
+          0: end_time
+- name: TKY
+  lower_bound: 80000
+  upper_bound: 300000
+  values:
+  - demes:
+      MH:
+        epochs:
+          0: end_time
+- name: NA 
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+  - demes:
+      Anc:
+        epochs: 
+          0: start_size
+- name: NMH
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+  - demes:
+      MH:
+        epochs: 
+          0: start_size
+- name: NK
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+  - demes:
+      KhomaniSan:
+        epochs: 
+          0: start_size
+- name: NY
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+  - demes:
+      Yoruba:
+        epochs: 
+          0: start_size
+- name: NV
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+  - demes:
+      Vindija:
+        epochs: 
+          0: start_size
+- name: mKY
+  lower_bound: 1e-07
+  upper_bound: 1e-04
+  values:
+  - migrations:
+      0: rate
+constraints:
+- params: [TNMH, TKY]
+  constraint: greater_than

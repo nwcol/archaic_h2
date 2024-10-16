@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "h2py"
+version = "0.0"
+description = "a package for estimating two-locus heterozygosity"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy >= 1.26.4",
+    "scipy >= 1.14.1",
+    "moments-popgen >= 1.2.2",
+    "matplotlib >= 3.9.2"
+]
+
+[tool.setuptools]
+packages = ["h2py", "h2py.scripts"]
+
+[project.scripts]
+parse_H2 = "h2py.scripts.parse_H2:main"
+fit_H2 = "h2py.scripts.fit_H2:main"
+plot_H2 = "h2py.scripts.plot_H2:main"
+
