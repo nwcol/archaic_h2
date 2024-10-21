@@ -1,0 +1,41 @@
+# invoke the fit_H2 script
+# created 10-11-2024
+# edited 10-21-2024
+
+label = test
+data = H2stats.npz
+
+log = out/job_$(Cluster).log
+error = out/job_$(Cluster)_$(Process).err
+output = out/job_$(Cluster)_$(Process).out
+
+requirements = (Target.HasCHTCStaging == true)
+container_image = file:///staging/nwcollier/archaic-container.sif
+
+executable = fit_H2.sh
+
+arguments = \
+ -d $(data) \
+ -g $(label).yaml \
+ -p params_$(graph) \
+ -o $(label)_$(Cluster)-$(Process) \
+ -u 1.113e-8 \
+ --perturb 0.2 \
+ --max_iter 500 \
+ --method NelderMead \
+ --verbose 10 \
+ --include_H 0 \
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+
+transfer_input_files = \
+ ../data/statistics/$(data), \
+ ../models/$(graph), \
+ ../models/$(params)
+
+request_cpus = 1
+request_memory = 1GB
+request_disk = 1GB
+
+queue 10

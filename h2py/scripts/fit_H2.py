@@ -51,9 +51,19 @@ def get_args():
         default=1
     )
     parser.add_argument(
+        '--max_iter',
+        type=int,
+        default=500
+    )
+    parser.add_argument(
         '--method',
         type=str,
         default='NealderMead'
+    )
+    parser.add_argument(
+        '--include_H',
+        type=int,
+        default=0
     )
     return parser.parse_args()
 
@@ -71,6 +81,8 @@ def main():
         u=args.u,
         perturb=args.perturb,
         verbose=args.verbose,
+        method=args.method,
+        max_iter=args.max_iter
         out_fname=args.out_fname
     )
     return
