@@ -25,32 +25,16 @@ _lower_u = 1e-8
 _upper_u = 1.6e-8
 
 
-def fit_H2(
-    graph_fname,
-    param_fname,
-    data,
-    u=None,
-    max_iter=500,
-    method='NelderMead',
-    verbosity=1,
-    include_H=False,
-    out_fname=None
-):
-    #
-    print(util.get_time(),
-          f'fitting H2 to data for demes {data.pop_ids}')
+def fit_H2(*args, include_H=False, **kwargs):
+    """
+    
+    """
     extra_args = dict(include_H=include_H)
     ret = optimize(
         objective_H2,
-        graph_fname,
-        param_fname,
-        data,
-        u=u,
-        max_iter=max_iter,
-        method=method,
-        verbosity=verbosity,
-        extra_args=extra_args,
-        out_fname=out_fname    
+        *args, 
+        extra_args=extra_args, 
+        **kwargs
     )
     return ret
 
@@ -64,10 +48,12 @@ def objective_H2(
     lower_bounds=None,
     upper_bounds=None,
     constraints=None,
-    verbosity=None,
+    verbose=None,
     extra_args=None
 ):
-    #
+    """
+    
+    """
     global _n_calls
     _n_calls += 1
     if u is None: u = p[-1]
@@ -78,7 +64,7 @@ def objective_H2(
     model = H2stats.from_demes(graph, u=u, template=data)
     include_H = extra_args['include_H']
     ll = compute_ll(model, data, include_H=include_H)
-    if verbosity > 0 and _n_calls % verbosity == 0:
+    if verbose > 0 and _n_calls % verbose == 0:
         print_status(_n_calls, ll, p)
     return -ll
 
@@ -91,13 +77,18 @@ def optimize(
     u=None,
     max_iter=500,
     method='NelderMead',
-    verbosity=1,
+    verbose=1,
     extra_args=None,
-    out_fname=None    
+    out_fname=None,
+    perturb=0
 ):
     """
 
     """
+    print(
+        util.get_time(), f'fitting {objective_func.__name__} ' 
+        f'to data for demes {data.pop_ids}'
+    )
     builder = Inference._get_demes_dict(graph_fname)
     options = Inference._get_params_dict(param_fname)
     pnames, p0, lower_bounds, upper_bounds = \
@@ -110,6 +101,14 @@ def optimize(
         p0 = np.append(p0, _init_u)
         lower_bounds = np.append(lower_bounds, _lower_u)
         upper_bounds = np.append(upper_bounds, _upper_u)
+    if perturb > 0: 
+        p0 = Inference._perturb_params_constrained(
+            p0, 
+            perturb, 
+            lower_bound=lower_bounds, 
+            upper_bound=upper_bounds,
+            cons=constraints
+        )
     print_start(pnames, p0)
 
     args = (
@@ -120,7 +119,7 @@ def optimize(
         lower_bounds,
         upper_bounds,
         constraints,
-        verbosity,
+        verbose,
         extra_args
     )
     
@@ -358,7 +357,9 @@ def print_status(n_calls, ll, p):
 
 
 def check_params(p, lower_bounds, upper_bounds, constraints):
-    #
+    """
+    
+    """
     ret = 0
     if lower_bounds is not None:
         if np.any(p < lower_bounds):

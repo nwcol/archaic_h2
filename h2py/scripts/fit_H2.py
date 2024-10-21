@@ -39,6 +39,22 @@ def get_args():
         type=str,
         required=True
     )
+    # optional args
+    parser.add_argument(
+        '--perturb',
+        type=float,
+        default=0
+    )
+    parser.add_argument(
+        '--verbose',
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        '--method',
+        type=str,
+        default='NealderMead'
+    )
     return parser.parse_args()
 
 
@@ -53,6 +69,8 @@ def main():
         args.param_fname,
         data,
         u=args.u,
+        perturb=args.perturb,
+        verbose=args.verbose,
         out_fname=args.out_fname
     )
     return

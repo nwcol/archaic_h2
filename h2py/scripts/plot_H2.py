@@ -2,9 +2,9 @@
 Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
 """
 import argparse
+import demes
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from matplotlib import cm
 import numpy as np
 from scipy import stats
 
@@ -27,53 +27,65 @@ def plot_H2stats(
     axs,
     color,
     ci,
+    n_axs,
     two_sample=True
 ):
 
+    hlabels = []
+    hxylabels = []
     x = h2stats.bins[:-1] + np.diff(h2stats.bins) / 2
     k = 0
     for i, sample_i in enumerate(h2stats.pop_ids):
         for sample_j in h2stats.pop_ids[i:]:
             if sample_i == sample_j: 
-                stat = h2stats.stats[:-1, k]
-                if h2stats.covs is not None:
-                    std = h2stats.covs[:-1, k, k] ** 0.5 * ci
-                    print(std)
-                    axs[k].errorbar(
-                        x, 
-                        stat, 
-                        yerr=std, 
-                        markerfacecolor='none',
-                        markeredgecolor=color, 
-                        ecolor=color,
-                        fmt="o", 
-                        capsize=0
-                    )
+                label = sample_i  
+                hlabels.append(label[:3])
+                Hax = n_axs - 2
+                hpos = i
+            else:
+                if two_sample:
+                    label = f'{sample_i[:3]},{sample_j[:3]}'
+                    hxylabels.append(label)
+                    Hax = n_axs - 1
+                    hpos = k - i - 1
                 else:
-                    axs[k].plot(x, stat, color=color)
-                axs[k].set_title(sample_i)
+                    continue
+
+            H = h2stats.stats[-1, k]
+            H2 = h2stats.stats[:-1, k]
+
+            if h2stats.covs is not None:
+                stdH2 = h2stats.covs[:-1, k, k] ** 0.5 * ci
+                stdH = h2stats.covs[-1, k, k] ** 0.5 * ci
+                axs[k].errorbar(
+                    x, 
+                    H2, 
+                    yerr=stdH2, 
+                    markerfacecolor='none',
+                    markeredgecolor=color, 
+                    ecolor=color,
+                    fmt="o", 
+                    capsize=0
+                )
+                axs[Hax].errorbar( 
+                    hpos, 
+                    H, 
+                    yerr=stdH, 
+                    markerfacecolor='none',
+                    markeredgecolor=color, 
+                    ecolor=color,
+                    fmt="o", 
+                    capsize=0
+                )
 
             else:
-                if not two_sample: 
-                    continue
-                stat = h2stats.stats[:-1, k]
-                if h2stats.covs is not None:
-                    std = h2stats.covs[:-1, k, k] ** 0.5 * ci
-                    axs[k].errorbar(
-                        x, 
-                        stat, 
-                        yerr=std, 
-                        markerfacecolor='none',
-                        markeredgecolor=color, 
-                        ecolor=color,
-                        fmt="o", 
-                        capsize=0
-                    )
-                else:
-                    axs[k].plot(x, stat, color=color)
-                axs[k].set_title(f'{sample_i[:3]},{sample_j[:3]}')
-            
+                axs[k].plot(x, H2, color=color)
+                axs[Hax].scatter(hpos, H, color=color, marker='x')
+
+            axs[k].set_title(sample_i)
             k += 1
+    axs[n_axs - 2].set_xticks(np.arange(len(hlabels)), labels=hlabels, rotation=90)
+    axs[n_axs - 1].set_xticks(np.arange(len(hxylabels)), labels=hxylabels, rotation=90)
     return
 
 
@@ -105,14 +117,17 @@ def format_ticks(ax, y_ax=True, x_ax=True):
 def main():
 
     args = get_args()
+    if args.u is not None:
+        u = args.u
+    else:
+        u = demes.load(args.graph_fname).metadata['opt_info']['u']
     data = H2stats.from_file(args.data_fname, graph=args.graph_fname)
-    model = H2stats.from_demes(args.graph_fname, args.u, template=data)
+    model = H2stats.from_demes(args.graph_fname, u, template=data)
     bins = data.bins
     ll = inference.compute_ll(model, data, include_H=False)
     
-    conf = 0.975
-    ci = stats.norm().ppf(0.95)
-    print(ci)
+    conf = 0.95
+    ci = stats.norm().ppf(0.5 + conf / 2)
 
     n_cols = 5
     n_axs = data.stats.shape[1] + 2
@@ -129,6 +144,8 @@ def main():
         layout="constrained"
     )
     axs = axs.flat
+    for ax in axs[n_axs:]:
+        ax.remove()
 
     for h2stats, color in zip([model, data], ['blue', 'green']):
         plot_H2stats(
@@ -136,20 +153,22 @@ def main():
             axs,
             color,
             ci,
+            n_axs,
             two_sample=True
         )
-
-    for ax in axs[n_axs:]:
-        ax.remove()
 
     for i, ax in enumerate(axs):
         if ax is None:
             continue
-        ax.set_xscale('log')
-        ax.set_xlim(max(1e-8, 0.5 * bins[0]), 2 * bins[-1])
-        ax.set_xlabel('$r$')
-        ax.set_ylabel('$H_2$')
-        format_ticks(ax)
+        if i in [n_axs - 1, n_axs - 2]: 
+            ax.set_ylabel('$H$')
+            format_ticks(ax, x_ax=False)
+        else:
+            ax.set_xlabel('$r$')
+            ax.set_ylabel('$H_2$')
+            ax.set_xscale('log')
+            ax.set_xlim(max(1e-8, 0.5 * bins[0]), 2 * bins[-1])
+            format_ticks(ax)
 
     plt.savefig(args.out_fname, dpi=244, bbox_inches='tight')
     return 
