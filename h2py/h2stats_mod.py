@@ -172,7 +172,7 @@ class H2stats:
     
     def __repr__(self):
         """
-        
+        Print a string representation of the instance.
         """
         num_pops = len(self.pop_ids)
         num_bins = len(self.stats) - 1
@@ -181,7 +181,7 @@ class H2stats:
 
     def subset(self, pop_ids=None, min_bin=None, max_bin=None):
         """
-        
+        Subset the instance by population ids or bin indices.
         """
         bins, stats, covs = self.bins, self.stats, self.covs
         if pop_ids is not None:

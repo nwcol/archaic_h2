@@ -2,21 +2,36 @@
 Plot an arbitrary number of H, H2 expectations alongside 0 or 1 empirical vals.
 """
 import argparse
+from bokeh.palettes import Category10
 import demes
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
 from scipy import stats
+import os
 
-from h2py import inference
+from h2py import h2stats_mod, inference
 from h2py.h2stats_mod import H2stats
+
+
+colors = Category10[10]
 
 
 def get_args():
     # get args
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data_fname', required=True)
-    parser.add_argument('-g', '--graph_fname', required=True)
+    parser.add_argument(
+        '-d', '--data_fnames', 
+        nargs='*',
+        default=[],
+        type=str
+    )
+    parser.add_argument(
+        '-g', '--graph_fnames', 
+        nargs='*',
+        default=[],
+        type=str
+    )
     parser.add_argument('-o', '--out_fname', required=True)
     parser.add_argument('-u', '--u', type=float, default=None)
     return parser.parse_args()
@@ -57,7 +72,7 @@ def plot_H2stats(
             if h2stats.covs is not None:
                 stdH2 = h2stats.covs[:-1, k, k] ** 0.5 * ci
                 stdH = h2stats.covs[-1, k, k] ** 0.5 * ci
-                axs[k].errorbar(
+                l,*_ = axs[k].errorbar(
                     x, 
                     H2, 
                     yerr=stdH2, 
@@ -79,14 +94,14 @@ def plot_H2stats(
                 )
 
             else:
-                axs[k].plot(x, H2, color=color)
+                l, = axs[k].plot(x, H2, color=color)
                 axs[Hax].scatter(hpos, H, color=color, marker='x')
 
-            axs[k].set_title(sample_i)
+            axs[k].set_title(label)
             k += 1
     axs[n_axs - 2].set_xticks(np.arange(len(hlabels)), labels=hlabels, rotation=90)
     axs[n_axs - 1].set_xticks(np.arange(len(hxylabels)), labels=hxylabels, rotation=90)
-    return
+    return l
 
 
 def format_ticks(ax, y_ax=True, x_ax=True):
@@ -120,17 +135,39 @@ def main():
     if args.u is not None:
         u = args.u
     else:
-        u = demes.load(args.graph_fname).metadata['opt_info']['u']
-    data = H2stats.from_file(args.data_fname, graph=args.graph_fname)
-    model = H2stats.from_demes(args.graph_fname, u, template=data)
-    bins = data.bins
-    ll = inference.compute_ll(model, data, include_H=False)
+        opt_u = None
+        for gf in args.graph_fnames:
+            g = demes.load(gf)
+            if 'opt_info' in g.metadata:
+                opt_u = g.metadata['opt_info']['u']
+        if opt_u is None:
+            raise ValueError('please provide a u parameter')
+        else:
+            u = opt_u
+
+    datas = [H2stats.from_file(f, graph=args.graph_fnames[0]) 
+             for f in args.data_fnames]
     
+    if len(datas) > 0:
+        template = datas[0]
+        n_stats = template.stats.shape[1]
+        bins = template.bins
+        models = [H2stats.from_demes(g, u, template=template) 
+                for g in args.graph_fnames]
+        lls = [inference.compute_ll(m, template, include_H=False)
+               for m in models]
+        
+    else:
+        bins = h2stats_mod._default_bins
+        models = [H2stats.from_demes(g, u) for g in args.graph_fnames]
+        n_stats = models[0].stats.shape[1]
+        lls = None
+
     conf = 0.95
     ci = stats.norm().ppf(0.5 + conf / 2)
 
     n_cols = 5
-    n_axs = data.stats.shape[1] + 2
+    n_axs = n_stats + 2
 
     n_rows = int(np.ceil(n_axs / n_cols))
     if n_axs < n_cols:
@@ -147,8 +184,9 @@ def main():
     for ax in axs[n_axs:]:
         ax.remove()
 
-    for h2stats, color in zip([model, data], ['blue', 'green']):
-        plot_H2stats(
+    lines = []
+    for h2stats, color in zip(models + datas, colors):
+        l = plot_H2stats(
             h2stats,
             axs,
             color,
@@ -156,6 +194,25 @@ def main():
             n_axs,
             two_sample=True
         )
+        lines.append(l)
+    
+    if lls is not None:
+        glabels = [os.path.basename(args.graph_fnames[i]) + 
+                   f', ll={np.round(lls[i], 2)}'
+                   for i in range(len(args.graph_fnames))]
+    else:
+        glabels = [os.path.basename(g) for g in args.graph_fnames]
+    dlabels = [os.path.basename(d) for d in args.data_fnames]
+    labels = glabels + dlabels
+    y_anchor = -0.2 / n_rows
+    plt.figlegend(
+        lines, 
+        labels, 
+        framealpha=0,
+        loc='lower center',
+        bbox_to_anchor=(0.5, y_anchor),
+        ncols=2
+    )
 
     for i, ax in enumerate(axs):
         if ax is None:

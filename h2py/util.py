@@ -79,6 +79,71 @@ def collapse_regions(elements):
     return mask_to_regions(regions_to_mask(elements))
 
 
+def read_bedgraph(fname, sep=','):
+    """
+    From a bedgraph-format file, read and return chromosome number(s), an 
+    array of genomic regions and a dictionary of data columns. 
+
+    If the file has one unique chromosome number, returns it as a string of
+    the form `chr00`; if there are several, returns an array of string
+    chromosome numbers of this form for each row.
+    Possible file extensions include but are not limited to .bedgraph, .csv,
+    and .tsv, with column seperator determined by the `sep` argument.
+    """
+    open_func = gzip.open if fname.endswith('.gz') else open
+    with open_func(fname, 'rb') as file:
+        header_line = file.readline().decode().strip().split(sep)
+    # check for proper header format
+    assert header_line[0] in ['chrom', '#chrom']
+    assert header_line[1] in ['chromStart', 'start']
+    assert header_line[2] in ['chromEnd', 'end']
+    fields = header_line[3:]
+    # handle the return of the chromosome number(s)
+    chrom_nums = np.loadtxt(
+        fname, usecols=0, dtype=str, skiprows=1, delimiter=sep
+    )
+    if len(set(chrom_nums)) == 1:
+        ret_chrom = chrom_nums[0]
+    else:
+        # return the whole vector if there are >1 unique chromosome
+        ret_chrom = chrom_nums
+    windows = np.loadtxt(
+        fname, usecols=(1, 2), dtype=int, skiprows=1, delimiter=sep
+    )
+    cols_to_load = tuple(range(3, len(header_line)))
+    arr = np.loadtxt(
+        fname,
+        usecols=cols_to_load,
+        dtype=float,
+        skiprows=1,
+        unpack=True,
+        delimiter=sep
+    )
+    dataT = [arr] if arr.ndim == 1 else [col for col in arr]
+    data = dict(zip(fields, dataT))
+    return ret_chrom, windows, data
+
+
+def write_bedgraph(fname, chrom_num, regions, data, sep=','):
+    """
+    Write a .bedgraph-format file from an array of regions/windows and a 
+    dictionary of data columns.
+    """
+    for field in data:
+        if len(data[field]) != len(regions):
+            raise ValueError(f'data field {data} mismatches region length!')
+    open_func = gzip.open if fname.endswith('.gz') else open
+    fields = list(data.keys())
+    header = sep.join(['#chrom', 'chromStart', 'chromEnd'] + fields) + '\n'
+    with open_func(fname, 'wb') as file:
+        file.write(header.encode())
+        for i, (start, end) in enumerate(regions):
+            ldata = [str(data[field][i]) for field in fields]
+            line = sep.join([chrom_num, str(start), str(end)] + ldata) + '\n'
+            file.write(line.encode())
+    return
+
+
 """
 Recombination maps
 """
@@ -178,6 +243,58 @@ def read_genotypes(vcf_fname, bed_fname=None, L=None):
     return sample_ids, positions, genotype_arr
 
 
+def read_vcf_positions(fname):
+    # read and return the vector of positions in a .vcf.gz file
+    pos_idx = 1
+    positions = []
+    if ".gz" in fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    with open_fxn(fname, "rb") as file:
+        for line_b in file:
+            if line_b.startswith(b'#'):
+                continue
+            fields = line_b.strip(b'\n').split(b'\t')
+            positions.append(int(fields[pos_idx]))
+    return np.array(positions)
+
+
+"""
+.fa files
+"""
+
+
+def get_fa_allele_mask(genotypes):
+    # bad name...
+    indicator = genotypes != 'N'
+    regions = get_mask_from_bool(indicator)
+    return regions
+
+
+def read_fasta_file(fname, map_symbols=True):
+    # expects one sequence per file. returns an array of bytes
+    if 'gz' in fname:
+        open_fxn = gzip.open
+    else:
+        open_fxn = open
+    lines = []
+    header = None
+    with open_fxn(fname, 'rb') as file:
+        for i, line in enumerate(file):
+            line = line.rstrip(b'\n')
+            if b'>' in line:
+                header = line
+            else:
+                lines.append(line)
+    alleles = np.array(list(b''.join(lines).decode()))
+    if map_symbols:
+        mapping = {'.': 'N', '-': 'N', 'a': 'A', 'g': 'G', 't': 'T', 'c': 'C'}
+        for symbol in mapping:
+            alleles[alleles == symbol] = mapping[symbol]
+    return alleles, header
+
+
 """
 Recombination map arithmetic
 """
@@ -205,92 +322,3 @@ printouts
 def get_time():
     # return a string giving the date and time
     return "[" + datetime.strftime(datetime.now(), "%m-%d-%y %H:%M:%S") + "]"
-
-
-
-
-#####
-"""
-reading and writing data to file
-"""
-
-
-def read_bedgraph(fname, sep='\t', fields=None):
-    # read a .bedgraph
-    if fname.endswith('.gz'):
-        open_func = gzip.open
-    else:
-        open_func = open
-    with open_func(fname, 'rb') as file:
-        header_line = file.readline().decode()
-
-    header = header_line.strip('\n').split(sep)
-    data_names = header[3:]
-    cols = tuple(range(3, len(header)))
-
-    regions = np.loadtxt(
-        fname,
-        skiprows=1,
-        dtype=int,
-        usecols=(1, 2)
-    )
-    data_cols = np.loadtxt(
-        fname,
-        skiprows=1,
-        usecols=cols,
-        dtype=float,
-        unpack=True,
-    )
-    data = dict(zip(data_names, data_cols))
-    # add field filter
-    return regions, data
-
-
-def read_fasta_file(fname, map_symbols=True):
-    # expects one sequence per file. returns an array of bytes
-    if 'gz' in fname:
-        open_fxn = gzip.open
-    else:
-        open_fxn = open
-    lines = []
-    header = None
-    with open_fxn(fname, 'rb') as file:
-        for i, line in enumerate(file):
-            line = line.rstrip(b'\n')
-            if b'>' in line:
-                header = line
-            else:
-                lines.append(line)
-    alleles = np.array(list(b''.join(lines).decode()))
-    if map_symbols:
-        mapping = {'.': 'N', '-': 'N', 'a': 'A', 'g': 'G', 't': 'T', 'c': 'C'}
-        for symbol in mapping:
-            alleles[alleles == symbol] = mapping[symbol]
-    return alleles, header
-
-
-def get_fa_allele_mask(genotypes):
-    # bad name...
-    indicator = genotypes != 'N'
-    regions = get_mask_from_bool(indicator)
-    return regions
-
-
-
-
-
-def read_vcf_positions(fname):
-    # read and return the vector of positions in a .vcf.gz file
-    pos_idx = 1
-    positions = []
-    if ".gz" in fname:
-        open_fxn = gzip.open
-    else:
-        open_fxn = open
-    with open_fxn(fname, "rb") as file:
-        for line_b in file:
-            if line_b.startswith(b'#'):
-                continue
-            fields = line_b.strip(b'\n').split(b'\t')
-            positions.append(int(fields[pos_idx]))
-    return np.array(positions)

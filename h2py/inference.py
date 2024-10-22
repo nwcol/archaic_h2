@@ -27,7 +27,7 @@ _upper_u = 1.6e-8
 
 def fit_H2(*args, include_H=False, **kwargs):
     """
-    
+    Fit 
     """
     extra_args = dict(include_H=include_H)
     ret = optimize(
@@ -52,7 +52,8 @@ def objective_H2(
     extra_args=None
 ):
     """
-    
+    Evalute the log likelihood of parameters `p` against empirical H2
+    statistics.
     """
     global _n_calls
     _n_calls += 1
@@ -83,7 +84,8 @@ def optimize(
     perturb=0
 ):
     """
-
+    Fit a graph defined in `graph_fname` and parameterized by `param_fname`
+    to `data` using `objective_func` using a scipy optimization routine.
     """
     print(
         util.get_time(), f'fitting {objective_func.__name__} ' 
@@ -101,6 +103,7 @@ def optimize(
         p0 = np.append(p0, _init_u)
         lower_bounds = np.append(lower_bounds, _lower_u)
         upper_bounds = np.append(upper_bounds, _upper_u)
+        
     if perturb > 0: 
         p0 = Inference._perturb_params_constrained(
             p0, 
@@ -213,115 +216,6 @@ def optimize(
     else: return graph
 
 
-def _optimize(
-    object_func,
-    p0,
-    args,
-    u=None,
-    builder=None,
-    options=None,
-    method='NelderMead',
-    max_iter=1000,
-    out_fname=None,
-    bounds=None,
-    fit_u=False
-):
-    """
-
-    """
-    methods = ['NelderMead', 'Powell', 'BFGS', 'LBFGSB']
-    if method not in methods:
-        raise ValueError(f'method: {method} is not in {methods}')
-    
-    if method == 'NelderMead':
-        opt = scipy.optimize.fmin(
-            object_func,
-            p0,
-            args=args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        p = opt[0]
-        fopt, num_iter, func_calls, flag = opt[1:5]
-
-    elif method == 'BFGS':
-        opt = scipy.optimize.fmin_bfgs(
-            object_func,
-            p0,
-            args=args,
-            maxiter=max_iter,
-            full_output=True
-        )
-        p = opt[0]
-        fopt, _, __, func_calls, grad_calls, flag = opt[1:7]
-        # is it correct to equate these?
-        num_iter = grad_calls
-
-    elif method == 'LBFGSB':
-        lower, upper = bounds
-        _bounds = list(zip(lower, upper))
-        opt = scipy.optimize.fmin_l_bfgs_b(
-            object_func,
-            p0,
-            args=args,
-            maxiter=max_iter,
-            bounds=_bounds,
-            epsilon=1e-2,
-            pgtol=1e-5,
-            approx_grad=True
-        )
-        p, fopt, d = opt
-        num_iter = d['nit']
-        func_calls = d['funcalls']
-        flag = d['warnflag']
-
-    elif method == 'Powell':
-        opt = scipy.optimize.fmin_powell(
-            object_func,
-            p0,
-            args=args,
-            maxiter=max_iter,
-            full_output=True,
-        )
-        p = opt[0]
-        fopt, _, num_iter, func_calls, flag = opt[1:6]
-
-    else:
-        return 1
-
-    global _n_calls
-    print_status(_n_calls, 'fit p:', p)
-
-    if fit_u:
-        info_u = p[-1]
-        p = p[:-1]
-    else:
-        info_u = u
-
-    info = dict(
-        method=method,
-        objective_func=object_func.__name__,
-        fopt=-fopt,
-        max_iter=max_iter,
-        num_iter=num_iter,
-        func_calls=func_calls,
-        flag=flag,
-        u=info_u
-    )
-    print('\n'.join([f'{key}: {info[key]}' for key in info]))
-
-    if builder is None or options is None:
-        return p, info
-    builder = Inference._update_builder(builder, options, p)
-    graph = demes.Graph.fromdict(builder)
-    graph.metadata['opt_info'] = info
-
-    if out_fname is not None:
-        demes.dump(graph, out_fname)
-    else:
-        return graph
-
-
 def print_start(pnames, p0):
     """
     Print out parameter names and initial values.
@@ -358,18 +252,16 @@ def print_status(n_calls, ll, p):
 
 def check_params(p, lower_bounds, upper_bounds, constraints):
     """
-    
+    Check whether any parameters violate bounds or constraints, returning 1
+    if they do and 0 otherwise.
     """
     ret = 0
-    if lower_bounds is not None:
-        if np.any(p < lower_bounds):
-            ret = 1
-    elif upper_bounds is not None:
-        if np.any(p > upper_bounds):
-            ret = 1
-    elif constraints is not None:
-        if np.any(constraints(p) <= 0):
-            ret = 1
+    if lower_bounds is not None and np.any(p < lower_bounds):
+        ret = 1
+    elif upper_bounds is not None and np.any(p > upper_bounds):
+        ret = 1
+    elif constraints is not None and np.any(constraints(p) <= 0):
+        ret = 1
     return ret
 
 
@@ -458,11 +350,12 @@ def get_uncerts(
     delta=0.01,
     method='GIM'
 ):
-    #
+    """
+    
+    """
     builder = Inference._get_demes_dict(graph_fname)
     options = Inference._get_params_dict(options_fname)
-    pnames, p0, lower_bound, upper_bound = \
-        Inference._set_up_params_and_bounds(options, builder)
+    pnames, p0, _, __ = Inference._set_up_params_and_bounds(options, builder)
 
     if u is None:
         # my temporary means of getting mutation rate into p0
@@ -530,8 +423,8 @@ def get_godambe_matrix(
     just_H=False
 ):
     """
+    
     """
-
     def func(p, data):
         # compute log-likelihood given parameters, data
         # cache check
@@ -561,7 +454,9 @@ def get_godambe_matrix(
 
 
 def get_hessian(ll_func, p0, data, delta):
-    #
+    """
+    
+    """
     f0 = ll_func(p0, data)
     hs = delta * p0
 
@@ -605,8 +500,9 @@ def get_hessian(ll_func, p0, data, delta):
 
 
 def get_gradient(func, p0, delta, args):
-    #
-
+    """
+    
+    """
     # should be changed to match moments version
     hs = delta * p0
 

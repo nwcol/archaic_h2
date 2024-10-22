@@ -1,42 +1,20 @@
 
-
-
-
-
-
-
-#####
-
-"""
-Various plotting functions. mostly called by console scripts
-"""
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.ticker as mticker
-from matplotlib.lines import Line2D
-import moments
 import numpy as np
 import scipy
 
-from archaic import util, parsing
 
 
-"""
-Useful constants
-"""
 
 
-_line_styles = [
-    "solid",
-    "dashed",
-    "dotted",
-    "dashdot",
-    (0, (1, 1)),
-    (0, (2, 2)),
-    (0, (1, 2, 2, 2)),
-    (0, (3, 4, 2, 4))
-]
+
+
+
+
+
 
 
 """

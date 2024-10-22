@@ -10,7 +10,7 @@ error = out/job_$(Cluster)_$(Process).err
 output = out/job_$(Cluster)_$(Process).out
 
 requirements = (Target.HasCHTCStaging == true)
-container_image = file:///staging/nwcollier/archaic-container.sif
+container_image = file:///staging/nwcollier/h2-container.sif
 
 executable = fit_H2.sh
 
@@ -21,7 +21,7 @@ arguments = \
  -o $(label)_$(Cluster)-$(Process) \
  -u 1.113e-8 \
  --perturb 0.2 \
- --max_iter 500 \
+ --max_iter 1000 \
  --method NelderMead \
  --verbose 10 \
  --include_H 0 \
