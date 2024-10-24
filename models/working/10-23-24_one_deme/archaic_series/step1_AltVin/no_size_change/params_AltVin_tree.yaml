@@ -1,0 +1,47 @@
+parameters:
+- name: NND
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: start_size
+- name: TN
+  lower_bound: 110000
+  upper_bound: 750000
+  values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: end_time
+- name: NN
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: start_size
+- name: NA
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes:
+        Altai:
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: mAV
+  lower_bound: 1e-7
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        0: rate

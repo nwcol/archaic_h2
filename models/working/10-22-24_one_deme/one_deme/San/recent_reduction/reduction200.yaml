@@ -1,0 +1,25 @@
+description: here stem join time was upper-bounded by 200000 and was fit to approximately this value.
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.2196904709325929,
+    max_iter: 100, num_iter: 36, func_calls: 7326, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1383835.8757617944, start_size: 11194.08726980737}
+- name: Stem1S
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 199999.99999999994, start_size: 29999.953155788626}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 199999.99999999994, start_size: 24797.766973828497}
+- name: KhomaniSan
+  start_time: 199999.99999999994
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.8839536028216042, 0.11604639717839582]
+  epochs:
+  - {end_time: 200, start_size: 34673.39648828321}
+  - {end_time: 0, start_size: 200}

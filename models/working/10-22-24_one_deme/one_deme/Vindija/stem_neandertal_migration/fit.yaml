@@ -1,0 +1,19 @@
+description: adds more epochs to allow for Ne contraction
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2.0874682870958305,
+    max_iter: 500, num_iter: 39, func_calls: 4948, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Neandertal
+  epochs:
+  - {end_time: 428439.1015626324, start_size: 12407.702259920745}
+  - {end_time: 55000, start_size: 3111.2917196903986}
+- name: Vindija
+  start_time: 428439.10156263236
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 55000, start_size: 1584.649618879131}
+migrations:
+- demes: [Vindija, Neandertal]
+  rate: 4.4974109129330105e-05

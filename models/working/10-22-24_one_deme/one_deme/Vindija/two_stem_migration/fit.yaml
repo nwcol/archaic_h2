@@ -1,0 +1,26 @@
+description: I don't fit ancestral stem population sizes here- ID issues!
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2.1042826099072824,
+    max_iter: 500, num_iter: 46, func_calls: 7061, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 875027.0234463579, start_size: 8826.46753038098}
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 700666.2097213459, start_size: 6000}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 700666.2097213459, start_size: 8000}
+- name: Vindija
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 157609.04358874742, start_size: 29998.281058723827}
+  - {end_time: 55000, start_size: 1214.2823206078074}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 1.0000000004058115e-08

@@ -1,0 +1,28 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 10500
+    end_time: 800000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - start_size: 10000
+    end_time: 700000
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - start_size: 10000
+    end_time: 100000
+  - start_size: 1000
+    end_time: 55000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3000
+    end_time: 80000
+  
+migrations:
+- demes: [Denisova, Vindija]
+  rate: 2e-6

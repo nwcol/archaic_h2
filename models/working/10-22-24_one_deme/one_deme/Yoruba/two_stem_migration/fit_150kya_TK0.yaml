@@ -1,0 +1,27 @@
+description: uses population labels from Ragsdale et al 2022
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.4935906476520666,
+    max_iter: 500, num_iter: 31, func_calls: 2853, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1733047.151315107, start_size: 8194.751025984971}
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 220951.13019729784, start_size: 12056.844594120597}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 220951.13019729784, start_size: 17956.43340006077}
+- name: Yoruba
+  start_time: 220951.13019729784
+  ancestors: [Stem2, Stem1E]
+  proportions: [0.3314749236204246, 0.6685250763795754]
+  epochs:
+  - {end_time: 0, start_size: 31467.01242600825}
+migrations:
+- demes: [Stem1E, Stem2]
+  rate: 9.592564052567261e-06

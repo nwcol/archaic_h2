@@ -1,0 +1,29 @@
+description: fix TVindija at 800kya
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -219.3996047346629,
+    max_iter: 500, num_iter: 500, func_calls: 765, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1136087.0861578323, start_size: 13087.47556792582}
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 15680.37408564808, start_size: 12253.264851860607}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 15680.37408564808, start_size: 29998.801785039934}
+- name: Yoruba
+  start_time: 15680.37408564808
+  ancestors: [Stem2, Stem1E]
+  proportions: [0.9395146120885642, 0.06048538791143576]
+  epochs:
+  - {end_time: 0, start_size: 12530.505705538639}
+- name: Vindija
+  start_time: 800000
+  ancestors: [Stem1E]
+  epochs:
+  - {end_time: 55000, start_size: 4126.485634114979}

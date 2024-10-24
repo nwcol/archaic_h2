@@ -1,0 +1,110 @@
+# 14 parameters
+parameters:
+- name: TSTEMS 
+  lower_bound: 800000
+  upper_bound: 2000000
+  values:
+  - demes:
+      Anc: 
+        epochs: 
+          0: end_time
+- name: TNMH
+  lower_bound: 400000
+  upper_bound: 1000000
+  values:
+  - demes:
+      Vindija: start_time
+      Stem1:
+        epochs:
+          0: end_time
+- name: TK
+  lower_bound: 50000
+  upper_bound: 150000
+  values:
+  - demes:  
+      KhomaniSan: start_time
+- name: TY
+  lower_bound: 50000
+  upper_bound: 150000
+  values:
+  - demes:  
+      Yoruba: start_time
+- name: NA 
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+  - demes:
+      Anc:
+        epochs: 
+          0: start_size
+- name: N2
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+  - demes:
+      Stem2:
+        epochs: 
+          0: start_size
+- name: N11
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+  - demes:
+      Stem1:
+        epochs: 
+          0: start_size
+- name: N12
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+  - demes:
+      Stem1:
+        epochs: 
+          1: start_size
+- name: NK
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+  - demes:
+      KhomaniSan:
+        epochs: 
+          0: start_size
+- name: NY
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+  - demes:
+      Yoruba:
+        epochs: 
+          0: start_size
+- name: NV
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+  - demes:
+      Vindija:
+        epochs: 
+          0: start_size
+- name: mKY
+  lower_bound: 1e-7
+  upper_bound: 1e-4
+  values:
+  - migrations:
+      0: rate
+- name: p2K
+  lower_bound: 0.01
+  upper_bound: 0.80
+  values:
+  - demes:
+      KhomaniSan: 
+        proportions: 0
+- name: p2Y  
+  lower_bound: 0.01
+  upper_bound: 0.80
+  values:
+  - demes:
+      Yoruba: 
+        proportions: 0
+constraints:
+- params: [TSTEMS, TNMH]
+  constraint: greater_than

@@ -1,0 +1,22 @@
+time_units: years
+generation_time: 29
+description: a cleaner model with high migration between Neandertals and Denisovans
+demes:  
+- name: Anc
+  epochs:
+  - end_time: 700000
+    start_size: 12000
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - end_time: 80000
+    start_size: 5000
+- name: Denisova
+  ancestors: [Anc]
+  epochs:
+  - end_time: 80000
+    start_size: 5000
+
+migrations:
+- demes: [Neandertal, Denisova]
+  rate: 4e-4

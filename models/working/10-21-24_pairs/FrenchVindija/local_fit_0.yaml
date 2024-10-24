@@ -1,0 +1,40 @@
+description: A one-stem model with relatively intricate representation of Neandertal
+  introgressions
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -117.33798359161938,
+    max_iter: 500, num_iter: 500, func_calls: 692, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 799885.2106535695, start_size: 18664.92114907822}
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 310936.5810050223, start_size: 9683.825779349132}
+  - {end_time: 55000, start_size: 1889.0332732659056}
+- name: NI
+  start_time: 76651.00603586083
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 40000, start_size: 1077.5983562011043}
+- name: French
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 68294.60721532314, start_size: 23675.045700330116}
+  - {end_time: 0, start_size: 3759.3005345322963}
+- name: HI
+  start_time: 171979.4253404945
+  ancestors: [French]
+  epochs:
+  - {end_time: 100000, start_size: 4595.4694528486125}
+pulses:
+- sources: [HI]
+  dest: Vindija
+  time: 154251.17521270883
+  proportions: [0.03889283202193915]
+- sources: [NI]
+  dest: French
+  time: 68487.26876143945
+  proportions: [0.0165141420418679]

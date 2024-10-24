@@ -1,0 +1,17 @@
+time_units: years
+generation_time: 29
+demes:  
+- name: Anc
+  epochs:
+  - end_time: 700000
+    start_size: 12000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - end_time: 650000
+    start_size: 10000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - end_time: 80000
+    start_size: 5000

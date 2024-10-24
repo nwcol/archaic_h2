@@ -1,0 +1,9 @@
+parameters:
+- name: NF
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size

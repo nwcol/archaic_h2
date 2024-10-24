@@ -1,0 +1,45 @@
+parameters:
+- name: NA
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: TA
+  lower_bound: 500000
+  upper_bound: 900000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+- name: NND
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: start_size
+- name: TD
+  lower_bound: 100000
+  upper_bound: 900000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: end_time
+- name: ND
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+
+constraints:
+- params: [TA, TD]
+  constraint: greater_than

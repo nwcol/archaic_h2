@@ -1,0 +1,9 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -71.79906130951235,
+    max_iter: 500, num_iter: 31, func_calls: 62, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: French
+  epochs:
+  - {end_time: 0, start_size: 17176.610326766968}

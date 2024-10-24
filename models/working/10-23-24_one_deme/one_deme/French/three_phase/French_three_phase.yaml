@@ -1,0 +1,12 @@
+time_units: years
+generation_time: 29
+description: allows two size changes to represent OOA event
+demes:
+- name: French
+  epochs:
+  - start_size: 20000
+    end_time: 60000
+  - start_size: 1000
+    end_time: 40000
+  - start_size: 10000
+    end_time: 0

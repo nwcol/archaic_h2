@@ -1,0 +1,31 @@
+description: probably poorly constrained for one deme
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.0827981895494805,
+    max_iter: 100, num_iter: 17, func_calls: 2178, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1632980.3044704509, start_size: 9883.616472516094}
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 599677.0586904944, start_size: 10391.139728496952}
+- name: Stem1S
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 199999.9999998635, start_size: 12494.210974146497}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 199999.9999998635, start_size: 22562.500429381213}
+- name: KhomaniSan
+  start_time: 199999.9999998635
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.46878419756625855, 0.5312158024337414]
+  epochs:
+  - {end_time: 0, start_size: 32373.01277076168}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 0.0002848160374478314

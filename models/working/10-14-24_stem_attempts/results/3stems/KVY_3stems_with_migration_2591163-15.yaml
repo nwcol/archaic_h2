@@ -1,0 +1,54 @@
+description: Structured model of Vindija Neandertal, Yoruba, Khomani-San lineages
+  without stem migration
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -668.5236220254011,
+    max_iter: 200, n_iter: 61, func_calls: 22650, flag: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  description: Ancestral population
+  epochs:
+  - {end_time: 1509630.9512976175, start_size: 17048.547658360745}
+- name: Stem1
+  description: Major ancestor of modern human lineages and Neandertals
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 810316.4553222498, start_size: 19999.999999999975}
+- name: Stem1E
+  description: Major contributor to East/West African lineages (Yoruba)
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 10000, start_size: 6661.489202488718}
+- name: Stem1S
+  description: Major contributor to South African lineages (Khomani San)
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 10000, start_size: 7265.822477113646}
+- name: Stem2
+  description: Minor ancestor of modern human lineages
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 10000, start_size: 3817.8388763514226}
+- name: Vindija
+  description: Deme leading to the Vindija Neandertal
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 50000, start_size: 3910.8830276152753}
+- name: KhomaniSan
+  start_time: 149999.9999999809
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.46502299757622556, 0.5349770024237744]
+  epochs:
+  - {end_time: 0, start_size: 39999.99999999399}
+- name: Yoruba
+  start_time: 149999.9999999172
+  ancestors: [Stem2, Stem1E]
+  proportions: [0.3978625122960171, 0.6021374877039829]
+  epochs:
+  - {end_time: 0, start_size: 39999.99999999999}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 0.00010226565857627434
+- demes: [KhomaniSan, Yoruba]
+  rate: 6.236139367915749e-05

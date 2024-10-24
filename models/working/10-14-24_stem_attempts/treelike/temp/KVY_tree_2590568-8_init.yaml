@@ -1,0 +1,29 @@
+description: Tree-like model of Vindija Neandertal, Yoruba, Khomani-San lineages
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  description: Ancestral population
+  epochs:
+  - {end_time: 911988.7681322105, start_size: 16717.544722930226}
+- name: MH
+  description: Lineage ancestral to modern humans
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 258786.96269635428, start_size: 26521.967442478348}
+- name: Vindija
+  description: Deme leading to the Vindija Neandertal
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 50000, start_size: 2937.384491730664}
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 14866.174151848094}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 23382.92503841576}
+migrations:
+- demes: [KhomaniSan, Yoruba]
+  rate: 7.344639796782965e-07

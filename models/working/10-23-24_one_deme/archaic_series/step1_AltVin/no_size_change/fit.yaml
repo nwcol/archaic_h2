@@ -1,0 +1,28 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -25.451302318848924,
+    max_iter: 500, num_iter: 500, func_calls: 787, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 800000, start_size: 12000}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 750000, start_size: 2226.133817425556}
+- name: Neandertal
+  ancestors: [ND]
+  epochs:
+  - {end_time: 266095.424777864, start_size: 1575.9467059978824}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 110000, start_size: 862.5704708318312}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 1836.0573502400052}
+migrations:
+- demes: [Altai, Vindija]
+  rate: 0.00036551301006694796

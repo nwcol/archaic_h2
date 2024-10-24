@@ -1,0 +1,7 @@
+time_units: years
+generation_time: 29
+demes:
+- name: French
+  epochs:
+  - start_size: 6000
+    end_time: 0

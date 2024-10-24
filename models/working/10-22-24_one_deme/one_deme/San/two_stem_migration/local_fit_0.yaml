@@ -1,0 +1,27 @@
+description: in this fit I let the formation time for KhomaniSan go to a minimum of 1000 and the fit value was quite recent
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.035705161409485,
+    max_iter: 100, num_iter: 36, func_calls: 3588, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1667076.7781006207, start_size: 9423.451450712988}
+- name: Stem1S
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 7002.715786817901, start_size: 11267.321462841723}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 7002.715786817901, start_size: 24311.332148902282}
+- name: KhomaniSan
+  start_time: 7002.715786817901
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.7078377293343021, 0.2921622706656979]
+  epochs:
+  - {end_time: 0, start_size: 9389.304225279056}
+migrations:
+- demes: [Stem1S, Stem2]
+  rate: 0.00017661870162085576

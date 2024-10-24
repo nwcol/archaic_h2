@@ -1,0 +1,7 @@
+time_units: years
+generation_time: 29
+demes:
+- name: KhomaniSan
+  epochs:
+  - end_time: 0
+    start_size: 10000

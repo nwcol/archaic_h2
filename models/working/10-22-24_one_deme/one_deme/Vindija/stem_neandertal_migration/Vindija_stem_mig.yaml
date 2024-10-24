@@ -1,0 +1,20 @@
+time_units: years
+generation_time: 29
+description: adds more epochs to allow for Ne contraction
+demes: 
+- name: Neandertal
+  epochs:
+  - end_time: 600000
+    start_size: 12000
+  - end_time: 55000
+    start_size: 10000
+- name: Vindija
+  ancestors: [Neandertal]
+  start_time: 200000
+  epochs:
+  - end_time: 55000
+    start_size: 5000
+
+migrations:
+- demes: [Vindija, Neandertal]
+  rate: 1e-4

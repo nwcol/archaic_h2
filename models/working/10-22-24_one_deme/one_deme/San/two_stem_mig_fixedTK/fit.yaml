@@ -1,0 +1,27 @@
+description: fixes TK at the Nama join time from Ragsdale et al 2022.
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.1044796082694746,
+    max_iter: 500, num_iter: 6, func_calls: 510, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1689314.5698039748, start_size: 9047.781120284797}
+- name: Stem1S
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 120000, start_size: 12070.880452342875}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 120000, start_size: 23680.630394056483}
+- name: KhomaniSan
+  start_time: 120000
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.3676202281922525, 0.6323797718077475]
+  epochs:
+  - {end_time: 0, start_size: 30686.04544001739}
+migrations:
+- demes: [Stem1S, Stem2]
+  rate: 0.00027237596608250446

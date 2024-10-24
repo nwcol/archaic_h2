@@ -1,0 +1,12 @@
+description: adds more epochs to allow for Ne contraction
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2.461260109266668,
+    max_iter: 500, num_iter: 23, func_calls: 1127, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Vindija
+  epochs:
+  - {end_time: 600000, start_size: 10310.183861789086}
+  - {end_time: 101900.81457347887, start_size: 9432.506483671597}
+  - {end_time: 55000, start_size: 802.5697626972706}

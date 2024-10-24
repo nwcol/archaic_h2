@@ -1,0 +1,11 @@
+description: allows a single size change to represent OOA event
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -64.31665199447967,
+    max_iter: 500, num_iter: 80, func_calls: 161, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: French
+  epochs:
+  - {end_time: 60000, start_size: 17952.940209884044}
+  - {end_time: 0, start_size: 8941.697658903802}

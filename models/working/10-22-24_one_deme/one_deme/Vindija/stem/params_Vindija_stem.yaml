@@ -1,0 +1,33 @@
+parameters:
+- name: NA
+  lower_bound: 5000
+  upper_bound: 20000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            1: start_size
+- name: TV
+  lower_bound: 60000
+  upper_bound: 600000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            1: end_time 
+- name: NV
+  lower_bound: 10
+  upper_bound: 10000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            2: start_size

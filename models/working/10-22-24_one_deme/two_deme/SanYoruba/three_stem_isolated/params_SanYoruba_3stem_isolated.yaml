@@ -1,0 +1,91 @@
+parameters:
+- name: TA
+  lower_bound: 500000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: start_size
+- name: N1
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem1: 
+          epochs:
+            0: start_size
+- name: T1
+  lower_bound: 200000
+  upper_bound: 1000000
+  values:
+    - demes:  
+        Stem1: 
+          epochs:
+            0: end_time
+- name: N1S
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem1S: 
+          epochs:
+            0: start_size
+- name: N1E
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem1E: 
+          epochs:
+            0: start_size
+- name: N2
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem2: 
+          epochs:
+            0: start_size
+- name: NK
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        KhomaniSan: 
+          epochs:
+            0: start_size
+- name: P2K
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        KhomaniSan:
+          proportions: 0
+- name: NY
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        KhomaniSan: 
+          epochs:
+            0: start_size
+- name: P2Y
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        KhomaniSan:
+          proportions: 0
+
+constraints:
+- params: [TA, T1]
+  constraint: greater_than

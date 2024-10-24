@@ -1,0 +1,31 @@
+
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - end_time: 800000
+    start_size: 12000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - end_time: 750000
+    start_size: 4000
+- name: Neandertal
+  ancestors: [ND]
+  epochs:
+  - end_time: 200000
+    start_size: 1000
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - end_time: 110000
+    start_size: 1000
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - end_time: 55000
+    start_size: 3000
+migrations:
+- demes: [Altai, Vindija]
+  rate: 1e-3

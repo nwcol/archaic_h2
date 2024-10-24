@@ -1,0 +1,25 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -31.10639936437753,
+    max_iter: 500, num_iter: 500, func_calls: 768, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 800000, start_size: 16342.94098927667}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 740307.1974226963, start_size: 7198.925037604069}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 155533.57567756862, start_size: 5952.4614220170115}
+  - {end_time: 55000, start_size: 1744.740153210264}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3789.8995249291984}
+migrations:
+- demes: [Denisova, Vindija]
+  rate: 1.2974100582962044e-06

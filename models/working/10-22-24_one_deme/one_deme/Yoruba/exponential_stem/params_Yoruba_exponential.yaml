@@ -1,0 +1,50 @@
+parameters:
+- name: NA0
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Yoruba:
+          epochs: 
+            0: start_size
+- name: NA1
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Yoruba:
+          epochs: 
+            1: start_size
+- name: NMH
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        Yoruba:
+          epochs: 
+            2: start_size
+            3: start_size
+- name: NMH
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        Yoruba:
+          epochs: 
+            2: start_size
+- name: Texp
+  lower_bound: 5000
+  upper_bound: 300000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            2: end_time
+- name: NY
+  lower_bound: 0
+  upper_bound: 100000
+  values:
+    - demes:  
+        Yoruba:
+          epochs: 
+            3: start_size

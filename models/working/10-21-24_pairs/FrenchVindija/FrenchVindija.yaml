@@ -1,0 +1,44 @@
+description: A one-stem model with relatively intricate representation of Neandertal introgressions
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - end_time: 600000
+    start_size: 20000
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - end_time: 400000
+    start_size: 10000
+  - end_time: 55000
+    start_size: 2000
+- name: NI
+  ancestors: [Vindija]
+  start_time: 140000
+  epochs:
+  - end_time: 40000
+    start_size: 1000
+- name: French
+  ancestors: [Anc]
+  epochs:
+  - end_time: 70000
+    start_size: 20000
+  - end_time: 0
+    start_size: 6000
+- name: HI
+  ancestors: [French]
+  start_time: 140000
+  epochs:
+  - end_time: 100000
+    start_size: 5000
+
+pulses:
+- sources: [HI]
+  proportions: [0.04]
+  dest: Vindija
+  time: 120000
+- sources: [NI]
+  proportions: [0.02]
+  dest: French
+  time: 60000

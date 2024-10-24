@@ -1,0 +1,12 @@
+time_units: years
+generation_time: 29
+description: adds more epochs to allow for Ne contraction
+demes: 
+- name: Vindija
+  epochs:
+  - end_time: 600000
+    start_size: 12000
+  - end_time: 200000
+    start_size: 10000
+  - end_time: 55000
+    start_size: 5000

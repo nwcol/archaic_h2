@@ -1,0 +1,25 @@
+parameters:
+- name: NA
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: TF
+  lower_bound: 10000
+  upper_bound: 100000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: end_time
+- name: NF
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        French:
+          epochs:
+            1: start_size

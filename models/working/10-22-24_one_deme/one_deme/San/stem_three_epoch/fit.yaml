@@ -1,0 +1,12 @@
+description: epochs are `ancestral`, `modern human`, `Khomani-San`
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -12.124689540772975,
+    max_iter: 500, num_iter: 307, func_calls: 563, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: KhomaniSan
+  epochs:
+  - {end_time: 600000, start_size: 16364.853197979923}
+  - {end_time: 120000, start_size: 49999.999999998676}
+  - {end_time: 0, start_size: 49999.142373148294}

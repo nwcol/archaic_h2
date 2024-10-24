@@ -1,0 +1,24 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -43.73611329994988,
+    max_iter: 500, num_iter: 20, func_calls: 2963, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 670818.810365318, start_size: 15982.896249321177}
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 455534.62091371295, start_size: 20000.0}
+- name: Vindija
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 55000, start_size: 2918.1571037269637}
+- name: Denisova
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 80000, start_size: 3786.8775284513085}
+migrations:
+- demes: [Neandertal, Denisova]
+  rate: 5.634129522712887e-06

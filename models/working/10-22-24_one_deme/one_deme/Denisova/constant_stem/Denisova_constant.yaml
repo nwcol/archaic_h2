@@ -1,0 +1,7 @@
+time_units: years
+generation_time: 29
+demes:  
+- name: Denisova
+  epochs:
+  - end_time: 80000
+    start_size: 5000

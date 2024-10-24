@@ -1,0 +1,33 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 20000
+    end_time: 600000
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 100000
+  - start_size: 40000
+    end_time: 0
+- name: HI
+  ancestors: [Yoruba]
+  start_time: 150000
+  epochs:
+  - start_size: 5000
+    end_time: 100000
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - end_time: 400000
+    start_size: 10000
+  - end_time: 55000
+    start_size: 2000
+
+pulses:
+- sources: [HI]
+  proportions: [0.04]
+  dest: Vindija
+  time: 120000

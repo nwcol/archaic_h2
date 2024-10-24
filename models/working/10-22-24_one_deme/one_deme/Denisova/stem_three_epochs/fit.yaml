@@ -1,0 +1,17 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -23.905304040338063,
+    max_iter: 500, num_iter: 500, func_calls: 865, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 500000.0041754688, start_size: 11917.73257636137}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 500000.00416688644, start_size: 18674.33682062485}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3611.2439086490485}

@@ -270,7 +270,7 @@ Computing log-likelihoods
 """
 
 
-_inv_cov_cache = {}
+_inv_cov_cache = dict()
 
 
 def compute_ll(model, data, include_H=False):
@@ -343,7 +343,7 @@ Computing confidence intervals
 
 def get_uncerts(
     graph_fname,
-    options_fname,
+    param_fname,
     data,
     bootstraps=None,
     u=None,
@@ -354,18 +354,13 @@ def get_uncerts(
     
     """
     builder = Inference._get_demes_dict(graph_fname)
-    options = Inference._get_params_dict(options_fname)
+    options = Inference._get_params_dict(param_fname)
     pnames, p0, _, __ = Inference._set_up_params_and_bounds(options, builder)
 
     if u is None:
-        # my temporary means of getting mutation rate into p0
-        g = demes.load(graph_fname)
-        _u = float(g.metadata['opt_info']['u'])
+        _u = float(demes.load(graph_fname).metadata['opt_info']['u'])
         pnames.append('u')
         p0 = np.append(p0, _u)
-        fit_u = True
-    else:
-        fit_u = False
 
     def model_func(p):
         # takes parameters and returns expected statistics
@@ -373,14 +368,13 @@ def get_uncerts(
         nonlocal options
         nonlocal data
         nonlocal u
-        nonlocal fit_u
 
-        if fit_u:
+        if u is None:
             u = p[-1]
 
         builder = Inference._update_builder(builder, options, p)
         graph = demes.Graph.fromdict(builder)
-        model = H2Spectrum.from_graph(graph, data.sample_ids, data.r, u)
+        model = H2stats.from_graph(graph, u, template=data)
         return model
 
     if method == 'FIM':
@@ -411,7 +405,7 @@ def get_uncerts(
     return pnames, p0, uncerts
 
 
-_ll_cache = {}
+_ll_cache = dict()
 
 
 def get_godambe_matrix(
@@ -434,7 +428,7 @@ def get_godambe_matrix(
         else:
             model = model_func(p)
             _ll_cache[key] = model
-        return get_ll(model, data)
+        return compute_ll(model, data)
 
     H = -get_hessian(func, p0, data, delta)
 

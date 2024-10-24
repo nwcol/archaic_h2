@@ -1,0 +1,30 @@
+description: fixes join times for San, Yoruba
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -29.186853242447583,
+    max_iter: 500, num_iter: 12, func_calls: 1099, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1357023.4742771336, start_size: 10390.105774485295}
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 8931.64408581794}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 20430.240793620316}
+- name: KhomaniSan
+  start_time: 120000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.6962648989819377, 0.30373510101806234]
+  epochs:
+  - {end_time: 0, start_size: 24701.16755828562}
+- name: Yoruba
+  start_time: 100000
+  ancestors: [Stem2, Stem1]
+  proportions: [0.5142910554330621, 0.4857089445669379]
+  epochs:
+  - {end_time: 0, start_size: 19709.593800220788}

@@ -1,0 +1,38 @@
+description: fixes join times.
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -27.10687601337216,
+    max_iter: 500, num_iter: 30, func_calls: 4877, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1263583.0381069742, start_size: 11614.098731774377}
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 448194.9674075824, start_size: 7359.900369202366}
+- name: Stem1S
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 100000, start_size: 27804.363765918435}
+- name: Stem1E
+  ancestors: [Stem1]
+  epochs:
+  - {end_time: 100000, start_size: 16437.73497046512}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 18978.30810198855}
+- name: KhomaniSan
+  start_time: 120000
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.4090851539437872, 0.5909148460562128]
+  epochs:
+  - {end_time: 0, start_size: 32680.709974510777}
+- name: Yoruba
+  start_time: 100000
+  ancestors: [Stem2, Stem1E]
+  proportions: [0.5, 0.5]
+  epochs:
+  - {end_time: 0, start_size: 20000}

@@ -1,0 +1,31 @@
+time_units: years
+generation_time: 29
+description: fix TVindija at 800kya
+demes:
+- name: Anc
+  epochs:
+  - end_time: 1700000
+    start_size: 10000
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - end_time: 100000
+    start_size: 10000
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - end_time: 100000
+    start_size: 24000
+- name: Yoruba
+  ancestors: [Stem2, Stem1E]
+  proportions: [0.5, 0.5]
+  start_time: 100000
+  epochs:
+  - end_time: 0
+    start_size: 20000
+- name: Vindija
+  ancestors: [Stem1E]
+  start_time: 800000
+  epochs:
+  - start_size: 3000
+    end_time: 55000

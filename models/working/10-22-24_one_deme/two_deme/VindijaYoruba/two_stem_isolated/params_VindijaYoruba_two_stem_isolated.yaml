@@ -1,0 +1,69 @@
+parameters:
+- name: TA
+  lower_bound: 810000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: start_size
+- name: N1E
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem1E: 
+          epochs:
+            0: start_size
+- name: N2
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem2: 
+          epochs:
+            0: start_size
+- name: TY
+  lower_bound: 1000
+  upper_bound: 200000
+  values:
+    - demes:  
+        Yoruba: start_time
+        Stem1E:
+          epochs:
+            0: end_time
+        Stem2:
+          epochs:
+            0: end_time
+- name: NY
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        Yoruba: 
+          epochs:
+            0: start_size
+- name: P2
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        Yoruba:
+          proportions: 0
+- name: NV
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes:  
+        Vindija: 
+          epochs:
+            0: start_size
+        

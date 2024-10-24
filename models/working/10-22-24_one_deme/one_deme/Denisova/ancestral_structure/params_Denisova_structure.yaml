@@ -1,0 +1,43 @@
+parameters:
+- name: NA
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        Neandertal:
+          epochs:
+            0: start_size
+- name: ND
+  lower_bound: 1000
+  upper_bound: 20000
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+        D:
+          epochs:
+            0: start_size
+        D2:
+          epochs:
+            0: start_size
+- name: mND
+  lower_bound: 1e-6
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        0: rate
+- name: mDD
+  lower_bound: 1e-6
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        1: rate

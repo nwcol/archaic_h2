@@ -1,0 +1,133 @@
+# 16 parameters 
+parameters:
+- name: T_NH
+  lower_bound: 400000
+  upper_bound: 900000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: end_time
+- name: T_V
+  lower_bound: 100000
+  upper_bound: 600000
+  description: Ne reduction time for Vindija
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            0: end_time
+- name: T_NI
+  lower_bound: 55000
+  upper_bound: 400000
+  description: seperation time of Vindija and NI
+  values:
+    - demes:
+        NI: start_time
+- name: T_HI
+  lower_bound: 100000
+  upper_bound: 300000
+  values:
+    - demes:
+        HI: start_time
+- name: T_OOA
+  lower_bound: 50000
+  upper_bound: 100000
+  description: population reduction time for French
+  values:
+    - demes:
+        French: 
+          epochs:
+            0: end_time
+- name: T_pHN 
+  lower_bound: 100000
+  upper_bound: 250000
+  values:
+    - pulses:
+        0: time
+- name: T_pVF
+  lower_bound: 40000
+  upper_bound: 70000
+  values:
+    - pulses:
+        1: time
+- name: pHN 
+  lower_bound: 0.01
+  upper_bound: 0.08
+  values:
+    - pulses:
+        0:
+          proportions: 0
+- name: pVF
+  lower_bound: 0.01
+  upper_bound: 0.05
+  values:
+    - pulses:
+        1: 
+          proportions: 0
+- name: NA 
+  lower_bound: 5000
+  upper_bound: 30000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: NN 
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 1000
+  upper_bound: 10000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            1: start_size
+- name: NAFR
+  lower_bound: 5000
+  upper_bound: 30000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: NF
+  lower_bound: 1000
+  upper_bound: 10000
+  values:
+    - demes:
+        French:
+          epochs:
+            1: start_size
+- name: NHI
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        HI:
+          epochs:
+            0: start_size
+- name: NNI
+  lower_bound: 100
+  upper_bound: 5000
+  values:
+    - demes:
+        NI:
+          epochs:
+            0: start_size
+
+constraints:
+- params: [T_NH, T_V]
+  constraint: greater_than
+- params: [T_NI, T_pVF]
+  constraint: greater_than
+- params: [T_HI, T_OOA]
+  constraint: greater_than
+- params: [T_HI, T_pHN]
+  constraint: greater_than

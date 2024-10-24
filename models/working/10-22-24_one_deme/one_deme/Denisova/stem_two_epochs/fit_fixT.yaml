@@ -1,0 +1,21 @@
+description: a cleaner model with high migration between Neandertals and Denisovans
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -6.4376847216759865,
+    max_iter: 500, num_iter: 33, func_calls: 2252, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 700000, start_size: 10723.077222328819}
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 80000, start_size: 335.929430703854}
+- name: Denisova
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 80000, start_size: 2929.8448084284605}
+migrations:
+- demes: [Neandertal, Denisova]
+  rate: 1.309776894556347e-05

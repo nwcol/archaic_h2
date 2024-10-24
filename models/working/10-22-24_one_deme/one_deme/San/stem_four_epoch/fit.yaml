@@ -1,0 +1,12 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -1.5223220600808023,
+    max_iter: 500, num_iter: 500, func_calls: 852, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: KhomaniSan
+  epochs:
+  - {end_time: 1500000, start_size: 10226.944345478463}
+  - {end_time: 600000, start_size: 41735.305308568786}
+  - {end_time: 100000.0000131746, start_size: 26398.828954178898}
+  - {end_time: 0, start_size: 49999.99991307076}

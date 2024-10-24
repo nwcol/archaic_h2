@@ -1,0 +1,60 @@
+parameters:
+- name: TA
+  lower_bound: 500000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: start_size
+- name: N1S
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem1S: 
+          epochs:
+            0: start_size
+- name: N2
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Stem2: 
+          epochs:
+            0: start_size
+- name: TK
+  lower_bound: 100000
+  upper_bound: 350000
+  values:
+    - demes:  
+        KhomaniSan: start_time
+        Stem1S:
+          epochs:
+            0: end_time
+        Stem2:
+          epochs:
+            0: end_time
+- name: NK
+  lower_bound: 1000
+  upper_bound: 50000
+  values:
+    - demes:  
+        KhomaniSan: 
+          epochs:
+            0: start_size
+- name: P2
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        KhomaniSan:
+          proportions: 0

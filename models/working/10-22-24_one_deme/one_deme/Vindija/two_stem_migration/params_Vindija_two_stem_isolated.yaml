@@ -1,0 +1,65 @@
+parameters:
+- name: TA
+  lower_bound: 500000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 1000
+  upper_bound: 30000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: start_size
+- name: TN
+  lower_bound: 400000
+  upper_bound: 1000000
+  values:
+    - demes:  
+        Vindija: start_time
+        Stem1:
+          epochs:
+            0: end_time
+        Stem2:
+          epochs:
+            0: end_time
+- name: NN
+  lower_bound: 100
+  upper_bound: 30000
+  values:
+    - demes:  
+        Vindija: 
+          epochs:
+            0: start_size
+- name: TV
+  lower_bound: 55000
+  upper_bound: 600000
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: end_time
+- name: NN
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes:  
+        Vindija: 
+          epochs:
+            1: start_size
+- name: m12
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - migrations:
+        0: rate
+
+constraints:
+- params: [TA, TN]
+  constraint: greater_than
+- params: [TN, TV]
+  constraint: greater_than

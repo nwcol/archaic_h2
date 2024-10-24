@@ -1,0 +1,12 @@
+description: allows two size changes to represent OOA event
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -64.137992458352,
+    max_iter: 500, num_iter: 21, func_calls: 799, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: French
+  epochs:
+  - {end_time: 60000, start_size: 17934.759369639993}
+  - {end_time: 50000, start_size: 9999.961790181855}
+  - {end_time: 0, start_size: 8843.563753842489}

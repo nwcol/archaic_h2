@@ -1,0 +1,24 @@
+description: uses population labels from Ragsdale et al 2022
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1.0881976997901774,
+    max_iter: 100, num_iter: 12, func_calls: 954, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1471576.4883122137, start_size: 10616.416610230084}
+- name: Stem1S
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 294331.3946215469, start_size: 16551.511002938423}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 294331.3946215469, start_size: 22407.88012251385}
+- name: KhomaniSan
+  start_time: 294331.3946215469
+  ancestors: [Stem2, Stem1S]
+  proportions: [0.8697465513911992, 0.13025344860880084]
+  epochs:
+  - {end_time: 0, start_size: 37655.9208124753}

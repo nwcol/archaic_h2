@@ -1,0 +1,9 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -133.14964305999774,
+    max_iter: 500, num_iter: 23, func_calls: 46, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Denisova
+  epochs:
+  - {end_time: 80000, start_size: 5075.6120681762695}

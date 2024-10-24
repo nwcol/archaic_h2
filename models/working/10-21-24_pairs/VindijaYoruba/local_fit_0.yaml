@@ -1,0 +1,29 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -87.89605273076087,
+    max_iter: 20000, num_iter: 4484, func_calls: 6493, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 899898.5504637064, start_size: 16955.228712423384}
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 163784.40956224423, start_size: 28149.530961602995}
+  - {end_time: 0, start_size: 40000}
+- name: HI
+  start_time: 102284.61677948704
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 100000, start_size: 4268.767210362768}
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 379785.3900317146, start_size: 9300.972672469972}
+  - {end_time: 55000, start_size: 2354.826145875727}
+pulses:
+- sources: [HI]
+  dest: Vindija
+  time: 102284.61677920385
+  proportions: [0.01837041058485399]
