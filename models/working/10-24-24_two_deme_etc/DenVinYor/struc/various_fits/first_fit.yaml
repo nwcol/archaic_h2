@@ -1,0 +1,36 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -2266.209404652466,
+    max_iter: 100, num_iter: 100, func_calls: 156, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1350000, start_size: 10665}
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 200000, start_size: 11375}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 200000, start_size: 20000}
+- name: ND
+  start_time: 1207874.707390403
+  ancestors: [Stem1E]
+  epochs:
+  - {end_time: 1080614.2717250357, start_size: 4555.514558025932}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 4323.423604214708}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 3741.0705449429015}
+- name: Yoruba
+  start_time: 200000
+  ancestors: [Stem1E, Stem2]
+  proportions: [0.5, 0.5]
+  epochs:
+  - {end_time: 0, start_size: 27000}

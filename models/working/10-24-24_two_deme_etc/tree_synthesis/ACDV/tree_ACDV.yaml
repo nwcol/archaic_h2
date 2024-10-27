@@ -1,0 +1,44 @@
+time_units: years
+generation_time: 29
+demes:
+- name: ND
+  epochs:
+  - end_time: 800000 
+    start_size: 11500
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3000
+    end_time: 80000
+- name: N
+  ancestors: [ND]
+  epochs:
+  - end_time: 200000
+    start_size: 5000
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - start_size: 500
+    end_time: 110000
+- name: WN
+  ancestors: [N]
+  epochs:
+  - start_size: 5000
+    end_time: 150000
+- name: Chagyrskaya
+  ancestors: [WN]
+  epochs:
+  - start_size: 500
+    end_time: 80000
+- name: Vindija
+  ancestors: [WN]
+  epochs:
+  - end_time: 55000
+    start_size: 1500
+migrations:
+- demes: [Denisova, Altai]
+  rate: 5.3e-6
+- demes: [Altai, WN]
+  rate: 1e-3
+- demes: [Vindija, Chagyrskaya]
+  rate: 1e-3

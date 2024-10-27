@@ -1,0 +1,37 @@
+parameters:
+- name: NA 
+  lower_bound: 5000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: start_size
+- name: TVY
+  lower_bound: 600000
+  upper_bound: 1000000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: end_time
+- name: NV0
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            0: start_size
+- name: NV1
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            1: start_size
+- name: NY
+  lower_bound: 5000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size

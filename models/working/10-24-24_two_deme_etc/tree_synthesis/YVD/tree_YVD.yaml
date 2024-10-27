@@ -1,0 +1,27 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 12000
+    end_time: 1050000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - start_size: 5000
+    end_time: 600000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3500
+    end_time: 80000
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - start_size: 4300
+    end_time: 55000
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 33500
+    end_time: 0

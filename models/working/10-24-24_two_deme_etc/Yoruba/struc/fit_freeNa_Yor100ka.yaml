@@ -1,0 +1,23 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -1.7385897696451977,
+    max_iter: 500, num_iter: 500, func_calls: 833, flag: 2, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1057177.7007117542, start_size: 13004.573002301904}
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 9354.812600990685}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 20000}
+- name: Yoruba
+  start_time: 100000
+  ancestors: [Stem1E, Stem2]
+  proportions: [0.5, 0.5]
+  epochs:
+  - {end_time: 0, start_size: 59999.999999883556}

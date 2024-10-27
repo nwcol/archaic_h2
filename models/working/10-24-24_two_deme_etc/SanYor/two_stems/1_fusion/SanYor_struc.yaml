@@ -1,0 +1,34 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - end_time: 1300000
+    start_size: 11000
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - end_time: 200000
+    start_size: 10000
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - end_time: 200000
+    start_size: 20000
+- name: MH
+  ancestors: [Stem1, Stem2]
+  proportions: [0.5, 0.5]
+  start_time: 200000
+  epochs:
+  - end_time: 120000
+    start_size: 20000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - end_time: 0
+    start_size: 14000 
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - end_time: 0
+    start_size: 27000

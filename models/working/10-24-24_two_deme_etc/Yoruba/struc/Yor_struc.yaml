@@ -1,0 +1,24 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - end_time: 1300000
+    start_size: 12000
+- name: Stem1E
+  ancestors: [Anc]
+  epochs:
+  - end_time: 120000
+    start_size: 10000
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - end_time: 120000
+    start_size: 20000
+- name: Yoruba
+  ancestors: [Stem1E, Stem2]
+  proportions: [0.5, 0.5]
+  start_time: 120000
+  epochs:
+  - end_time: 0
+    start_size: 27000

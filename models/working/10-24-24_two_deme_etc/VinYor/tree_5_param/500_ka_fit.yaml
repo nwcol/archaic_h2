@@ -1,0 +1,18 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -93.61293074471115,
+    max_iter: 500, num_iter: 12, func_calls: 841, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 999999.9999934267, start_size: 15205.629210645176}
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 500000, start_size: 4.776646555695445e+17}
+  - {end_time: 55000, start_size: 2784.663920990227}
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 0, start_size: 32784.44787664387}

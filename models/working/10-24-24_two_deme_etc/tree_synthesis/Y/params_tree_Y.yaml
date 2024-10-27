@@ -1,0 +1,15 @@
+parameters:
+- name: TA 
+  lower_bound: 0
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+- name: NY
+  lower_bound: 0
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size

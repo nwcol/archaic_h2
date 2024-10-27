@@ -1,0 +1,11 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -2.1082456200105875,
+    max_iter: 500, num_iter: 169, func_calls: 314, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: Vindija
+  epochs:
+  - {end_time: 600000, start_size: 10000}
+  - {end_time: 112682.44878331157, start_size: 11166.408068429624}
+  - {end_time: 55000, start_size: 892.5247131088222}

@@ -1,0 +1,17 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 11000
+    end_time: 800000
+- name: MH  
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 100000
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 28000
+    end_time: 0

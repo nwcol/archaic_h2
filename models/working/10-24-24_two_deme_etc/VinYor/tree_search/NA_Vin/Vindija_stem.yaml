@@ -1,0 +1,11 @@
+time_units: years
+generation_time: 29
+demes: 
+- name: Vindija
+  epochs:
+  - end_time: 600000
+    start_size: 10000
+  - end_time: 150000
+    start_size: 10000
+  - end_time: 55000
+    start_size: 1000

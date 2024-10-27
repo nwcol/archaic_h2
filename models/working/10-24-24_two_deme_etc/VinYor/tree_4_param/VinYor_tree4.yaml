@@ -1,0 +1,17 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 12000
+    end_time: 600000
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - start_size: 4000
+    end_time: 55000
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 0

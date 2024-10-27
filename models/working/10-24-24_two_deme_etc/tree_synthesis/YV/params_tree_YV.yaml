@@ -1,0 +1,29 @@
+parameters:
+- name: NA 
+  lower_bound: 1000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: TA 
+  lower_bound: 0
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+- name: NV
+  lower_bound: 0
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 0
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size

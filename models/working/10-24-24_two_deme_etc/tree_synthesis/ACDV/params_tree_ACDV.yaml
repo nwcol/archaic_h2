@@ -1,0 +1,87 @@
+parameters:
+- name: NND
+  lower_bound: 1000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: start_size
+- name: TND
+  lower_bound: 450000
+  upper_bound: 1000000
+  values:
+    - demes:
+        ND:
+          epochs:
+            0: end_time
+- name: ND
+  lower_bound: 1000
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 100
+  values:
+    - demes:
+        N:
+          epochs:
+            0: start_size
+        WN:
+          epochs: 
+            0: start_size
+- name: TAWN
+  lower_bound: 110000
+  values:
+    - demes:
+        N:
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 100
+  values:
+    - demes:
+        Altai:
+          epochs:
+            0: start_size
+- name: TCV
+  lower_bound: 80000
+  values:
+    - demes:
+        WN:
+          epochs:
+            0: end_time
+- name: NC
+  lower_bound: 100
+  values:
+    - demes:
+        Chagyrskaya:
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: mAD
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - migrations:
+        0: rate
+- name: mNN
+  lower_bound: 1e-6
+  upper_bound: 1e-2
+  values:
+    - migrations: 
+        1: rate
+        2: rate
+
+constraints:
+- params: [TND, TAWN]
+  constraint: greater_than
+- params: [TAWN, TCV]
+  constraint: greater_than

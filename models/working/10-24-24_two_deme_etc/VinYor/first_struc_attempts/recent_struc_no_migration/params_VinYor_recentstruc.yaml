@@ -1,0 +1,62 @@
+parameters:
+- name: NA 
+  lower_bound: 5000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: start_size
+- name: TA
+  lower_bound: 100000
+  upper_bound: 600000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: end_time
+#- name: TMHV
+#  upper_bound: 1000000
+#  values:
+#    - demes:
+#        Anc: 
+#          epochs:
+#            0: end_time
+- name: N1
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:
+        Stem1: 
+          epochs:
+            0: start_size
+- name: NV0
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            0: start_size
+- name: NV1
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            1: start_size
+- name: NY
+  lower_bound: 5000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size
+- name: P1Y
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        Yoruba:
+          proportions: 0
+#constraints:
+#- params: [TMHV, TA]
+#  constraint: greater_than

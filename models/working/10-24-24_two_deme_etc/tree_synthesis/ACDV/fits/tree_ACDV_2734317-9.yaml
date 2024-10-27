@@ -1,0 +1,40 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -321.31384714673743,
+    max_iter: 1000, num_iter: 25, func_calls: 3422, flag: 0, u_fitted: 0, u: 1.113e-08}
+demes:
+- name: ND
+  epochs:
+  - {end_time: 743938.5304309045, start_size: 14925.038291150582}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3166.989095469668}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 172053.4157178307, start_size: 5108.367857148641}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 110000, start_size: 627.8977823526462}
+- name: WN
+  ancestors: [N]
+  epochs:
+  - {end_time: 115453.98243825583, start_size: 5108.367857148641}
+- name: Chagyrskaya
+  ancestors: [WN]
+  epochs:
+  - {end_time: 80000, start_size: 489.4247636893745}
+- name: Vindija
+  ancestors: [WN]
+  epochs:
+  - {end_time: 55000, start_size: 1303.8643433646134}
+migrations:
+- demes: [Denisova, Altai]
+  rate: 1.486068054629575e-05
+- demes: [Altai, WN]
+  rate: 0.0006169290284690067
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0006169290284690067

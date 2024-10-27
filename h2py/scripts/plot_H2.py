@@ -132,21 +132,21 @@ def format_ticks(ax, y_ax=True, x_ax=True):
 def main():
 
     args = get_args()
-    if args.u is not None:
-        u = args.u
-    else:
-        opt_u = None
-        for gf in args.graph_fnames:
-            g = demes.load(gf)
-            if 'opt_info' in g.metadata:
-                opt_u = g.metadata['opt_info']['u']
-        if opt_u is None:
-            raise ValueError('please provide a u parameter')
+    if len(args.graph_fnames) > 0:
+        if args.u is not None:
+            u = args.u
         else:
-            u = opt_u
-
-    datas = [H2stats.from_file(f, graph=args.graph_fnames[0]) 
-             for f in args.data_fnames]
+            opt_u = None
+            for gf in args.graph_fnames:
+                g = demes.load(gf)
+                if 'opt_info' in g.metadata:
+                    opt_u = g.metadata['opt_info']['u']
+            if opt_u is None:
+                raise ValueError('please provide a u parameter')
+            else:
+                u = opt_u
+    template = args.graph_fnames[0] if len(args.graph_fnames) > 0 else None
+    datas = [H2stats.from_file(f, graph=template) for f in args.data_fnames]
     
     if len(datas) > 0:
         template = datas[0]
@@ -185,7 +185,7 @@ def main():
         ax.remove()
 
     lines = []
-    for h2stats, color in zip(models + datas, colors):
+    for h2stats, color in zip(datas + models, colors):
         l = plot_H2stats(
             h2stats,
             axs,
@@ -203,7 +203,7 @@ def main():
     else:
         glabels = [os.path.basename(g) for g in args.graph_fnames]
     dlabels = [os.path.basename(d) for d in args.data_fnames]
-    labels = glabels + dlabels
+    labels = dlabels + glabels
     y_anchor = -0.2 / n_rows
     plt.figlegend(
         lines, 

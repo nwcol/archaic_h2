@@ -1,0 +1,1 @@
+Here I wish to fit a simple isolation (possibly with migration) tree-like model by the progressive addition of demes, using simple agnostic parameterizations and fixing as many parameters as possible

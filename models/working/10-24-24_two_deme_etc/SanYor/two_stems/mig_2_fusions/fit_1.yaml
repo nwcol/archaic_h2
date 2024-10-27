@@ -1,0 +1,32 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -26.63034636846662,
+    max_iter: 500, num_iter: 17, func_calls: 2430, flag: 0, u_fitted: 0, u: 1.11e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1380838.5012950483, start_size: 10500}
+- name: Stem1
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 50000, start_size: 6415.027729443583}
+- name: Stem2
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 50000, start_size: 20000}
+- name: KhomaniSan
+  start_time: 163915.1444965316
+  ancestors: [Stem1, Stem2]
+  proportions: [0.3274200933430895, 0.6725799066569105]
+  epochs:
+  - {end_time: 0, start_size: 28138.325889419266}
+- name: Yoruba
+  start_time: 129718.29868064758
+  ancestors: [Stem1, Stem2]
+  proportions: [0.4769024206138126, 0.5230975793861874]
+  epochs:
+  - {end_time: 0, start_size: 27000}
+migrations:
+- demes: [Stem1, Stem2]
+  rate: 1.0005414008466523e-08

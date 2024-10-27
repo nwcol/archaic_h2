@@ -1,0 +1,21 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -58.06878006618422,
+    max_iter: 500, num_iter: 411, func_calls: 721, flag: 0, u_fitted: 0, u: 1.11e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 1750967.4636999385, start_size: 10500}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 150000, start_size: 30861.216718313794}
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 23179.601098786057}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 21750.91269614671}

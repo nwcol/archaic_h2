@@ -74,14 +74,21 @@ class H2stats:
         return cls(data, bins=bins, pop_ids=pop_ids, covs=covs)
 
     @classmethod
-    def from_dict(self, dic):
-
-        return None
+    def from_dict(cls, dic):
+        """
+        
+        """
+        pop_ids = dic['pop_ids']
+        bins = dic['bins']
+        stats = dic['means']
+        return cls(stats, bins=bins, pop_ids=pop_ids)
 
     @classmethod
     def from_file(cls, fname, pop_ids=None, graph=None):
         """
         Load a bootstrap instance from a .npz file.
+        """
+
         """
         file = np.load(fname)
         stats = file['H2stats']
@@ -98,6 +105,12 @@ class H2stats:
             deme_names = [d.name for d in g.demes]
             matches = [pop for pop in _pop_ids if pop in deme_names]
             ret = ret.subset(pop_ids=matches)
+        """
+        with open(fname, 'rb') as fin:
+            dics = pickle.load(fin)
+            dic = dics[list(dics.keys())[0]]
+
+        ret = cls.from_dict(dic)
         return ret
 
     @classmethod
@@ -230,7 +243,9 @@ def get_r_points(bins):
     if str(bins) in _r_cache:
         r_steps = _r_cache[bins]
     else:
-        r_steps = np.sort(np.concatenate((bins, bins[:-1] + np.diff(bins)/2)))
+        r_steps = np.sort(
+            np.concatenate((bins, bins[:-1] + np.diff(bins) / 2))
+        )
     return r_steps
 
 
@@ -240,45 +255,3 @@ def interpolate_quadratic(arr):
     """
     ret = 1/6 * arr[:-1:2] + 2/3 * arr[1::2] + 1/6 * arr[2::2]
     return ret
-
-
-def bootstrap_H2(
-    num_H2, 
-    num_pairs, 
-    sample_ids=None, 
-    bins=None,
-    num_reps=100, 
-    sample_size=None,
-    return_distr=False
-):
-    """
-    Bootstrap H2 from genomic blocks and return an H2stats instance holding
-    bootstrap means and variances/covariances. Operates on masked arrays
-    of counts.
-
-    :param num_H2: 3dim, shape (num_windows, num_bins + 1, num_statistics)
-        array of raw H2 counts with H at highest dim1 index.
-    :param num_pairs: 2dim, shape (num_windows, num_bins + 1) 
-        array of site pair counts or weighting factors, with site counts in
-        the highest dim1 index.
-    """
-    assert num_H2.shape[:2] == num_pairs.shape
-    num_windows, num_bins, num_stats = num_H2.shape
-    sample_size = num_stats
-    num_distr = np.zeros((num_reps, num_bins, num_stats), dtype=float)
-    denom_distr = np.zeros((num_reps, num_bins), dtype=float)
-    for i in range(num_reps):
-        sampled = np.random.Generator.integers(0, sample_size, num_stats)
-        num_distr[i] = num_H2[sampled].sum(0)
-        denom_distr[i] = num_pairs[sampled].sum(0)
-    rep_H2 = num_distr / denom_distr[:, :, np.newaxis]
-    if return_distr:
-        ret = rep_H2
-    else:
-        covs = np.array(
-            [np.cov(rep_H2[:, i], rowvar=False) for i in range(num_bins)]
-        )
-        means = num_distr.sum(0) / denom_distr.sum(0)
-        ret = H2stats(means, bins=bins, pop_ids=sample_ids, covs=covs)
-    return ret
-

@@ -1,0 +1,73 @@
+parameters:
+- name: TA
+  lower_bound: 100000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+#- name: NA
+#  lower_bound: 1000
+#  upper_bound: 40000
+#  values:
+#    - demes:  
+#        Anc: 
+#          epochs:
+#            0: start_size
+- name: N1
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:  
+        Stem1: 
+          epochs:
+            0: start_size
+- name: TK
+  lower_bound: 50000
+  upper_bound: 200000
+  values:
+    - demes:  
+        KhomaniSan: start_time
+- name: NK
+  lower_bound: 1000
+  upper_bound: 40000
+  values:
+    - demes:  
+        KhomaniSan: 
+          epochs:
+            0: start_size
+- name: P1K
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        KhomaniSan:
+          proportions: 0
+- name: TY
+  lower_bound: 50000
+  upper_bound: 200000
+  values:
+    - demes:  
+        Yoruba: start_time
+#- name: NY
+#  lower_bound: 1000
+#  upper_bound: 60000
+#  values:
+#    - demes:  
+#        Yoruba: 
+#          epochs:
+#            0: start_size
+- name: P1Y
+  lower_bound: 0
+  upper_bound: 1
+  values:
+    - demes:
+        Yoruba:
+          proportions: 0
+- name: m12
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - migrations:
+        0: rate

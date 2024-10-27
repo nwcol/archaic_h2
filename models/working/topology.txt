@@ -1,0 +1,12 @@
+Here I enumerate some topological choices I've been thinking about.
+
+The general shape of the topology might be
+- Tree-like, with demes formed by bifurcation from a common ancestor
+- Branched and reticulated by deme mergers, with divergent ancestral stems rejoining in merger events
+    - How deep does ancestral structure run? How antique is the split between south/west Africans, etc
+- Branched and reticulated by migrations, which would probably be relatively intense
+
+- In the structured-ancestry case;
+    - Neandertal/Denisovan divergence before or after emergence of structure?
+    - MH groups in east/south Africa formed seperately from stems, or derived from single fusion?
+    - Do the stems actually merge, or just interact via continuous migration?

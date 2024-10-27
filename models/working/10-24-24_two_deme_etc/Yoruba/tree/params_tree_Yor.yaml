@@ -1,0 +1,22 @@
+parameters:
+- name: NA 
+  lower_bound: 1000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: start_size
+- name: NMH 
+  lower_bound: 1000
+  values:
+    - demes:
+        MH: 
+          epochs:
+            0: start_size
+- name: NY 
+  lower_bound: 1000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size

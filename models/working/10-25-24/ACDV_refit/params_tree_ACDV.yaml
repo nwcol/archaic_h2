@@ -1,0 +1,67 @@
+parameters:
+- name: ND
+  lower_bound: 1000
+  values:
+    - demes:
+        Denisova:
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 100
+  values:
+    - demes:
+        N:
+          epochs:
+            0: start_size
+- name: NN 
+  lower_bound: 100
+  values:
+    - demes:
+        WN:
+          epochs: 
+            0: start_size
+- name: NA
+  lower_bound: 100
+  values:
+    - demes:
+        Altai:
+          epochs:
+            0: start_size
+- name: NC
+  lower_bound: 100
+  values:
+    - demes:
+        Chagyrskaya:
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija:
+          epochs:
+            0: start_size
+- name: mDN
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - migrations:
+        0: rate
+- name: mAD
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        1: rate
+- name: mAWN
+  lower_bound: 1e-6
+  upper_bound: 1e-2
+  values:
+    - migrations: 
+        2: rate
+- name: mCV
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - migrations:
+        3: rate
