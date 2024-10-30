@@ -1,0 +1,42 @@
+"""
+Parses H2
+"""
+
+
+CHROMS = list(range(1, 23))
+
+
+rule all:
+    input:
+        "bootstrap_H2.pkl"
+
+
+rule compute_H2:
+    input:
+
+
+    output:
+        "H2_{chrom}.pkl"
+    shell:
+        """
+        parse_H2 -v {input.vcf_file} \
+            -b {input.bed_file} \
+            -r {input.rec_map_file} \
+            -m {input.mut_map_file} \
+            -p  \
+            -w {input.region_file} \
+            --bins  \
+            --min_reg_len 100 \
+            -o {output}
+        """
+
+    
+rule bootstrap_H2:
+    input:
+        expand("H2_{chrom}.pkl", chrom=CHROMS)
+    output:
+        "bootstrap_H2.pkl"
+    shell:
+        """
+        bootstrap_H2 -d {input} -o {output}
+        """

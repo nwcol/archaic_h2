@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import pickle
 
-from h2py import h2_parsing
+from h2py import util, h2_parsing
 
 
 def get_args():
@@ -32,7 +32,7 @@ def get_args():
         type=str
     )
     parser.add_argument(
-        '-w', '--region_file',
+        '-R', '--region_file',
         type=str
     )
     parser.add_argument(
@@ -64,6 +64,11 @@ def get_args():
         type=str,
         default=1
     )
+    parser.add_argument(
+        '--verbose',
+        type=str,
+        default=1
+    )
     return parser.parse_args()
 
 
@@ -76,9 +81,14 @@ def main():
     bins = np.loadtxt(args.bin_file)
 
     if args.region_file is not None:
-        regions = np.loadtxt(args.region_file)
+        regions = np.loadtxt(args.region_file, usecols=(0,1,2))
+        if regions.ndim == 1:
+            regions = regions[np.newaxis]
     else:
         regions = [None]
+
+    if args.verbose:
+        print(util.get_time(), f'computing H2 on chromosome {args.chrom}')
 
     region_stats = {}
     for i, region in enumerate(regions):
@@ -95,7 +105,7 @@ def main():
             min_reg_len=args.min_reg_len,
             compute_denom=args.compute_denom,
             compute_two_sample=args.compute_two_sample,
-            verbose=None
+            verbose=args.verbose
         )
 
     with open(args.out_file, 'wb') as fout:

@@ -1,0 +1,65 @@
+"""
+"""
+
+ARCHAICS = ['Altai', 'Chagyrskaya', 'Denisova', 'Vindija']
+CHROMS = list(range(1, 23))
+
+
+merged_files = [f"merged/genotypes_chr{chrom}.vcf.gz" for chrom in CHROMS]
+
+
+rule:
+    input:
+        expand("merged/merged_variants_chr{chrom}.vcf.gz", chrom=CHROMS),
+
+
+rule get_archaic_variants:
+    input: 
+        "{sample}/{chrom}_mq25_mapab100.vcf.gz"
+    output:
+        "{sample}_variants/{sample}_{chrom}.vcf.gz"
+    shell:
+        """
+        bcftools view -c 1 {input} | \
+	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT -o {output}
+        """
+
+
+rule get_chagyrskaya_variants:
+    input: 
+        "{sample}/{chrom}.noRB.vcf.gz"
+    output:
+        "{sample}_variants/{sample}_{chrom}.vcf.gz"
+    shell:
+        """
+        bcftools view -c 1 {input} | \
+	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT -o {output}
+        """
+
+
+rule get_simons_variants:
+    input:
+        "Simons/vcfs.variants.public_samples.279samples.tar"
+    output:
+        expand("Simons_variants/simons_variants_chr{chrom}.vcf.gz", chrom=CHROMS)
+    shell:
+        """
+        
+        """
+
+
+rule merge_vcfs:
+    input:
+        "Altai_variants/Altai_{chrom}.vcf.gz",
+        "Chagyrskaya_variants/Chagyrskaya_{chrom}.vcf.gz",
+        "Denisova_variants/Denisova_{chrom}.vcf.gz",
+        "Vindija_variants/Vindija_{chrom}.vcf.gz",
+        "Simons_variants/simons_variants_{chrom}.vcf.gz"
+
+    output:
+        "merged/merged_variants_{chrom}.vcf.gz"
+
+    shell: 
+        """
+        bcftools merge
+        """

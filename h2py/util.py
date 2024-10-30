@@ -328,6 +328,35 @@ def read_genotypes(
     return chrom_num, sample_ids, positions, genotype_matrix
 
 
+def read_vcf_positions(vcf_file):
+    """
+    Read and return the vector of positions covered in a .vcf file
+    """
+    open_func = gzip.open if vcf_file.endswith('.gz') else open
+
+    chrom_nums = []
+    positions = []
+
+    with open_func(vcf_file, "rb") as fin:
+        for lineb in fin:
+            line = lineb.decode()
+            if line.startswith('#'):
+                continue
+            else:
+                chrom, pos = line.split()[:2]
+                position = int(pos) - 1
+                chrom_nums.append(chrom)
+                positions.append(position)
+
+    positions = np.array(positions, dtype=np.int64)
+    unique_chrom_nums = list(set(chrom_nums))
+    if len(unique_chrom_nums) > 1:
+        warnings.warn('more than one unique chromosome in .vcf')
+    chrom_num = unique_chrom_nums[0]
+
+    return chrom_num, positions
+
+
 """
 Math
 """

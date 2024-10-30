@@ -2,4 +2,12 @@ h2py.egg-info/
 h2py/__pycache__/
 h2py/scripts/__pycache__/
 .h2py/
+**.snakemake/
 
+data/mutation_maps/*.vcf.gz
+data/mutation_maps/*.npy
+data/mutation_maps/*.bed.gz
+
+data/genotypes/*/*.tar
+data/genotypes/*/*.vcf.gz
+data/genotypes/*/*.vcf.gz.csi

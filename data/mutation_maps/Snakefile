@@ -1,0 +1,39 @@
+"""
+Download the Roulette mutation maps in hg37 and extract the mutation rates 
+into .npy files. Also create .bed files representing map coverage.
+"""
+
+
+CHROMS = list(range(1, 20))
+npy_files = [f"mutation_map_hg19_chr{chrom}.npy" for chrom in CHROMS]
+bed_files = [f"mutation_map_hg19_chr{chrom}.bed.gz" for chrom in CHROMS]
+
+
+rule all:
+    input: npy_files, bed_files
+
+
+rule download_mutation_maps:
+    output: 
+        "hg19_chr{chrom}_rate_v5.2_TFBS_correction_sorted.vcf.gz" 
+    params:
+        prefix = "http://genetics.bwh.harvard.edu/downloads/Vova/Roulette/hg19/hg19_chr",
+        suffix = "_rate_v5.2_TFBS_correction_sorted.vcf.gz"
+    shell:
+        """
+        wget {params.prefix}{wildcards.chrom}{params.suffix}
+        """
+        
+
+rule parse_mutation_maps:
+    input:
+        "hg19_chr{chrom}_rate_v5.2_TFBS_correction_sorted.vcf.gz"
+    output:
+        vcf_file = "mutation_map_hg19_chr{chrom}.npy",
+        bed_file = "mutation_map_hg19_chr{chrom}.bed.gz"
+    shell:
+        """
+        python ../../tools/parse_mut_vcf.py -i {input} \
+            -o {output.vcf_file} -b {output.bed_file}
+        """
+

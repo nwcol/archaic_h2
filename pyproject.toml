@@ -19,6 +19,7 @@ packages = ["h2py", "h2py.scripts"]
 
 [project.scripts]
 parse_H2 = "h2py.scripts.parse_H2:main"
+bootstrap_H2 = "h2py.scripts.bootstrap_H2:main"
 fit_H2 = "h2py.scripts.fit_H2:main"
 plot_H2 = "h2py.scripts.plot_H2:main"
-
+stderrs = "h2py.scripts.compute_stderrs:main"

@@ -23,7 +23,7 @@ def compute_H2(
     min_reg_len=None,
     compute_denom=True,
     compute_two_sample=True,
-    verbose=None
+    verbose=True
 ):
     """
     Compute H2 and H statistics from a region in a .vcf file.
@@ -50,8 +50,10 @@ def compute_H2(
     if rec_map_file is not None:
         if r_bins is not None:
             bins = util.map_function(r_bins)
+            ret_bins = r_bins
         elif cM_bins is not None:
             bins = cM_bins
+            ret_bins = cM_bins
         else:
             raise ValueError('must provide r or cM bins')
         
@@ -60,6 +62,7 @@ def compute_H2(
     else:
         if bp_bins is not None:
             bins = bp_bins
+            ret_bins = bp_bins
         else:
             raise ValueError('must provide bp bins')
         
@@ -72,14 +75,19 @@ def compute_H2(
 
     stats = {}
 
-    num_H = get_H_statistics(genotypes, compute_two_sample=compute_two_sample)
+    num_H = get_H_statistics(
+        genotypes, 
+        compute_two_sample=compute_two_sample,
+        verbose=verbose
+    )
     num_H2 = get_H2_statistics(
         genotypes,
         pos_map,
         bins=bins,
         l_end=l_end,
         phased=phased,
-        compute_two_sample=compute_two_sample
+        compute_two_sample=compute_two_sample,
+        verbose=verbose
     )
     stats['nums'] = np.vstack((num_H2, num_H[np.newaxis]))
 
@@ -98,7 +106,8 @@ def compute_H2(
                 bed_map, 
                 bins=bins, 
                 l_end=l_end, 
-                mut_map=None
+                mut_map=None,
+                verbose=verbose
             )
             stats['denoms'] = np.append(denom_H2, denom_H)
             stats['means'] = np.divide(
@@ -111,7 +120,8 @@ def compute_H2(
                 bed_map,
                 bins=bins,
                 l_end=l_end,
-                mut_map=mut_map
+                mut_map=mut_map,
+                verbose=verbose
             )
             stats['denoms'] = np.append(mut_prod_sums, denom_H)
             stats['mut_stats'] = mut_stats
@@ -119,11 +129,14 @@ def compute_H2(
                 mut_prod_sums / mut_stats['mean_mut_prod'], denom_H
             )
             stats['means'] = np.divide(
-                stats['nums'], temp_denom[:, None], where=(temp_denom > 0)[:, None]
+                stats['nums'], 
+                temp_denom[:, None], 
+                where=(temp_denom > 0)[:, None]
             )
 
-    stats['bins'] = bins
+    stats['bins'] = ret_bins
     stats['pop_ids'] = pop_ids
+    stats['num_sites'] = denom_H
 
     return stats
 
@@ -154,7 +167,7 @@ def subset_genotypes_by_pop(pop_file, sample_ids, genotypes):
     return pop_ids, genotypes
 
 
-def get_H_statistics(genotypes, compute_two_sample=True):
+def get_H_statistics(genotypes, compute_two_sample=True, verbose=False):
     """
 
     """
@@ -176,6 +189,9 @@ def get_H_statistics(genotypes, compute_two_sample=True):
                     continue
                 num_H[k] = _two_sample_H(genotypes[[i, j]])
                 k += 1
+
+    if verbose:
+        print(util.get_time(), f'computed H for {genotypes.shape[1]} sites')
 
     return num_H
 
@@ -209,7 +225,7 @@ def get_H2_statistics(
     l_end=None,
     phased=False,
     compute_two_sample=True,
-    return_arr=True
+    verbose=False
 ):
     """
     """
@@ -248,6 +264,8 @@ def get_H2_statistics(
                     genotypes[[i, j]], pos_map, bins, llim=llim
                 )
                 k += 1
+    if verbose:
+        print(util.get_time(), f'computed H2 for {genotypes.shape[1]} sites')
 
     return num_H2
 
@@ -304,6 +322,7 @@ def _denominator_H2(
     if mut_map is None:
         denom = count_num_pairs(pos_map, bins, llim=llim, verbose=None)
         ret = denom
+        print(util.get_time(), f'computed denominator for {len(pos_map)} sites')
 
     else:
         mut_prod_sums = _mut_prod_sums(
@@ -311,15 +330,19 @@ def _denominator_H2(
             mut_map, 
             bins, 
             llim=llim,
-            verbose=verbose
+            verbose=None
         )
-
+        print(util.get_time(), f'computed denominator for {len(pos_map)} sites')
         mut_stats = {}
+
 
         mut_stats['num_sites'] = len(mut_map)
         mut_stats['mean_mut'] = np.mean(mut_map)
-        mut_stats['sqr_mean_mut'] = np.mean(mut_map) ** 0.5
+        mut_stats['sqr_mean_mut'] = np.mean(mut_map) ** 2
         mut_stats['mean_mut_prod'] = _mean_mut_prod(mut_map)
+        whole_bin = np.array([bins[0], bins[-1]])
+        mut_stats['num_pairs'] = count_num_pairs(pos_map, whole_bin, llim=llim)
+        print(util.get_time(), f'computed mut stats for {len(pos_map)} sites')
 
         ret = (mut_prod_sums, mut_stats)
 
@@ -333,7 +356,7 @@ def count_num_pairs(site_map, bins, llim=None, verbose=None):
     if not llim:
         llim = len(site_map)
 
-    if not verbose:
+    if not verbose or verbose is False:
         verbose = 1e10
 
     cum_nums = np.zeros(len(bins), dtype=int)
@@ -342,7 +365,7 @@ def count_num_pairs(site_map, bins, llim=None, verbose=None):
         edges = np.searchsorted(site_map[i + 1:], rl + bins)
         cum_nums += edges
 
-        if i % verbose == 0:
+        if i % verbose == 0 and i > 0:
             print(util.get_time(), f'num pairs counted at site {i}')
 
     _num_pairs = np.diff(cum_nums)
@@ -351,7 +374,7 @@ def count_num_pairs(site_map, bins, llim=None, verbose=None):
     return num_pairs
 
 
-def compute_prod_sums(site_vals, site_map, bins, llim=None, verbose=1e6):
+def compute_prod_sums(site_vals, site_map, bins, llim=None, verbose=None):
     """
     Get sums of site-pair products binned by recombination distance.
     """
@@ -360,6 +383,9 @@ def compute_prod_sums(site_vals, site_map, bins, llim=None, verbose=1e6):
     
     if not llim:
         llim = len(site_map)
+
+    if not verbose:
+        verbose = 1e10
 
     cum_vals = np.cumsum(site_vals)
     cum_prods = np.zeros(len(bins), dtype=float)
@@ -391,15 +417,15 @@ def _mut_prod_sums(rec_map, mut_map, bins, llim=None, verbose=None):
     if verbose is None:
         verbose = 1e10
 
-    cum_mut_map = np.cumsum(rec_map)
-    cum_prods = np.zeros(len(bins), dtype=float)
+    cum_mut_map = np.cumsum(mut_map)
+    cum_prods = np.zeros(len(bins), dtype=np.float64)
 
     for i, (rl, ul) in enumerate(zip(rec_map[:llim], mut_map[:llim])):
         if ul > 0:
             edges = np.searchsorted(rec_map[i + 1:], rl + bins)
             cum_prods += ul * cum_mut_map[i:][edges]
 
-            if i % verbose == 0:
+            if i % verbose == 0 and i > 0:
                 print(util.get_time(), f'u prods computed at site {i}')
 
     _prod_sums = np.diff(cum_prods)
@@ -513,6 +539,9 @@ def bootstrap_H2(
     if num_samples is None:
         num_samples = num_regions
 
+    print(util.get_time(), f'bootstrapping with {num_reps} reps of '
+          f'{num_samples} samples')
+
     if mut_weighted is False:
         stats = _bootstrap(regions, num_reps, num_samples)
 
@@ -536,24 +565,23 @@ def _bootstrap(
     """
     region0 = regions[next(iter(regions))]
     num_bins, num_stats = region0['nums'].shape
-
-    sums = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
-    denoms = np.zeros((num_reps, num_bins), dtype=np.float64)
-    means = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
+    reps = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
 
     for rep in range(num_reps):
         samples = np.random.choice(regions, num_samples, replace=True)
-
-        sums[rep] = [regions[key]['nums'] for key in samples].sum(0)
-        denoms[rep] = [regions[key]['denoms'] for key in samples].sum(0)
-        means[rep] = sums[rep] / denoms[rep]
+        rep_sums = np.zeros((num_bins, num_stats), dtype=np.float64)
+        rep_denoms = np.zeros(num_bins, dtype=np.float64)
+        for key in samples:
+            rep_sums += regions[key]['nums']
+            rep_denoms += regions[key]['denoms']
+        reps[rep] = rep_sums / rep_denoms[:, np.newaxis]
 
     means = (
-        np.array(regions[reg['nums']] for reg in regions)/sum(0) / 
-        np.array(regions[reg['denoms']] for reg in regions).sum(0)
+        np.array(regions[reg]['nums'] for reg in regions).sum(0) / 
+        np.array(regions[reg]['denoms'] for reg in regions).sum(0)
     )
     varcovs = np.array(
-        [np.cov(means[:, b], rowvar=False) for b in range(num_bins)]
+        [np.cov(reps[:, b], rowvar=False) for b in range(num_bins)]
     )
 
     stats = {}
@@ -572,45 +600,65 @@ def _mut_weighted_bootstrap(
     to_mean_mut=None,
 ):
     """
+
     """
     region0 = regions[next(iter(regions))]
     num_bins, num_stats = region0['nums'].shape
+    sums = np.zeros((num_bins, num_stats), dtype=np.float64)
+    denom_sums = np.zeros(num_bins, dtype=np.float64)
 
-    sums = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
-    denoms = np.zeros((num_reps, num_bins), dtype=np.float64)
-    means = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
+    for key in regions:
+        sums += regions[key]['nums']
+        denom_sums += regions[key]['denoms']
+
+    if to_mean_mut is None:
+        sum_mut = 0
+        sum_sites = 0
+        for key in regions:
+            num_sites = regions[key]['mut_stats']['num_sites']
+            sum_mut += num_sites * regions[key]['mut_stats']['mean_mut']
+            sum_sites += num_sites
+        print(sum_mut, sum_sites)
+        mean_mut = sum_mut / sum_sites
+        print(util.get_time(), f'normalizing to genome-average u {mean_mut}')
+        mut_fac = mean_mut ** 2 
+    else:
+        print(util.get_time(), f'normalizing to u = {to_mean_mut}')
+        mut_fac = to_mean_mut ** 2
+    
+    denom_sums[:-1] /= mut_fac
+    means = sums / denom_sums[:, np.newaxis]
+
+    region0 = regions[next(iter(regions))]
+    num_bins, num_stats = region0['nums'].shape
+
+    reps = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
+    labels = list(regions.keys())
 
     for rep in range(num_reps):
-        samples = np.random.choice(regions, num_samples, replace=True)
-
-        sums[rep] = [regions[key]['nums'] for key in samples].sum(0)
+        samples = np.random.choice(labels, num_samples, replace=True)
+        rep_sums = np.zeros((num_bins, num_stats), dtype=np.float64)
+        rep_denom_sums = np.zeros(num_bins, dtype=np.float64)
+        for key in samples:
+            rep_sums += regions[key]['nums']
+            rep_denom_sums += regions[key]['denoms']
         
         if to_mean_mut:
-            denoms[rep] = (
-                [regions[key]['denoms'] for key in samples].sum(0) 
-                / to_mean_mut ** 2
-            )
+            mut_fac = to_mean_mut ** 2
         else:
-            for key in samples:
-                reg_mut_prod = regions[key]['mut_stats']['mean_mut_prod']
-                denoms[rep] += regions[key]['denoms'] / reg_mut_prod
+            sum_mut = 0
+            sum_sites = 0
+            for key in regions:
+                num_sites = regions[key]['mut_stats']['num_sites']
+                sum_mut += regions[key]['mut_stats']['mean_mut'] * num_sites
+                sum_sites += num_sites
+            mut_fac = (sum_mut / sum_sites) ** 2
                 
-        means[rep] = sums[rep] / denoms[rep]
-
-    if to_mean_mut:
-        denoms = (
-            np.array(regions[reg['denoms']] for reg in regions).sum(0)
-            / to_mean_mut ** 2
-        )
-    else:
-        denoms = np.array(
-            regions[reg['denoms']] / regions[reg['mut_stats']['mean_mut_prod']] 
-            for reg in regions
-        ).sum(0)
+        rep_denoms = rep_denom_sums / mut_fac     
+        reps[rep] = rep_sums / rep_denoms[:, np.newaxis]
     
-    means = np.array(reg['nums'] for reg in regions)/sum(0) / denoms
     varcovs = np.array(
-        [np.cov(means[:, b], rowvar=False) for b in range(num_bins)]
+        [np.cov(reps[:, b], rowvar=False) for b in range(num_bins)]
     )
 
     stats = {}

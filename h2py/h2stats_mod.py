@@ -8,6 +8,19 @@ import moments
 import pickle
 
 
+def load_data(in_file, **kwargs):
+    """
+    Load H2 statistics from one or more dictionaries in a pickled file.
+    """
+    reps = {}
+    with open(in_file, 'rb') as fin:
+        dic = pickle.load(fin)
+        for rep in dic:
+            stats = H2stats.from_dict(dic[rep], **kwargs)
+            reps[rep] = stats
+    return reps
+
+
 _default_bins = np.logspace(-6, -2, 17)
 
 
@@ -40,7 +53,7 @@ class H2stats:
         assert pop_ids is not None
         self.stats = stats
         self.bins = bins
-        self.pop_ids = [str(x) for x in pop_ids]
+        self.pop_ids = pop_ids
         self.covs = covs
 
     @classmethod
@@ -74,14 +87,27 @@ class H2stats:
         return cls(data, bins=bins, pop_ids=pop_ids, covs=covs)
 
     @classmethod
-    def from_dict(cls, dic):
+    def from_dict(cls, dic, to_pop_ids=None, to_bins=None, graph=None):
         """
         
         """
         pop_ids = dic['pop_ids']
         bins = dic['bins']
         stats = dic['means']
-        return cls(stats, bins=bins, pop_ids=pop_ids)
+        covs = dic['covs'] if 'covs' in dic else None
+        ret = cls(stats, bins=bins, pop_ids=pop_ids, covs=covs)
+
+        if to_pop_ids is not None:
+            ret = ret.subset(to_pop_ids=to_pop_ids, to_bins=to_bins)
+
+        elif graph is not None:
+            if isinstance(graph, str): 
+                graph = demes.load(graph)
+            deme_names = [d.name for d in graph.demes]
+            overlaps = [pop for pop in pop_ids if pop in deme_names]
+            ret = ret.subset(to_pop_ids=overlaps, to_bins=to_bins)
+
+        return ret
 
     @classmethod
     def from_file(cls, fname, pop_ids=None, graph=None):
@@ -150,6 +176,7 @@ class H2stats:
             sample_times = [_times[pop] for pop in sampled_demes]
         else:
             assert len(sample_times) == len(sampled_demes)
+
         r_points = get_r_points(bins)
         ld_stats = moments.LD.LDstats.from_demes(
             graph,
@@ -172,8 +199,10 @@ class H2stats:
                     phased = False
                 point_H2[:, k] = ld_stats.H2(x, y, phased=phased)
                 k += 1
+
         H2 = interpolate_quadratic(point_H2)
         stats = np.vstack((H2, ld_stats.H()))
+
         return cls(stats, bins=bins, pop_ids=sampled_demes, covs=None)
     
     @classmethod
@@ -192,31 +221,38 @@ class H2stats:
         ret = f'H2stats with {num_pops} samples in {num_bins} bins'
         return ret
 
-    def subset(self, pop_ids=None, min_bin=None, max_bin=None):
+    def subset(self, to_pop_ids=None, to_bins=None):
         """
         Subset the instance by population ids or bin indices.
         """
-        bins, stats, covs = self.bins, self.stats, self.covs
-        if pop_ids is not None:
+        _bins, stats, covs = self.bins, self.stats, self.covs
+
+        if to_pop_ids is not None:
             _pop_ids = self.pop_ids
-            num_pops = len(_pop_ids)
-            expanded = [(_pop_ids[i], _pop_ids[j]) for i in range(num_pops)
-                        for j in range(i, num_pops)]
-            keep_me = lambda pair: pair[0] in pop_ids and pair[1] in pop_ids
-            idx = np.nonzero([keep_me(pair) for pair in expanded])[0]
+            labels = get_stat_labels(_pop_ids)
+            include = lambda pair: pair[0] in to_pop_ids and pair[1] in to_pop_ids
+            idx = np.nonzero([include(pair) for pair in labels])[0]
             stats = stats[:, idx]
             covs = np.stack([cov[np.ix_(idx, idx)] for cov in covs])
+
             # sort pop_ids to preserve original order
-            sorter = np.sort(np.searchsorted(_pop_ids, pop_ids))
+            sorter = np.sort(np.searchsorted(_pop_ids, to_pop_ids))
             pop_ids = [_pop_ids[i] for i in sorter]
-        if min_bin is not None or max_bin is not None:
-            # TO-DO add support for bin bounds given in r
-            if min_bin is None: min_bin = 0
-            if max_bin is None: max_bin = -1
-            else: max_bin += 1
-            bins = bins[min_bin:max_bin + 1]
-            covs = np.vstack((covs[:-1][min_bin:max_bin], covs[-1][None]))
+
+        if to_bins is not None:
+            _bs = list(zip(_bins[:-1], _bins[1:]))
+            bs = list(zip(to_bins[:-1], to_bins[1:]))
+            min_bin = _bs.index(bs[0])
+            max_bin = _bs.index(bs[-1])
+            bins = _bins[min_bin:max_bin + 1]
+
+            assert len(bins) == len(to_bins)
+            assert np.all([_b == b for _b, b in zip(bins, to_bins)])
+
+            if covs is not None:
+                covs = np.vstack((covs[:-1][min_bin:max_bin], covs[-1][None]))
             stats = np.vstack((stats[:-1][min_bin:max_bin], stats[-1][None]))
+
         return H2stats(stats, bins=bins, pop_ids=pop_ids, covs=covs)
     
     def write(self, fname):
@@ -255,3 +291,16 @@ def interpolate_quadratic(arr):
     """
     ret = 1/6 * arr[:-1:2] + 2/3 * arr[1::2] + 1/6 * arr[2::2]
     return ret
+
+
+def get_stat_labels(pop_ids):
+    """
+    Get a list of tuples naming one and two-sample statistics from a list of
+    population ids.
+    """
+    num_pops = len(pop_ids)
+    labels = []
+    for i in range(num_pops):
+        for j in range(i, num_pops):
+            labels.append((pop_ids[i], pop_ids[j]))
+    return labels

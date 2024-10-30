@@ -1,0 +1,24 @@
+"""
+Download recombination maps from various sources.
+"""
+
+
+CHROMS = list(range(1, 23))
+omni_maps = []
+pyrho_maps = []
+hinch_maps = []
+hapmapII_maps = []
+deCODE_maps = []
+
+
+rule all:
+    input: omni_maps, pyrho_maps, hinch_maps, hapmapII_maps, deCODE_maps
+
+
+rule download_pyrho_maps:
+
+
+rule download_omni_maps:
+
+
+rule 
