@@ -1,0 +1,24 @@
+
+
+NAs = ['12k', '14k', '16k', '18k', '20k']
+TAs = ['300ka', '500ka', '700ka', '900ka']
+iters = list(range(3))
+
+
+rule all:
+    input:
+        expand('TA_{TA}_NA_{NA}/fit_{iter}.yaml', NA=NAs, TA=TAs, iter=iters)
+
+
+rule fit:
+    input:
+        d = "../../bootstrap.pkl",
+        g = "TA_{TA}_NA_{NA}/African_tree.yaml",
+        p = "TA_{TA}_NA_{NA}/params_African_tree.yaml"
+    output:
+        "TA_{TA}_NA_{NA}/fit_{iter}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.111e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 100 --method Powell --perturb 0.5 > {output}.log
+        """

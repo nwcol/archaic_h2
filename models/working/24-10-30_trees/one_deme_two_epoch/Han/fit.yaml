@@ -1,0 +1,13 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -52.58592291803363,
+    max_iter: 500, num_iter: 165, func_calls: 326, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 21761.584989921, start_size: 18001.869324757732}
+- name: Han
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 0, start_size: 2516.4767278032077}

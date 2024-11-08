@@ -1,0 +1,19 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 12885
+    end_time: 1300000
+  - start_size: 30000
+    end_time: 110000
+- name: KhomaniSan
+  ancestors: [Anc]
+  epochs:
+  - start_size: 34484
+    end_time: 0
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 32640
+    end_time: 0

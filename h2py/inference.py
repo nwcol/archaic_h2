@@ -6,8 +6,9 @@ import numpy as np
 import moments
 from moments.Demes import Inference
 import scipy
+import pickle
 
-from h2py import util, theory
+from h2py import util, h2_parsing, theory
 from h2py.h2stats_mod import H2stats
 
 
@@ -25,74 +26,29 @@ _lower_u = 1e-8
 _upper_u = 1.6e-8
 
 
-def fit_H2(*args, include_H=False, **kwargs):
-    """
-    Fit 
-    """
-    extra_args = dict(include_H=include_H)
-    ret = optimize(
-        objective_H2,
-        *args, 
-        extra_args=extra_args, 
-        **kwargs
-    )
-    return ret
-
-
-def objective_H2(
-    p,
-    builder,
-    options,
-    data,
-    u=None,
-    lower_bounds=None,
-    upper_bounds=None,
-    constraints=None,
-    verbose=None,
-    extra_args=None
-):
-    """
-    Evalute the log likelihood of parameters `p` against empirical H2
-    statistics.
-    """
-    global _n_calls
-    _n_calls += 1
-    if u is None: u = p[-1]
-    if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
-        return -_out_of_bounds
-    builder = Inference._update_builder(builder, options, p)
-    graph = demes.Graph.fromdict(builder)
-    model = H2stats.from_demes(graph, u=u, template=data)
-    include_H = extra_args['include_H']
-    ll = compute_ll(model, data, include_H=include_H)
-    if verbose > 0 and _n_calls % verbose == 0:
-        print_status(_n_calls, ll, p)
-    return -ll
-
-
 def optimize(
     objective_func,
-    graph_fname,
-    param_fname,
+    graph_file,
+    param_file,
     data,
     u=None,
     method='NelderMead',
     max_iter=500,
     verbose=1,
     extra_args=None,
-    out_fname=None,
+    out_file=None,
     perturb=0
 ):
     """
-    Fit a graph defined in `graph_fname` and parameterized by `param_fname`
+    Fit a graph defined in `graph_file` and parameterized by `param_file`
     to `data` using `objective_func` using a scipy optimization routine.
     """
     print(
         util.get_time(), f'fitting {objective_func.__name__} ' 
-        f'to data for demes {data.pop_ids}'
+        f'to data for demes {data["pop_ids"]}'
     )
-    builder = Inference._get_demes_dict(graph_fname)
-    options = Inference._get_params_dict(param_fname)
+    builder = Inference._get_demes_dict(graph_file)
+    options = Inference._get_params_dict(param_file)
     pnames, p0, lower_bounds, upper_bounds = \
         Inference._set_up_params_and_bounds(options, builder)
     constraints = Inference._set_up_constraints(options, pnames)
@@ -212,7 +168,7 @@ def optimize(
     graph = demes.Graph.fromdict(builder)
     graph.metadata['opt_info'] = info
 
-    if out_fname is not None: demes.dump(graph, out_fname)
+    if out_file is not None: demes.dump(graph, out_file)
     else: return graph
 
 
@@ -265,12 +221,209 @@ def check_params(p, lower_bounds, upper_bounds, constraints):
     return ret
 
 
+
+def fit_H2(*args, include_H=False, **kwargs):
+    """
+     
+    """
+    extra_args = dict(
+        include_H=include_H
+    )
+    ret = optimize(
+        objective_H2,
+        *args, 
+        extra_args=extra_args, 
+        **kwargs
+    )
+    return ret
+
+
+def objective_H2(
+    p,
+    builder,
+    options,
+    data,
+    u=None,
+    lower_bounds=None,
+    upper_bounds=None,
+    constraints=None,
+    verbose=None,
+    extra_args=None
+):
+    """
+    Evalute the log likelihood of parameters `p` against empirical H2
+    statistics.
+    """
+    global _n_calls; _n_calls += 1
+
+    if u is None: u = p[-1]
+
+    if check_params(p, lower_bounds, upper_bounds, constraints) != 0:
+        return -_out_of_bounds
+    
+    builder = Inference._update_builder(builder, options, p)
+    graph = demes.Graph.fromdict(builder)
+    model = moments_H2(graph, u=u, data=data)
+
+    include_H = extra_args['include_H']
+    ll = compute_ll(model, data, include_H=include_H)
+    
+    if verbose > 0 and _n_calls % verbose == 0:
+        print_status(_n_calls, ll, p)
+
+    return -ll
+
+
+"""
+Computing expected statistics
+"""
+
+
+def moments_H2(
+    graph,
+    data=None,
+    rhos=None,
+    theta=None,
+    rs=None,
+    bins=None,
+    u=None,
+    approximation='trapezoid',
+    sampled_demes=None,
+    sample_times=None
+):
+    """
+    Compute expected H2 using moments.LD.
+
+    If the approximation method is not None, then rs is treated as an array of
+    bin edges; else it is treated as an array of points.
+    """
+    methods = ['midpoint', 'trapezoid', 'Simpsons', None]
+    if approximation not in methods: 
+        raise ValueError('approximation method is not recognized')
+
+    if u is None and theta is None:
+        raise ValueError('argument `u` or `theta` must be provided')
+
+    if isinstance(graph, str):
+        graph = demes.load(graph)
+
+    if data is not None:
+        sampled_demes = data['pop_ids']
+        bins = data['bins']
+    else:
+        if sampled_demes is not None:
+            graph_demes = [d.name for d in graph.demes]
+            for d in sampled_demes:
+                if d not in graph_demes: 
+                    raise ValueError(f'deme {d} is not present in graph!')
+        else:
+            sampled_demes = [d.name for d in graph.demes if d.end_time == 0]
+
+    if sample_times is None:
+        end_times = {d.name: d.end_time for d in graph.demes}
+        sample_times = [end_times[pop] for pop in sampled_demes]
+    else:
+        assert len(sample_times) == len(sampled_demes)
+
+    if rs is None:
+        if bins is None:
+            bins = h2_parsing._default_bins
+        rs = get_rs(bins, approximation)
+
+    ld_stats = moments.Demes.LD(
+        graph,
+        sampled_demes,
+        sample_times=sample_times,
+        rho=rhos,
+        theta=theta,
+        r=rs,
+        u=u
+    )
+
+    num_demes = len(sampled_demes)
+    indices = [(i, j) for i in range(num_demes) for j in range(i, num_demes)]
+    raw_H2 = np.zeros((len(rs), len(indices)))
+
+    for k, (i, j) in enumerate(indices):
+        phasing = True if i == j else False
+        raw_H2[:, k] = ld_stats.H2(i, j, phased=phasing)
+
+    H2 = approximate_H2(raw_H2, approximation)
+    H2H = np.vstack((H2, ld_stats.H()))
+
+    model = {
+        'means': H2H,
+        'pop_ids': sampled_demes,
+        'bins': bins
+    }
+    return model
+
+
+def get_rs(bins, approximation):
+    """
+    Get the r or rho values at which to evaluate H2 for a given approximation
+    scheme.
+    """
+    key = (str(bins), approximation)
+    if key in _rs_cache:
+        rs = _rs_cache[key]
+
+    elif approximation is None:
+        rs = bins
+
+    elif approximation == 'midpoint':
+        rs = bins[:-1] + (bins[1:] - bins[:-1]) / 2
+
+    elif approximation == 'trapezoid':
+        rs = bins
+    
+    elif approximation == 'Simpsons':
+        midpoints = (bins[1:] - bins[:-1]) / 2
+        rs = np.sort(np.concatenate((bins, bins[:-1] + midpoints)))
+
+    else:
+        raise ValueError('unrecognized approximation method')
+
+    return rs
+
+
+def approximate_H2(raw, approximation):
+    """
+    
+    """
+    if approximation is None:
+        ret = raw
+
+    elif approximation == 'midpoint':
+        ret = raw
+
+    elif approximation == 'trapezoid':
+        ret = 1/2 * (raw[:-1] + raw[1:])
+    
+    elif approximation == 'Simpsons':
+        ret = 1/6 * raw[:-1:2] + 2/3 * raw[1::2] + 1/6 * raw[2::2]
+
+    else:
+        raise ValueError('unrecognized approximation method')
+
+    return ret
+
+
+def load_H2(file, graph=None):
+    """
+    
+    """
+    with open(file, 'rb') as fin:
+        dic = pickle.load(fin)
+    _data = dic[next(iter(dic))]
+    if graph is not None:
+        data = h2_parsing.subset_H2(_data, graph=graph)
+    return data
+
+
 """
 Computing log-likelihoods
 """
-
-
-_inv_cov_cache = dict()
 
 
 def compute_ll(model, data, include_H=False):
@@ -287,12 +440,12 @@ def compute_bin_ll(model, data, include_H=False):
     Get log-likelihood per bin from H2stats instances `model` and `data`. 
     If use_H is True, then likelihood is also computed for H.
     """
-    xs = data.stats
-    if data.covs is None:
+    xs = data['means']
+    if data['covs'] is None:
         raise ValueError('data has no covariance matrix!')
     else:
-        covs = data.covs
-    mus = model.stats
+        covs = data['covs']
+    mus = model['means']
     if include_H:
         bin_ll = _compute_bin_ll(xs, mus, covs)
     else:
@@ -316,14 +469,18 @@ def _compute_bin_ll(xs, mus, covs):
     lens = np.array([len(xs), len(mus), len(covs)])
     if not np.all(lens == lens[0]):
         raise ValueError('xs, mus, covs lengths do not match')
+    
     bin_ll = np.zeros(len(xs))
+
     for i in range(len(xs)):
         if i in _inv_cov_cache and np.all(_inv_cov_cache[i]['cov'] == covs[i]):
             inv_cov = _inv_cov_cache[i]['inv']
         else:
             inv_cov = np.linalg.inv(covs[i])
             _inv_cov_cache[i] = dict(cov=covs[i], inv=inv_cov)
+            
         bin_ll[i] = log_gaussian(xs[i], mus[i], inv_cov)
+
     return bin_ll
 
 
@@ -341,11 +498,11 @@ Computing confidence intervals
 """
 
 
-def get_uncerts(
-    graph_fname,
-    param_fname,
+def compute_uncerts(
+    graph_file,
+    param_file,
     data,
-    bootstraps=None,
+    bootstrap_reps=None,
     u=None,
     delta=0.01,
     method='GIM'
@@ -353,137 +510,126 @@ def get_uncerts(
     """
     
     """
-    builder = Inference._get_demes_dict(graph_fname)
-    options = Inference._get_params_dict(param_fname)
+    builder = Inference._get_demes_dict(graph_file)
+    options = Inference._get_params_dict(param_file)
     pnames, p0, _, __ = Inference._set_up_params_and_bounds(options, builder)
 
-    if u is None:
-        _u = float(demes.load(graph_fname).metadata['opt_info']['u'])
-        pnames.append('u')
-        p0 = np.append(p0, _u)
-
     def model_func(p):
-        # takes parameters and returns expected statistics
+
         nonlocal builder
         nonlocal options
         nonlocal data
         nonlocal u
 
-        if u is None:
-            u = p[-1]
-
         builder = Inference._update_builder(builder, options, p)
         graph = demes.Graph.fromdict(builder)
-        model = H2stats.from_graph(graph, u, template=data)
+        model = moments_H2(graph, u=u, data=data)
         return model
 
     if method == 'FIM':
-        H = get_godambe_matrix(
-            model_func,
+        H = compute_godambe(
             p0,
+            model_func,
             data,
-            bootstraps,
-            delta,
+            bootstrap_reps=None,
+            delta=delta,
             just_H=True
         )
         uncerts = np.sqrt(np.diag(np.linalg.inv(H)))
 
     elif method == 'GIM':
-        if bootstraps is None:
-            raise ValueError('You need bootstraps to use the GIM method!')
-        godambe_matrix = get_godambe_matrix(
-            model_func,
+        if bootstrap_reps is None:
+            raise ValueError('You need bootstrap_reps to use the GIM method!')
+        G = compute_godambe(
             p0,
+            model_func,
             data,
-            bootstraps,
-            delta
+            bootstrap_reps,
+            delta=delta
         )
-        uncerts = np.sqrt(np.diag(np.linalg.inv(godambe_matrix)))
+        uncerts = np.sqrt(np.diag(np.linalg.inv(G)))
     else:
         uncerts = None
 
     return pnames, p0, uncerts
 
 
-_ll_cache = dict()
-
-
-def get_godambe_matrix(
-    model_func,
+def compute_godambe(
     p0,
+    model_func,
     data,
-    bootstraps,
-    delta,
+    bootstrap_reps,
+    delta=0.01,
     just_H=False
 ):
     """
-    
+    Compute the Godambe matrix.
     """
-    def func(p, data):
+    def ll_func(p, data):
         # compute log-likelihood given parameters, data
         # cache check
         key = tuple(p)
-        if key in _ll_cache:
-            model = _ll_cache[key]
+        if key in _model_cache:
+            model = _model_cache[key]
         else:
             model = model_func(p)
-            _ll_cache[key] = model
+            _model_cache[key] = model
         return compute_ll(model, data)
 
-    H = -get_hessian(func, p0, data, delta)
+    H = -compute_hessian(p0, ll_func, data, delta=delta)
 
     if just_H:
         return H
 
     J = np.zeros((len(p0), len(p0)))
-    for i, bootstrap in enumerate(bootstraps):
-        cU = get_gradient(func, p0, delta, bootstrap)
-        cJ = cU @ cU.T
+    for rep in bootstrap_reps:
+        cU = compute_gradient(p0, ll_func, data, delta=delta)
+        cJ = np.matmul(cU, cU.T)
         J += cJ
 
-    J = J / len(bootstraps)
+    J = J / len(bootstrap_reps)
     J_inv = np.linalg.inv(J)
-    godambe_matrix = H @ J_inv @ H
-    return godambe_matrix
+    godambe = np.matmul(np.matmul(H,  J_inv), H)
+    return godambe
 
 
-def get_hessian(ll_func, p0, data, delta):
+def compute_hessian(p0, ll_func, data, delta=0.01):
     """
     
     """
     f0 = ll_func(p0, data)
     hs = delta * p0
-
-    hessian = np.zeros((len(p0), len(p0)))
+    hessian = np.zeros((len(p0), len(p0)), dtype=np.float64)
 
     for i in range(len(p0)):
         for j in range(i, len(p0)):
-            _p = np.array(p0, copy=True, dtype=float)
+            p = np.array(p0, copy=True, dtype=np.float64)
 
             if i == j:
-                _p[i] = p0[i] + hs[i]
-                fp = ll_func(_p, data)
-                _p[i] = p0[i] - hs[i]
-                fm = ll_func(_p, data)
+                p[i] = p0[i] + hs[i]
+                fp = ll_func(p, data)
+
+                p[i] = p0[i] - hs[i]
+                fm = ll_func(p, data)
 
                 element = (fp - 2 * f0 + fm) / hs[i] ** 2
 
             else:
-                _p[i] = p0[i] + hs[i]
-                _p[j] = p0[j] + hs[j]
-                fpp = ll_func(_p, data)
+                p[i] = p0[i] + hs[i]
+                p[j] = p0[j] + hs[j]
+                fpp = ll_func(p, data)
 
-                _p[i] = p0[i] + hs[i]
-                _p[j] = p0[j] - hs[j]
-                fpm = ll_func(_p, data)
+                p[i] = p0[i] + hs[i]
+                p[j] = p0[j] - hs[j]
+                fpm = ll_func(p, data)
 
-                _p[i] = p0[i] - hs[i]
-                _p[j] = p0[j] + hs[j]
-                fmp = ll_func(_p, data)
+                p[i] = p0[i] - hs[i]
+                p[j] = p0[j] + hs[j]
+                fmp = ll_func(p, data)
 
-                _p[i] = p0[i] - hs[i]
-                _p[j] = p0[j] - hs[j]
-                fmm = ll_func(_p, data)
+                p[i] = p0[i] - hs[i]
+                p[j] = p0[j] - hs[j]
+                fmm = ll_func(p, data)
 
                 element = (fpp - fpm - fmp + fmm) / (4 * hs[i] * hs[j])
 
@@ -493,24 +639,63 @@ def get_hessian(ll_func, p0, data, delta):
     return hessian
 
 
-def get_gradient(func, p0, delta, args):
+def compute_gradient(p0, ll_func, data, delta=0.01):
     """
     
     """
-    # should be changed to match moments version
     hs = delta * p0
-
-    # column
     gradient = np.zeros((len(p0), 1))
 
     for i in range(len(p0)):
-        _p = np.array(p0, copy=True, dtype=float)
+        p = np.array(p0, copy=True, dtype=float)
 
-        _p[i] = p0[i] + hs[i]
-        fp = func(_p, args)
+        p[i] = p0[i] + hs[i]
+        fp = ll_func(p, data)
 
-        _p[i] = p0[i] - hs[i]
-        fm = func(_p, args)
+        p[i] = p0[i] - hs[i]
+        fm = ll_func(p, data)
         gradient[i] = (fp - fm) / (2 * hs[i])
 
     return gradient
+
+
+# caches
+_rs_cache = {}
+_model_cache = {}
+_inv_cov_cache = {}
+
+
+"""
+
+"""
+
+
+def estimate_rho_theta(stats, bins):
+    """
+    
+    """
+    def logistic_func(x, l, k, x0, y0):
+
+        return y0 + l / (1 + np.exp(-k * (x - x0)))
+
+    H = stats[-1]
+    H2 = stats[:-1]
+    midpoints = bins[:-1] + np.diff(bins) / 2
+    log_midpoints = np.log10(midpoints)
+    p0 = np.array([H ** 2, -1, -4, H ** 2])
+
+    p_opt, p_cov = scipy.optimize.curve_fit(
+        logistic_func,
+        log_midpoints,
+        H2,
+        p0=p0
+    )
+
+    l, k, x0, y0 = p_opt
+
+    theta_H2 = y0 ** 0.5
+    rho_Ne = 1 / (4 * 10 ** -x0)
+    ldfac = l / y0
+
+    return p_opt
+

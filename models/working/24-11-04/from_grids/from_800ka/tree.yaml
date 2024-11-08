@@ -1,0 +1,65 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 16000 
+    end_time: 900000
+- name: ND 
+  ancestors: [Anc]
+  epochs:
+  - start_size: 16565
+    end_time: 671760
+- name: Denisova 
+  ancestors: [ND]
+  epochs:
+  - start_size: 3185
+    end_time: 80000
+- name: Neandertal
+  ancestors: [ND]
+  epochs:
+  - start_size: 4701
+    end_time: 143527
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - start_size: 509
+    end_time: 110000
+- name: CV
+  ancestors: [Neandertal]
+  epochs:
+  - start_size: 4701
+    end_time: 109170
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - start_size: 426
+    end_time: 80000
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - start_size: 1286
+    end_time: 55000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 44209
+    end_time: 79887
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 12364
+    end_time: 0
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 11700
+    end_time: 0
+
+migrations:
+- demes: [Altai, CV]
+  rate: 4.23e-4
+- demes: [Vindija, Chagyrskaya]
+  rate: 6.91e-4
+- demes: [Altai, Denisova]
+  rate: 2e-5

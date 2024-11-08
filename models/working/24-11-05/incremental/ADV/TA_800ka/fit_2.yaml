@@ -1,0 +1,34 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2130.180478432954,
+    max_iter: 300, num_iter: 16, func_calls: 1421, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 800000, start_size: 19346.939492982838}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 798999.9787692671, start_size: 1941.0596479725211}
+- name: Altai
+  ancestors: [ND]
+  epochs:
+  - {end_time: 110000, start_size: 1810.2162861980069}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 2837.6788839081255}
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 27169.212564072586}
+  - {end_time: 0, start_size: 30000}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 8.323376042375302e-06
+pulses:
+- sources: [Yoruba]
+  dest: Altai
+  time: 150000
+  proportions: [0.02]

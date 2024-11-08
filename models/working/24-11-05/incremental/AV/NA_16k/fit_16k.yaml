@@ -1,0 +1,23 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -209.34435523563877,
+    max_iter: 500, num_iter: 4, func_calls: 179, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 958671.6728250188, start_size: 16000}
+- name: Altai
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 110000, start_size: 3500.473297083478}
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 35390.594344583944}
+  - {end_time: 0, start_size: 20364.390515097497}
+pulses:
+- sources: [Yoruba]
+  dest: Altai
+  time: 150000
+  proportions: [0.02]

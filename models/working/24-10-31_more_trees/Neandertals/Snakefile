@@ -1,0 +1,26 @@
+"""
+A first attempt at using Snakemake to parallelize fits locally.
+"""
+
+
+NAs = ['12k', '14k', '16k', '18k', '20k']
+TAs = ['500ka', '600ka', '700ka', '800ka']
+iters = list(range(5))
+
+
+rule all:
+    input:
+        expand('NA{NA}_TA{TA}/fit_{iter}.yaml', NA=NAs, TA=TAs, iter=iters)
+
+
+rule fit:
+    input:
+        g = "NA{NA}_TA{TA}/Neandertal_tree.yaml",
+        p = "NA{NA}_TA{TA}/params_Neandertal_tree.yaml"
+    output:
+        "NA{NA}_TA{TA}/fit_{iter}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.111e-8 -d ../bootstrap.pkl -p {input.p} -g {input.g} \
+            -o {output} --max_iter 100 --method Powell --perturb 0.3 > {output}.log
+        """

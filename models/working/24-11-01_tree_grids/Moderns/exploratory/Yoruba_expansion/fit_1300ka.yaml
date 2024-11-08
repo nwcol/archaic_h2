@@ -1,0 +1,10 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -14.107874102345493,
+    max_iter: 500, num_iter: 6, func_calls: 146, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Yoruba
+  epochs:
+  - {end_time: 1300000, start_size: 12885.388353176766}
+  - {end_time: 0, start_size: 32640.440800023596}

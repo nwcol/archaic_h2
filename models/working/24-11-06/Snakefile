@@ -1,0 +1,40 @@
+"""
+snakefile for fitting separate archaic/modern demographies with fixed NAs
+"""
+
+
+NAs = ['15k', '16k', '17k', '18k', '19k', '20k']
+reps = list(range(3))
+
+
+rule all:
+    input:
+        expand('Moderns/NA{NA}/fit_{rep}.yaml', NA=NAs, rep=reps),
+        expand('Archaics/NA{NA}/fit_{rep}.yaml', NA=NAs, rep=reps)
+
+
+rule fit_modern:
+    input:
+        d = "bootstrap.pkl",
+        g = "Moderns/NA{NA}/tree.yaml",
+        p = "Moderns/params.yaml"
+    output:
+        "Moderns/NA{NA}/fit_{rep}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 400 --method Powell --perturb 0.6 --verbose 200
+        """
+
+rule fit_archaic:
+    input:
+        d = "bootstrap.pkl",
+        g = "Archaics/NA{NA}/Archaic_tree.yaml",
+        p = "Archaics/params_Archaic_tree.yaml"
+    output:
+        "Archaics/NA{NA}/fit_{rep}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 400 --method Powell --perturb 0.6 --verbose 200
+        """

@@ -1,0 +1,21 @@
+parameters:
+- name: TA0
+  lower_bound: 100000
+  upper_bound: 2000000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+- name: TA1
+  lower_bound: 50000
+  upper_bound: 225000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            1: end_time
+
+constraints:
+- params: [TA0, TA1]
+  constraint: greater_than

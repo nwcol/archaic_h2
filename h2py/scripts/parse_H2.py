@@ -47,7 +47,7 @@ def get_args():
     )
     parser.add_argument(
         '--min_reg_len',
-        type=str
+        type=int
     )
     parser.add_argument(
         '--compute_denom',

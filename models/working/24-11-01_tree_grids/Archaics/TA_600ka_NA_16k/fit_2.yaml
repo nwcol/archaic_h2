@@ -1,0 +1,45 @@
+description: Incorporates a size change between `Ancestral` and `Neandertal` demes
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1226.4477489096162,
+    max_iter: 200, num_iter: 37, func_calls: 9305, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 600000, start_size: 16000}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 598999.9999999476, start_size: 49999.99999975146}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3164.964229182759}
+- name: Neandertal
+  ancestors: [ND]
+  epochs:
+  - {end_time: 142808.66612572115, start_size: 3773.4042887103633}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 110000, start_size: 1043.583646784041}
+- name: CV
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 105778.15516680102, start_size: 3773.4042887103633}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 689.3931824808473}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1403.7058332504828}
+migrations:
+- demes: [Altai, CV]
+  rate: 1.306231930505958e-08
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.00019490203270643996
+- demes: [Altai, Denisova]
+  rate: 1.3104478121165028e-05

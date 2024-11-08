@@ -1,0 +1,24 @@
+
+
+NAs = ['10k', '12k', '14k', '16k', '18k', '20k']
+TAs = ['500ka', '600ka', '700ka', '800ka', '900ka']
+iters = list(range(3))
+
+
+rule all:
+    input:
+        expand('TA_{TA}_NA_{NA}/fit_{iter}.yaml', NA=NAs, TA=TAs, iter=iters)
+
+
+rule fit:
+    input:
+        d = "../bootstrap.pkl",
+        g = "TA_{TA}_NA_{NA}/Archaic_tree.yaml",
+        p = "TA_{TA}_NA_{NA}/params_Archaic_tree.yaml"
+    output:
+        "TA_{TA}_NA_{NA}/fit_{iter}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 200 --method Powell --perturb 0.5 > {output}.log
+        """

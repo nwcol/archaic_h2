@@ -1,0 +1,46 @@
+"""
+Parses H2 without mutation rate weighting
+"""
+
+
+CHROMS = list(range(1, 20))
+
+
+rule all:
+    input:
+        "bootstrapped_H2.pkl"
+
+
+rule compute_H2:
+    input:
+        vcf_file = "../../genotypes/merged/genotypes_chr{chrom}.vcf.gz",
+        bed_file = "/home/nick/Projects/old_archaic/data/masks/exons_10kb/roulette-exons_10kb_{chrom}.bed.gz",
+        rec_map_file = "/home/nick/Data/archaic/rmaps/omni/YRI/YRI-{chrom}-final.txt.gz",
+        pop_file = "../../genotypes/populations.txt",
+        region_file = "arms/arms_{chrom}.txt",
+        bins_file = "bins.txt"
+    output:
+        "H2_chr{chrom}.pkl"
+    shell:
+        """
+        parse_H2 -v {input.vcf_file} \
+            -b {input.bed_file} \
+            -r {input.rec_map_file} \
+            -p {input.pop_file} \
+            -R {input.region_file} \
+            -bins {input.bins_file} \
+            --min_reg_len 100 \
+            --chrom {wildcards.chrom} \
+            -o {output}
+        """
+
+    
+rule bootstrap_H2:
+    input:
+        expand("H2_chr{chrom}.pkl", chrom=CHROMS)
+    output:
+        "bootstrapped_H2.pkl"
+    shell:
+        """
+        bootstrap_H2 -i {input} -o {output} 
+        """

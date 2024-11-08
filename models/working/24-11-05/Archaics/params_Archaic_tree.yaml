@@ -1,0 +1,108 @@
+parameters:
+- name: TA
+  upper_bound: 1000000
+  description: Neandertal/Denisovan seperation event time
+  values:
+    - demes:  
+        Anc: 
+           epochs:
+            0: end_time
+- name: NND
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:  
+        ND: 
+           epochs:
+            0: start_size
+- name: TND
+  values:
+    - demes:  
+        ND: 
+           epochs:
+            0: end_time
+- name: ND
+  lower_bound: 100
+  values:
+    - demes:  
+        Denisova: 
+          epochs:
+            0: start_size
+- name: NN
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:  
+        Neandertal: 
+           epochs:
+            0: start_size
+        CV: 
+          epochs:
+            0: start_size
+- name: TN
+  lower_bound: 111000
+  values:
+    - demes:  
+        Neandertal: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 100
+  values:
+    - demes:  
+        Altai: 
+          epochs:
+            0: start_size
+- name: TCV
+  lower_bound: 81000
+  values:
+    - demes:  
+        CV: 
+          epochs:
+            0: end_time
+- name: NC
+  lower_bound: 100
+  values:
+    - demes:  
+        Chagyrskaya: 
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  values:
+    - demes:  
+        Vindija: 
+          epochs:
+            0: start_size
+- name: mDN
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        0: rate
+- name: mACV
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        1: rate
+- name: mCV 
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        2: rate
+- name: mAD
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        3: rate
+
+constraints:
+- params: [TA, TND]
+  constraint: greater_than
+- params: [TND, TN]
+  constraint: greater_than
+- params: [TN, TCV]
+  constraint: greater_than

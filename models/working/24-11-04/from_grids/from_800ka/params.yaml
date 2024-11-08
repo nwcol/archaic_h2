@@ -1,0 +1,33 @@
+parameters:
+- name: NA
+  lower_bound: 1
+  upper_bound: 40000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: TA
+  lower_bound: 200000
+  upper_bound: 1100000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+#- name: NND
+#  lower_bound: 1
+#  upper_bound: 40000
+#  values:
+#    - demes:
+#        ND:
+#          epochs:
+#            0: start_size
+#- name: NMH
+#  lower_bound: 1
+#  upper_bound: 50000
+#  values:
+#    - demes:
+#        MH:
+#          epochs:
+#            0: start_size

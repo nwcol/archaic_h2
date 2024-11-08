@@ -1,0 +1,84 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -2428346.678219871,
+    max_iter: 100, num_iter: 100, func_calls: 139, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 760510.1046203277, start_size: 14247.648728861648}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 652250.5971158855, start_size: 17243.92878902791}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3185}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 175675.85191664158, start_size: 3765.065684581521}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 110000, start_size: 509}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 98486.73155936005, start_size: 3765.065684581521}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 426}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1286}
+- name: NI
+  start_time: 95432.88601793279
+  ancestors: [Vindija]
+  epochs:
+  - {end_time: 50000, start_size: 1286}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 300000, start_size: 23748.46622043762}
+  - {end_time: 120000, start_size: 27743.80454756964}
+- name: MHI
+  start_time: 220285.4535661072
+  ancestors: [MH]
+  epochs:
+  - {end_time: 120000, start_size: 27743.80454756964}
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 9389.162609336734}
+- name: YOOA
+  ancestors: [MH]
+  epochs:
+  - {end_time: 60000, start_size: 13350.367605189109}
+- name: Yoruba
+  ancestors: [YOOA]
+  epochs:
+  - {end_time: 0, start_size: 13350.367605189109}
+- name: French
+  ancestors: [YOOA]
+  epochs:
+  - {end_time: 0, start_size: 5745.63377734309}
+migrations:
+- demes: [Altai, CV]
+  rate: 0.0004352161849784978
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0007355958162344267
+- demes: [Altai, Denisova]
+  rate: 1.790505095055012e-05
+pulses:
+- sources: [MHI]
+  dest: Altai
+  time: 120000
+  proportions: [0.02]
+- sources: [NI]
+  dest: French
+  time: 50000
+  proportions: [0.02]

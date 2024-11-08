@@ -1,0 +1,25 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -59074.616796112256,
+    max_iter: 100, num_iter: 4, func_calls: 306, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 100000, start_size: 12000}
+- name: KhomaniSan
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 0, start_size: 9462.572854404747}
+- name: FY
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 61197.12911400738, start_size: 2831.1032344938944}
+- name: French
+  ancestors: [FY]
+  epochs:
+  - {end_time: 0, start_size: 27348.12193929547}
+- name: Yoruba
+  ancestors: [FY]
+  epochs:
+  - {end_time: 0, start_size: 49999.99999996114}

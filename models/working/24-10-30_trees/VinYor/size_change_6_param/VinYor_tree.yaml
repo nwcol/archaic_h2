@@ -1,0 +1,22 @@
+time_units: years
+generation_time: 29
+description: allows a size change (times are fixed) for each sampled deme
+demes:
+- name: Anc
+  epochs:
+  - start_size: 18000
+    end_time: 850000
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - start_size: 6000
+    end_time: 100000
+  - start_size: 4000
+    end_time: 55000
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 25000
+    end_time: 100000
+  - start_size: 30000
+    end_time: 0

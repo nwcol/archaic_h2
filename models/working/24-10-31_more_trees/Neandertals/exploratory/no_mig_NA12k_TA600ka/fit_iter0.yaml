@@ -1,0 +1,30 @@
+description: Incorporates a size change between `Ancestral` and `Neandertal` demes
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -1297.038456417132,
+    max_iter: 500, num_iter: 500, func_calls: 778, flag: 2, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 600000, start_size: 12000}
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 173567.47189781378, start_size: 4034.7120806918956}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 110000, start_size: 1705.8984159206007}
+- name: CV
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 85000.00964685396, start_size: 8118.178006398398}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 200.43895446996294}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1545.2113185315807}

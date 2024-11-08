@@ -1,65 +1,141 @@
-"""
-"""
 
-ARCHAICS = ['Altai', 'Chagyrskaya', 'Denisova', 'Vindija']
+
+archaic_samples = [
+    "Altai",
+    "Chagyrskaya",
+    "Denisova",
+    "Vindija"
+]
+
+
+Simons_samples = [
+    "LP6005441-DNA_A05",
+    "LP6005442-DNA_B02",
+    "LP6005592-DNA_C05",
+    "LP6005441-DNA_D05",
+    "LP6005441-DNA_B10",
+    "LP6005441-DNA_B08"
+]
+
+
 CHROMS = list(range(1, 23))
 
 
-merged_files = [f"merged/genotypes_chr{chrom}.vcf.gz" for chrom in CHROMS]
-
-
-rule:
+rule all:
     input:
-        expand("merged/merged_variants_chr{chrom}.vcf.gz", chrom=CHROMS),
+        expand("merged/genotypes_chr{chrom}.vcf.gz", chrom=CHROMS)
+
+
+rule index_archaics:
+    input:
+        "{sample}/{chrom}_mq25_mapab100.vcf.gz"
+    output:
+        "{sample}/{chrom}_mq25_mapab100.vcf.gz.csi"
+    shell:
+        """
+        bcftools index {input}
+        """
 
 
 rule get_archaic_variants:
     input: 
-        "{sample}/{chrom}_mq25_mapab100.vcf.gz"
+        vcf = "{sample}/{chrom}_mq25_mapab100.vcf.gz",
+        csi = "{sample}/{chrom}_mq25_mapab100.vcf.gz.csi"
     output:
-        "{sample}_variants/{sample}_{chrom}.vcf.gz"
+        vcf = "{sample}_variants/{sample}_{chrom}.vcf.gz",
+        csi = "{sample}_variants/{sample}_{chrom}.vcf.gz.csi"
     shell:
         """
-        bcftools view -c 1 {input} | \
-	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT -o {output}
+        bcftools view -c 1 {input.vcf} | \
+	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT,FORMAT/GQ -o {output.vcf}
+
+        bcftools index {output.vcf}
+        """
+
+rule index_chagyrskaya:
+    input:
+        "Chagyrskaya/{chrom}.noRB.vcf.gz",
+    output:
+        "Chagyrskaya/{chrom}.noRB.vcf.gz.csi"
+    params:
+        decompressed = "Chagyrskaya/{chrom}.noRB.vcf"
+    shell:
+        """
+        gzip -d {input}
+
+        bgzip {params.decompressed}
+
+        bcftools index {input}
         """
 
 
 rule get_chagyrskaya_variants:
     input: 
-        "{sample}/{chrom}.noRB.vcf.gz"
+        vcf = "Chagyrskaya/{chrom}.noRB.vcf.gz",
+        csi = "Chagyrskaya/{chrom}.noRB.vcf.gz.csi"
     output:
-        "{sample}_variants/{sample}_{chrom}.vcf.gz"
+        vcf = "Chagyrskaya_variants/Chagyrskaya_{chrom}.vcf.gz",
+        csi = "Chagyrskaya_variants/Chagyrskaya_{chrom}.vcf.gz.csi"
     shell:
         """
-        bcftools view -c 1 {input} | \
-	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT -o {output}
+        bcftools view -c 1 {input.vcf} | \
+	        bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT,FORMAT/GQ -o {output.vcf}
+
+        bcftools index {output.vcf}
         """
 
 
-rule get_simons_variants:
+rule extract_simons_vcfs:
     input:
         "Simons/vcfs.variants.public_samples.279samples.tar"
     output:
-        expand("Simons_variants/simons_variants_chr{chrom}.vcf.gz", chrom=CHROMS)
+        vcf = "Simons_variants/{sample_id}.annotated.nh2.variants.vcf.gz", 
+        csi = "Simons_variants/{sample_id}.annotated.nh2.variants.vcf.gz.csi"
     shell:
         """
-        
+        tar -xvf {input} {wildcards.sample_id}.annotated.nh2.variants.vcf.gz | \
+            xargs bcftools annotate -x ID,QUAL,INFO,^FORMAT/GT,FORMAT/GQ -o {output.vcf}
+
+        rm {wildcards.sample_id}.annotated.nh2.variants.vcf.gz
+
+        bcftools index {output.vcf}
         """
 
 
-rule merge_vcfs:
+rule merge_simons_vcfs:
+    input:
+        vcf = expand(
+            "Simons_variants/{sample_id}.annotated.nh2.variants.vcf.gz", 
+            sample_id=Simons_samples
+        ),
+        csi = expand(
+            "Simons_variants/{sample_id}.annotated.nh2.variants.vcf.gz.csi", 
+            sample_id=Simons_samples
+        )
+    output:
+        vcf = "Simons_variants/Simons_chr{chrom}.vcf.gz",
+        csi = "Simons_variants/Simons_chr{chrom}.vcf.gz.csi"
+    shell:
+        """
+        bcftools merge -0 {input.vcf} -r {wildcards.chrom} -o {output.vcf}
+
+        bcftools index {output.vcf}
+        """
+
+
+rule merge_vcfs_main:
     input:
         "Altai_variants/Altai_{chrom}.vcf.gz",
         "Chagyrskaya_variants/Chagyrskaya_{chrom}.vcf.gz",
         "Denisova_variants/Denisova_{chrom}.vcf.gz",
         "Vindija_variants/Vindija_{chrom}.vcf.gz",
-        "Simons_variants/simons_variants_{chrom}.vcf.gz"
-
+        "Simons_variants/Simons_{chrom}.vcf.gz",
     output:
-        "merged/merged_variants_{chrom}.vcf.gz"
-
+        vcf = "merged/genotypes_{chrom}.vcf.gz",
+        csi = "merged/genotypes_{chrom}.vcf.gz.csi"
     shell: 
         """
-        bcftools merge
+        bcftools merge -0 -o {output.vcf} {input} 
+
+        bcftools index {output.vcf}
         """

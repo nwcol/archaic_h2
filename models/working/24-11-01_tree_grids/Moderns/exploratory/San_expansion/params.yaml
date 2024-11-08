@@ -1,0 +1,16 @@
+parameters:
+- name: NA 
+  lower_bound: 100
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            1: start_size

@@ -1,0 +1,35 @@
+description: Incorporates a size change between `Ancestral` and `Neandertal` demes
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -178.87405074879604,
+    max_iter: 500, num_iter: 47, func_calls: 5683, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 600000, start_size: 12000}
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 116864.94439345093, start_size: 5458.403860291796}
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 110000, start_size: 176.95432004119036}
+- name: CV
+  ancestors: [Neandertal]
+  epochs:
+  - {end_time: 85000.00000000316, start_size: 2454.2423158353668}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 110.81347978042209}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1105.3401340089845}
+migrations:
+- demes: [Altai, CV]
+  rate: 0.0012424971816097426
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0018865282617317387

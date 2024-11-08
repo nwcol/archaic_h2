@@ -1,28 +1,37 @@
 # invoke the fit_H2 script
-# created 10-11-2024
-# edited 10-21-2024
+# created 2024-10-11
+# edited 2024-11-08
 
-label = test
-data = H2stats.npz
+# ~ variables ~
+
+graph = archaic_tree_$(NA).yaml
+params = params_archaic_tree.yaml
+out = archaic_tree_$(NA)_$(Cluster)-$(Process).yaml
+data = bootstrap.pkl
+u = 1.112e-8
+
+maxiter = 500
+perturb = 0.5
+method = LBFGSB
+
+#     
 
 log = out/job_$(Cluster).log
 error = out/job_$(Cluster)_$(Process).err
 output = out/job_$(Cluster)_$(Process).out
-
 requirements = (Target.HasCHTCStaging == true)
 container_image = file:///staging/nwcollier/h2-container.sif
-
-executable = fit_H2.sh
+executable = fit_H2.sh      
 
 arguments = \
  -d $(data) \
- -g $(label).yaml \
- -p params_$(graph) \
- -o $(label)_$(Cluster)-$(Process) \
- -u 1.113e-8 \
- --perturb 0.2 \
- --max_iter 1000 \
- --method NelderMead \
+ -g $(graph) \
+ -p $(params) \
+ -o $(out) \
+ -u $(u) \
+ --perturb $(perturb) \
+ --max_iter $(maxiter) \
+ --method $(method) \
  --verbose 10 \
  --include_H 0 \
 

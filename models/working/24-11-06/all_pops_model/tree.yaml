@@ -1,0 +1,122 @@
+time_units: years
+generation_time: 29
+description: This aims to be an essentially comprehensive model...
+demes:
+- name: Anc
+  epochs:
+  - start_size: 18000 
+    end_time: 750000
+- name: ND 
+  ancestors: [Anc]
+  epochs:
+  - start_size: 16565
+    end_time: 650000
+- name: Denisova 
+  ancestors: [ND]
+  epochs:
+  - start_size: 3185
+    end_time: 80000
+- name: N
+  ancestors: [ND]
+  epochs:
+  - start_size: 4701
+    end_time: 160000
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - start_size: 509
+    end_time: 110000
+- name: CV
+  ancestors: [N]
+  epochs:
+  - start_size: 4701
+    end_time: 109170
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - start_size: 426
+    end_time: 80000
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - start_size: 1286
+    end_time: 55000
+- name: NI
+  ancestors: [Vindija]
+  start_time: 105000
+  epochs:
+  - start_size: 1286
+    end_time: 50000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 120000
+- name: MHI
+  ancestors: [MH]
+  start_time: 200000
+  epochs:
+  - start_size: 15000
+    end_time: 140000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 12364
+    end_time: 0
+- name: YOOA
+  ancestors: [MH]
+  epochs:
+  - start_size: 11700
+    end_time: 60000
+- name: Yoruba
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 11700
+    end_time: 0
+- name: OOA
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 1000
+    end_time: 45000
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - start_size: 6000
+    end_time: 0
+- name: HP
+  ancestors: [OOA]
+  epochs:
+  - start_size: 1000
+    end_time: 35000
+- name: Han
+  ancestors: [HP]
+  epochs:
+  - start_size: 5000
+    end_time: 0
+- name: Papuan
+  ancestors: [HP]
+  epochs:
+  - start_size: 1000
+    end_time: 0
+
+migrations:
+- demes: [Denisova, N]
+  rate: 5e-6
+- demes: [Altai, CV]
+  rate: 4.23e-4
+- demes: [Vindija, Chagyrskaya]
+  rate: 6.91e-4
+- demes: [Altai, Denisova]
+  rate: 2e-5
+- demes: [Yoruba, KhomaniSan]
+  rate: 2e-5
+
+pulses:
+- sources: [MHI]
+  proportions: [0.02]
+  dest: Altai
+  time: 120000
+- sources: [NI]
+  proportions: [0.02]
+  dest: OOA
+  time: 50000

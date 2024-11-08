@@ -1,0 +1,48 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -4672.2788929762755,
+    max_iter: 400, num_iter: 18, func_calls: 2990, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 536335.4934859313, start_size: 16000}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 347886.55554489687, start_size: 97754.80003674659}
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 97976.43770739959}
+- name: YOOA
+  ancestors: [MH]
+  epochs:
+  - {end_time: 33941.431892430475, start_size: 33760.265372574155}
+- name: Yoruba
+  ancestors: [YOOA]
+  epochs:
+  - {end_time: 0, start_size: 33760.265372574155}
+- name: OOA
+  ancestors: [YOOA]
+  epochs:
+  - {end_time: 22107.816460355887, start_size: 895.6347179621869}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 7217.2755813257345}
+- name: HP
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 19705.78569965143, start_size: 895.6347179621869}
+- name: Han
+  ancestors: [HP]
+  epochs:
+  - {end_time: 0, start_size: 2286.0365814084385}
+- name: Papuan
+  ancestors: [HP]
+  epochs:
+  - {end_time: 0, start_size: 738.2497274629715}
+migrations:
+- demes: [Yoruba, KhomaniSan]
+  rate: 0.0001639017818058103

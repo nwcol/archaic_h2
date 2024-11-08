@@ -1,0 +1,3 @@
+[24-10-31 16:40:29] fitting objective_H2 to data for demes ['Altai', 'Chagyrskaya', 'Vindija']
+[24-10-31 16:40:29] 0        pnames [         NN        TN        NA       NCV       TCV        NC        NV      mACV       mCV ]
+[24-10-31 16:40:29] 0            p0 [     3485.0  125769.2    1042.7    3491.2  141479.4    1215.6     983.9  9.49e-05  9.60e-05 ]

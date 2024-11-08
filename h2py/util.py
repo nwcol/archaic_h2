@@ -256,13 +256,35 @@ Reading .vcf files
 """
 
 
+def extract_gqs(samples, gq_index):
+    """
+    
+    """
+    gq_strs = [s.split(':')[gq_index] for s in samples]
+    gqs = np.array([np.nan if gq == '.' else float(gq) for gq in gq_strs])
+    return gqs
+
+
+def extract_genotypes(samples, allow_missing=False):
+    """
+    not finished
+    """
+    gt_strs = [re.split('/|\|', s.split(':')[0]) for s in samples]
+    if allow_missing:
+        raise ValueError('not implemented')
+    else:
+        genotypes = np.array(gt_strs, dtype=np.int64)
+    return genotypes
+
+
 def read_genotypes(
     vcf_file, 
     bed_file=None, 
     min_reg_len=None,
     region=None,
     ancestral_seq=None, 
-    read_multiallelic=False
+    read_multiallelic=False,
+    allow_missing=False
 ):
     """
     Read a genotype matrix from a .vcf file. Matrix has shape 
@@ -274,6 +296,7 @@ def read_genotypes(
         len_mask = len(mask)
     open_func = gzip.open if vcf_file.endswith('.gz') else open
 
+    first_row = True
     outside_mask = 0
     outside_reg = 0
     multiallelic = 0
@@ -292,6 +315,16 @@ def read_genotypes(
             else:
                 split_line = line.split()
                 chrom, pos, _, ref, alt = split_line[:5]
+
+                if first_row:
+                    fmt = split_line[8]
+                    if 'GQ' in fmt:
+                        gq_index = fmt.split(':').index('GQ')
+                    else:
+                        gq_index = None
+                        
+                    first_row = False
+
                 samples = split_line[9:]
                 position = int(pos) - 1
 
@@ -310,9 +343,8 @@ def read_genotypes(
                         multiallelic += 1
                         continue
 
-                line_genotypes = np.array(
-                    [re.split('/|\|', s.split(':')[0]) for s in samples],
-                    dtype=np.int64
+                line_genotypes = extract_genotypes(
+                    samples, allow_missing=allow_missing
                 )
                 chrom_nums.append(chrom)
                 positions.append(position)

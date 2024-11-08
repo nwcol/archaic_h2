@@ -1,0 +1,35 @@
+description: I fix modern human Ne and ancestral split time/Ne
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -2918.3093619576375,
+    max_iter: 500, num_iter: 20, func_calls: 3264, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 654394.9404179137, start_size: 20422.024063507073}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 483620.19858756755, start_size: 11118.313391517495}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 150000, start_size: 1993.9475221192265}
+  - {end_time: 80000, start_size: 101931.34282097133}
+- name: Altai
+  ancestors: [ND]
+  epochs:
+  - {end_time: 110000, start_size: 2265.6732285674575}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 21568.64321647185}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 59999.99999999999}
+migrations:
+- demes: [Denisova, Altai]
+  rate: 6.446749244473128e-06
+  start_time: 210000

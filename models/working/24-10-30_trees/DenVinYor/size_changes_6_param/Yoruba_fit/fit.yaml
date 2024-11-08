@@ -1,0 +1,18 @@
+description: Here I'm just trying to fit the Yoruba curve...
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -11.674826243965212,
+    max_iter: 500, num_iter: 282, func_calls: 516, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 930000, start_size: 14112.797448949914}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 49999.99999999961}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 18751.270977814027}

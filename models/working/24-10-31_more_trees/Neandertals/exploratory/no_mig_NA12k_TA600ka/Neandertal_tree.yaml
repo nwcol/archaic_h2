@@ -1,0 +1,33 @@
+time_units: years
+generation_time: 29
+description: Incorporates a size change between `Ancestral` and `Neandertal` demes
+demes:
+- name: Anc
+  epochs:
+  - start_size: 12000
+    end_time: 600000
+- name: Neandertal
+  ancestors: [Anc]
+  epochs:
+  - start_size: 10000
+    end_time: 150000
+- name: Altai
+  ancestors: [Neandertal]
+  epochs:
+  - start_size: 700
+    end_time: 110000
+- name: CV
+  ancestors: [Neandertal]
+  epochs:
+  - start_size: 9700
+    end_time: 115000
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - start_size: 650
+    end_time: 80000
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - start_size: 850
+    end_time: 55000

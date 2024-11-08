@@ -1,0 +1,27 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 10000
+    end_time: 150000
+- name: Altai
+  ancestors: [Anc]
+  epochs:
+  - start_size: 700
+    end_time: 110000
+- name: CV
+  ancestors: [Anc]
+  epochs:
+  - start_size: 9700
+    end_time: 115000
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - start_size: 650
+    end_time: 80000
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - start_size: 850
+    end_time: 55000

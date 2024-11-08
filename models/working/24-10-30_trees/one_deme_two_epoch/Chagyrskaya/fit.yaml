@@ -1,0 +1,13 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -5.576286886112783,
+    max_iter: 500, num_iter: 255, func_calls: 466, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 118867.67534229075, start_size: 9732.849280050788}
+- name: Chagyrskaya
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 80000, start_size: 625.9922230650807}

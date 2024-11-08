@@ -1,0 +1,39 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 17500
+    end_time: 600000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - start_size: 6000
+    end_time: 550000
+- name: Altai
+  ancestors: [ND]
+  epochs:
+  - start_size: 3000
+    end_time: 110000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3000
+    end_time: 80000
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - start_size: 28000
+    end_time: 100000
+  - start_size: 30000
+    end_time: 0
+
+migrations:
+- demes: [Altai, Denisova]
+  rate: 1e-5
+  
+pulses:
+- sources: [Yoruba]
+  dest: Altai
+  time: 150000
+  proportions: [0.02]

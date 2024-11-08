@@ -1,0 +1,31 @@
+description: allows a size change (times are fixed) for each sampled deme
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -1524.9765297044346,
+    max_iter: 40, num_iter: 8, func_calls: 403, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 930000, start_size: 16440}
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 752647.3214615111, start_size: 8082.173989420361}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 4362.430022332422}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 100000, start_size: 5880.504589866118}
+  - {end_time: 55000, start_size: 996.289579576172}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 32550}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 26500}

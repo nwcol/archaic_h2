@@ -1,0 +1,31 @@
+description: Frees the K/YF diverence time and adds another epoch, `MH` (which is
+  only a name and extends >300ka into the past)
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -809.3576816187436,
+    max_iter: 100, num_iter: 10, func_calls: 1044, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 600000, start_size: 18000}
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 151906.2450345059, start_size: 41941.656511373876}
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 29359.36230940918}
+- name: FY
+  ancestors: [MH]
+  epochs:
+  - {end_time: 40000.00004383552, start_size: 19333.348536633534}
+- name: French
+  ancestors: [FY]
+  epochs:
+  - {end_time: 0, start_size: 1995.7263300087207}
+- name: Yoruba
+  ancestors: [FY]
+  epochs:
+  - {end_time: 0, start_size: 49999.99999998111}

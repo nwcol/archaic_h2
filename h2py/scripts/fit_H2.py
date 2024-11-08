@@ -10,19 +10,19 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-d',
-        '--data_fname',
+        '--data_file',
         type=str,
         required=True
     )
     parser.add_argument(
         '-g',
-        '--graph_fname',
+        '--graph_file',
         type=str,
         required=True
     )
     parser.add_argument(
         '-p',
-        '--param_fname',
+        '--param_file',
         type=str,
         required=True
     )
@@ -33,7 +33,7 @@ def get_args():
     )
     parser.add_argument(
         '-o',
-        '--out_fname',
+        '--out_file',
         type=str,
         required=True
     )
@@ -71,17 +71,17 @@ def main():
     
     """
     args = get_args()
-    data = H2stats.from_file(args.data_fname, graph=args.graph_fname)
+    data = inference.load_H2(args.data_file, graph=args.graph_file)
     inference.fit_H2(
-        args.graph_fname,
-        args.param_fname,
+        args.graph_file,
+        args.param_file,
         data,
         u=args.u,
         perturb=args.perturb,
         verbose=args.verbose,
         method=args.method,
         max_iter=args.max_iter,
-        out_fname=args.out_fname
+        out_file=args.out_file
     )
     return
 

@@ -1,0 +1,139 @@
+parameters:
+- name: NAnc
+  lower_bound: 100
+  values:
+    - demes:  
+        Anc: 
+           epochs:
+            0: start_size
+- name: TA
+  upper_bound: 1000000 
+  values:
+    - demes:  
+        Anc: 
+           epochs:
+            0: end_time
+- name: NND
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:  
+        ND: 
+           epochs:
+            0: start_size
+- name: TND
+  values:
+    - demes:  
+        ND: 
+           epochs:
+            0: end_time
+- name: NN
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:  
+        N: 
+           epochs:
+            0: start_size
+        CV: 
+          epochs:
+            0: start_size
+- name: TN
+  lower_bound: 111000
+  values:
+    - demes:  
+        N: 
+          epochs:
+            0: end_time
+- name: TCV
+  lower_bound: 81000
+  values:
+    - demes:  
+        CV: 
+          epochs:
+            0: end_time
+- name: TNI 
+  lower_bound: 55000
+  values: 
+    - demes:
+        NI: start_time
+- name: NMH0
+  lower_bound: 100
+  upper_bound: 40000
+  values:
+    - demes:
+        MH:
+          epochs:
+            0: start_size
+- name: NMH1
+  lower_bound: 100
+  upper_bound: 40000
+  values:
+    - demes:
+        MH:
+          epochs:
+            1: start_size
+        MHI:
+          epochs:
+            0: start_size
+- name: TMHI
+  lower_bound: 121000
+  upper_bound: 300000
+  values:
+    - demes:
+        MHI: start_time
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        YOOA:
+          epochs:
+            0: start_size
+        Yoruba:
+          epochs:
+            0: start_size
+- name: NF
+  lower_bound: 100
+  upper_bound: 20000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: mACV
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        0: rate
+- name: mCV 
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        1: rate
+- name: mAD
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations:
+        2: rate
+
+constraints:
+- params: [TA, TND]
+  constraint: greater_than
+- params: [TND, TN]
+  constraint: greater_than
+- params: [TN, TCV]
+  constraint: greater_than
+- params: [TCV, TNI]
+  constraint: greater_than

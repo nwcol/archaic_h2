@@ -1,0 +1,10 @@
+ 
+parameters:
+- name: NA
+  lower_bound: 100
+  values:
+    - demes:  
+        A: 
+          epochs:
+            0: start_size
+

@@ -1,0 +1,114 @@
+parameters:
+- name: TA
+  upper_bound: 1000000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: end_time 
+- name: NMH
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        MH: 
+          epochs:
+            0: start_size 
+- name: TMH
+  values:
+    - demes:
+        MH: 
+          epochs:
+            0: end_time 
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        KhomaniSan: 
+          epochs:
+            0: start_size 
+- name: TYOOA
+  values:
+    - demes:
+        YOOA: 
+          epochs:
+            0: end_time 
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        YOOA: 
+          epochs:
+            0: start_size 
+        Yoruba: 
+          epochs:
+            0: start_size 
+- name: NOOA
+  lower_bound: 100
+  values:
+    - demes:
+        OOA: 
+          epochs:
+            0: start_size 
+        HP: 
+          epochs:
+            0: start_size 
+- name: TOOA
+  values:
+    - demes:
+        OOA: 
+          epochs:
+            0: end_time 
+- name: NF
+  lower_bound: 100
+  values:
+    - demes:
+        French: 
+          epochs:
+            0: start_size 
+- name: NHP
+  lower_bound: 100
+  values:
+    - demes:
+        HP: 
+          epochs:
+            0: start_size 
+- name: THP
+  lower_bound: 12000
+  values:
+    - demes:
+        HP: 
+          epochs:
+            0: end_time 
+- name: NH
+  lower_bound: 100
+  values:
+    - demes:
+        Han: 
+          epochs:
+            0: start_size 
+- name: NP
+  lower_bound: 100
+  values:
+    - demes:
+        Papuan: 
+          epochs:
+            0: start_size 
+- name: mKY
+  lower_bound: 1e-8
+  upper_bound: 1e-2
+  values:
+    - migrations: 
+        0: rate
+
+constraints: 
+- params: [TA, TMH]
+  constraint: greater_than
+- params: [TMH, TYOOA]
+  constraint: greater_than
+- params: [TYOOA, TOOA]
+  constraint: greater_than
+- params: [TOOA, THP]
+  constraint: greater_than

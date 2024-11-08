@@ -1,0 +1,23 @@
+
+
+NAs = ['15k', '16k', '17k', '18k', '19k', '20k']
+reps = list(range(3))
+
+
+rule all:
+    input:
+        expand('NA{NA}/fit_{rep}.yaml', NA=NAs, rep=reps)
+
+
+rule fit:
+    input:
+        d = "../bootstrap.pkl",
+        g = "NA{NA}/Archaic_tree.yaml",
+        p = "params_Archaic_tree.yaml"
+    output:
+        "NA{NA}/fit_{rep}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 200 --method Powell --perturb 0.5 --verbose 10
+        """

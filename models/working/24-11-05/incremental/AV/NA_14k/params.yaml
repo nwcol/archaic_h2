@@ -1,0 +1,32 @@
+parameters:
+- name: TA
+  lower_bound: 400000
+  upper_bound: 1000000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 10
+  values:
+    - demes:
+        Altai: 
+          epochs:
+            0: start_size
+- name: NY0
+  lower_bound: 10
+  upper_bound: 100000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size
+- name: NY1
+  lower_bound: 10
+  upper_bound: 100000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            1: start_size

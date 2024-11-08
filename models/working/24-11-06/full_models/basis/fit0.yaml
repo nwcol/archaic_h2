@@ -1,0 +1,43 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -549.9867556402704,
+    max_iter: 500, num_iter: 8, func_calls: 655, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 862525.7398827722, start_size: 18000}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 655407.6086233554, start_size: 8610.103896680452}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3876.3544088299423}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 2118.3780333926234}
+- name: MH
+  description: Ancestral to modern human populations
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 27917.095154272698}
+- name: MHI
+  description: Modern human deme introgressing into Neandertals
+  start_time: 300000
+  ancestors: [MH]
+  epochs:
+  - {end_time: 200000, start_size: 379.839942545695}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 29526.85371855206}
+pulses:
+- sources: [MHI]
+  dest: Vindija
+  time: 200000
+  proportions: [0.1]

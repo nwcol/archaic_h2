@@ -1,0 +1,57 @@
+parameters:
+#- name: NANC
+#  lower_bound: 100
+#  upper_bound: 50000
+#  values:
+#    - demes:  
+#        Anc: 
+#          epochs:
+#            0: start_size
+- name: TACV
+  lower_bound: 85000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        Anc: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 100
+  values:
+    - demes:  
+        Altai: 
+          epochs:
+            0: start_size
+- name: NCV
+  lower_bound: 100
+  values:
+    - demes:  
+        CV: 
+          epochs:
+            0: start_size
+- name: TCV
+  lower_bound: 85000
+  upper_bound: 2000000
+  values:
+    - demes:  
+        CV: 
+          epochs:
+            0: end_time
+- name: NC
+  lower_bound: 100
+  values:
+    - demes:  
+        Chagyrskaya: 
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  values:
+    - demes:  
+        Vindija: 
+          epochs:
+            0: start_size
+
+contraints:
+- params: [TACV, TCV]
+  contraint: greater_than

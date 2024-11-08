@@ -1,0 +1,60 @@
+parameters:
+- name: NA
+  lower_bound: 1
+  upper_bound: 40000
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: start_size
+- name: NND
+  lower_bound: 10
+  values:
+    - demes:
+        ND: 
+          epochs:
+            0: start_size
+- name: TND
+  lower_bound: 110000
+  upper_bound: 599000
+  values:
+    - demes:
+        ND: 
+          epochs:
+            0: end_time
+- name: NA
+  lower_bound: 10
+  values:
+    - demes:
+        Altai: 
+          epochs:
+            0: start_size
+- name: ND
+  lower_bound: 10
+  values:
+    - demes:
+        Denisova: 
+          epochs:
+            0: start_size
+- name: NY0
+  lower_bound: 10
+  upper_bound: 100000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size
+- name: NY1
+  lower_bound: 10
+  upper_bound: 100000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size
+- name: mAD
+  lower_bound: 1e-9
+  upper_bound: 1e-3
+  values:
+    - migrations: 
+        0: rate

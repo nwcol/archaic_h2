@@ -1,0 +1,44 @@
+
+
+NAs = ['14k', '14.5k', '15k', '15.5k', '16k', '16.5k', '17k', '17.5k', '18k',
+       '18.5k', '19k']
+TAs = ['600ka', '650ka', '700ka', '750ka', '800ka', '850ka', '900ka']
+reps = list(range(3))
+
+
+rule all:
+    input:
+        expand('NA_{NA}/fit_{rep}.yaml', NA=NAs, rep=reps),
+        expand('TA_{TA}/fit_{rep}.yaml', TA=TAs, rep=reps)
+
+
+rule fit:
+    input:
+        d = "../../bootstrap.pkl",
+        g = "NA_{NA}/tree.yaml",
+        p = "params.yaml"
+    output:
+        "NA_{NA}/fit_{rep}.yaml"
+    params:
+        log = "NA_{NA}/log_{rep}.txt"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 300 --method Powell --perturb 0.5 > {params.log}
+        """
+
+
+rule fit_fixed_TA:
+    input:
+        d = "../../bootstrap.pkl",
+        g = "TA_{TA}/tree.yaml",
+        p = "TA_{TA}/params.yaml"
+    output:
+        "TA_{TA}/fit_{rep}.yaml"
+    params:
+        log = "TA_{TA}/log_{rep}.txt"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 300 --method Powell --perturb 0.5 > {params.log}
+        """

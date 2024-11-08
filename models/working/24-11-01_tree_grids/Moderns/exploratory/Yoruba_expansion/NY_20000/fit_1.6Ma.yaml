@@ -1,0 +1,10 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -948.6295620133973,
+    max_iter: 500, num_iter: 32, func_calls: 65, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: Yoruba
+  epochs:
+  - {end_time: 1600000, start_size: 25341.102361679077}
+  - {end_time: 0, start_size: 20000}

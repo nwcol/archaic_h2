@@ -1,10 +1,12 @@
 
 from bisect import bisect
+import demes
 import numpy as np
 import numpy.ma as ma
 import pickle
 import scipy
 import time
+import warnings
 
 from h2py import util
 
@@ -22,6 +24,7 @@ def compute_H2(
     phased=False,
     min_reg_len=None,
     compute_denom=True,
+    compute_snp_denom=False,
     compute_two_sample=True,
     verbose=True
 ):
@@ -101,6 +104,7 @@ def compute_H2(
         else:
             bed_map = bed_positions
 
+        # compute pair-count denominator
         if mut_map_file is None:
             denom_H2 = _denominator_H2(
                 bed_map, 
@@ -111,9 +115,12 @@ def compute_H2(
             )
             stats['denoms'] = np.append(denom_H2, denom_H)
             stats['means'] = np.divide(
-                stats['nums'], stats['denoms'], where=stats['denoms'] > 0
+                stats['nums'], 
+                stats['denoms'][:, np.newaxis], 
+                where=stats['denoms'] > 0
             )
         
+        # compute mutation-map-weighted denominator
         else:
             mut_map = util.read_mutation_map(mut_map_file, bed_positions)
             mut_prod_sums, mut_stats = _denominator_H2(
@@ -130,10 +137,24 @@ def compute_H2(
             )
             stats['means'] = np.divide(
                 stats['nums'], 
-                temp_denom[:, None], 
+                temp_denom[:, np.newaxis], 
                 where=(temp_denom > 0)[:, None]
             )
-
+    
+    # compute denominator from vcf sites only
+    elif compute_snp_denom:
+        denom_H2 = _denominator_H2(
+            pos_map,
+            bins=bins,
+            l_end=l_end,
+            mut_map=None,
+            verbose=verbose
+        )
+        stats['denoms'] = np.append(denom_H2, denom_H)
+        stats['means'] = np.divide(
+            stats['nums'], stats['denoms'], where=stats['denoms'] > 0
+        )
+        
     stats['bins'] = ret_bins
     stats['pop_ids'] = pop_ids
     stats['num_sites'] = denom_H
@@ -207,7 +228,8 @@ def _two_sample_H(genotypes):
     """
     Takes an array of genotypes for two samples; shape (2, num_sites, 2)
     """
-    H = (genotypes[0, :, :, None] != genotypes[1, :, None]).sum() / 4
+    num_diff_pairs = (genotypes[0, :, :, None] != genotypes[1, :, None]).sum()
+    H = num_diff_pairs / 4
     return H
 
 
@@ -274,8 +296,8 @@ def _one_sample_genotype_H2(genotypes, pos_map, bins, llim=None):
     """
     
     """
-    het_indicator = genotypes[:, 0] != genotypes[:, 1]
-    het_map = pos_map[het_indicator]
+    het_sites = genotypes[:, 0] != genotypes[:, 1]
+    het_map = pos_map[het_sites]
     H2 = count_num_pairs(het_map, bins=bins, llim=llim)
     return H2
 
@@ -284,9 +306,9 @@ def _two_sample_genotype_H2(genotypes, pos_map, bins, llim=None):
     """
     
     """
-    site_sampling_pr = \
-        (genotypes[0, :, :, None] != genotypes[1, :, None]).sum((2, 1)) / 4
-    H2 = compute_prod_sums(site_sampling_pr, pos_map, bins, llim=llim)
+    num_diff_pairs = genotypes[0, :, :, None] != genotypes[1, :, None]
+    diff_probs = num_diff_pairs.sum((2, 1)) / 4
+    H2 = compute_prod_sums(diff_probs, pos_map, bins, llim=llim)
     return H2
 
 
@@ -312,7 +334,7 @@ def _denominator_H2(
     verbose=None
 ):
     """
-    Comoute the denominator for the H2 statistic.
+    Compute the denominator for the H2 statistic.
     """    
     if l_end is not None:
         llim = np.searchsorted(pos_map, l_end)
@@ -514,6 +536,95 @@ def _count_sums_prods(umap, rmap, bins, llim=None):
     return sums_prods
 
 
+"""
+Bootstrapping
+"""
+
+
+def compute_regions_mean(regions, mut_weighted=False):
+    """
+    Compute the mean statistics across a dictionary of region statistics.
+    """
+    num_regions = len(regions)
+    num_bins, num_stats = regions[next(iter(regions))]['nums'].shape
+
+    if mut_weighted:
+        sum_mut = 0
+        sum_sites = 0
+        for key in regions:
+            num_sites = regions[key]['mut_stats']['num_sites']
+            sum_mut += num_sites * regions[key]['mut_stats']['mean_mut']
+            sum_sites += num_sites
+        mean_mut = sum_mut / sum_sites
+        mut_fac = mean_mut ** 2 
+
+    sums = np.zeros((num_bins, num_stats), dtype=np.float64)
+    denoms = np.zeros(num_bins, dtype=np.float64)
+
+    for key in regions:
+        sums += regions[key]['nums']
+
+        if mut_weighted:
+            denoms += regions[key]['denoms'] / mut_fac
+        else:
+            denoms += regions[key]['denoms']
+
+    means = sums / denoms[:, np.newaxis]
+    return means
+
+
+def compute_varcov(reps):
+    """
+    Compute the variance-covariance matrix for each bin (and for H) from a 
+    list or array of bootstrap replicates.
+    """
+    reps = np.asanyarray(reps)
+    num_reps, num_bins, num_stats = reps.shape
+    varcovs = np.zeros((num_bins, num_stats, num_stats), dtype=np.float64)
+
+    for i in range(num_bins):
+        varcovs[i] = np.cov(reps[:, i], rowvar=False)
+
+    return varcovs
+
+
+def get_bootstrap_reps(
+    regions, 
+    num_reps=None, 
+    num_samples=None,
+    mut_weighted=True
+):
+    """
+    
+    """
+    num_regions = len(regions)
+
+    if num_reps is None:
+        num_reps = num_regions
+    if num_samples is None:
+        num_samples = num_regions
+
+    labels = list(regions.keys())
+    bootstrap_reps = []
+
+    for rep in range(num_reps):
+        samples = np.random.choice(labels, num_samples, replace=True)
+        _regions = {sample: regions[sample] for sample in samples}
+        bootstrap_reps.append(
+            compute_regions_mean(_regions, mut_weighted=mut_weighted)
+        )
+
+    ex = regions[next(iter(regions))]
+    data = {
+        'pop_ids': ex['pop_ids'],
+        'bins': ex['bins'],
+        'means': compute_regions_mean(regions, mut_weighted=mut_weighted),
+        'covs': compute_varcov(bootstrap_reps),
+    }
+
+    return data, bootstrap_reps
+
+
 def bootstrap_H2(
     regions, 
     num_reps=None, 
@@ -618,7 +729,6 @@ def _mut_weighted_bootstrap(
             num_sites = regions[key]['mut_stats']['num_sites']
             sum_mut += num_sites * regions[key]['mut_stats']['mean_mut']
             sum_sites += num_sites
-        print(sum_mut, sum_sites)
         mean_mut = sum_mut / sum_sites
         print(util.get_time(), f'normalizing to genome-average u {mean_mut}')
         mut_fac = mean_mut ** 2 
@@ -654,7 +764,10 @@ def _mut_weighted_bootstrap(
                 sum_sites += num_sites
             mut_fac = (sum_mut / sum_sites) ** 2
                 
-        rep_denoms = rep_denom_sums / mut_fac     
+        rep_denoms = np.zeros(num_bins, dtype=np.float64)
+        # we don't want to scale H by the mutation rate
+        rep_denoms[:-1] = rep_denom_sums[:-1] / mut_fac   
+        rep_denoms[-1] = rep_denom_sums[-1]  
         reps[rep] = rep_sums / rep_denoms[:, np.newaxis]
     
     varcovs = np.array(
@@ -670,50 +783,79 @@ def _mut_weighted_bootstrap(
     return stats
 
 
-def __bootstrap_H2(
-    num_H2, 
-    num_pairs, 
-    sample_ids=None, 
-    bins=None,
-    num_bootstraps=None, 
-    sample_size=None,
-    return_distr=False
+def subset_H2(
+    data, 
+    graph=None, 
+    to_pops=None, 
+    min_dist=None, 
+    max_dist=None
 ):
     """
-    Bootstrap H2 from genomic blocks and return an H2stats instance holding
-    bootstrap means and variances/covariances. Operates on masked arrays
-    of counts.
-
-    :param num_H2: 3dim, shape (num_windows, num_bins + 1, num_statistics)
-        array of raw H2 counts with H at highest dim1 index.
-    :param num_pairs: 2dim, shape (num_windows, num_bins + 1) 
-        array of site pair counts or weighting factors, with site counts in
-        the highest dim1 index.
+    Subset a dictionary of statistics by pop_id. If a graph is provided, subsets
+    to the set of names which occur in both the data set and the graph.
     """
-    assert num_H2.shape[:2] == num_pairs.shape
-    num_windows, num_bins, num_stats = num_H2.shape
-    sample_size = num_stats
+    if graph is not None:
+        if to_pops is not None:
+            warnings.warn('argument `to_pops` overriden by `graph`')
+        if isinstance(graph, str):
+            graph = demes.load(graph)
+        graph_demes = [d.name for d in graph.demes]
+        pop_ids = data['pop_ids']
+        to_pops = [d for d in pop_ids if d in graph_demes]
 
-    num_distr = np.zeros((num_bootstraps, num_bins, num_stats), dtype=float)
-    denom_distr = np.zeros((num_bootstraps, num_bins), dtype=float)
+    if to_pops is not None:
+        pop_ids = data['pop_ids']
+        labels = enumerate_labels(pop_ids)
+        to_labels = enumerate_labels(to_pops)
+        keep = np.array([labels.index(label) for label in to_labels])
 
-    for i in range(num_bootstraps):
-        sampled = np.random.Generator.integers(0, sample_size, num_stats)
-        num_distr[i] = num_H2[sampled].sum(0)
-        denom_distr[i] = num_pairs[sampled].sum(0)
+        for key in ['nums', 'sums', 'means']:
+            if key in data:
+                data[key] = data[key][:, keep]
+        
+        if 'covs' in data:
+            covs = data['covs']
+            data['covs'] = np.stack([cov[np.ix_(keep, keep)] for cov in covs])
+        
+        data['pop_ids'] = to_pops
 
-    rep_H2 = num_distr / denom_distr[:, :, np.newaxis]
-    if return_distr:
-        ret = rep_H2
+    if min_dist is not None or max_dist is not None:
+        bins = data['bins']
+        if min_dist is None:
+            min_dist = 0
+        if max_dist is None:
+            max_dist = np.inf
+        min_bin = np.searchsorted(bins, min_dist)
+        max_bin = np.searchsorted(bins, max_dist)
+        
+        data['bins'] = bins[min_bin:max_bin + 1]
+
+        for key in ['nums', 'sums', 'means']:
+            if key in data:
+                data[key] = data[key][min_bin:max_bin + 1]
+        
+        if 'covs' in data:
+            data['covs'] = data['covs'][min_bin:max_bin + 1]
+
+    return data
+
+
+def enumerate_labels(pop_ids, has_two_sample=True):
+    """
+    Enumerate all the pairs of population ids, including self-pairs.
+    """
+    if has_two_sample:
+        num_pops = len(pop_ids)
+        labels = []
+        for i in range(num_pops):
+            for j in range(i, num_pops):
+                labels.append((pop_ids[i], pop_ids[j]))
     else:
-        covs = np.array(
-            [np.cov(rep_H2[:, i], rowvar=False) for i in range(num_bins)]
-        )
-        means = num_distr.sum(0) / denom_distr.sum(0)
-        ret = 0 
-    return ret
+        labels = pop_ids
+    return labels
 
 
-def subset_H2_dict():
+# constants, defaults
+_default_bins = np.logspace(-6, -1, 21)
 
-    return 
+

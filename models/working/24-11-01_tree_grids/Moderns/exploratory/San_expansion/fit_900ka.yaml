@@ -1,0 +1,10 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -8.46877794809468,
+    max_iter: 500, num_iter: 7, func_calls: 175, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: KhomaniSan
+  epochs:
+  - {end_time: 900000, start_size: 14338.257247562287}
+  - {end_time: 0, start_size: 41736.136794417405}

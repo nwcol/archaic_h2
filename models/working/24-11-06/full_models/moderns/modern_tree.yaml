@@ -1,0 +1,105 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - start_size: 18000
+    end_time: 750000
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - start_size: 8000
+    end_time: 650000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3500
+    end_time: 80000
+- name: N
+  ancestors: [ND]
+  epochs:
+  - start_size: 5000
+    end_time: 80000  
+- name: Vindija
+  ancestors: [N]
+  epochs:
+  - start_size: 3000
+    end_time: 55000
+- name: NI
+  ancestors: [N]
+  epochs:
+  - start_size: 2000
+    end_time: 50000
+- name: MH
+  description: Ancestral to modern human populations
+  ancestors: [A]
+  epochs:
+  - start_size: 15000
+    end_time: 125000
+- name: MHI
+  description: Modern human deme introgressing into Neandertals
+  ancestors: [MH]
+  start_time: 300000
+  epochs:
+  - start_size: 15000
+    end_time: 200000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 18000
+    end_time: 0  
+- name: YOOA
+  ancestors: [MH]
+  epochs:
+  - start_size: 15000
+    end_time: 60000
+- name: Yoruba
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 24000
+    end_time: 0
+- name: OOA
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 1400
+    end_time: 45000
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - start_size: 6000
+    end_time: 0
+- name: HP 
+  ancestors: [OOA]
+  epochs:
+  - start_size: 1400
+    end_time: 40000
+- name: Han
+  ancestors: [HP]
+  epochs:
+  - start_size: 5000
+    end_time: 0
+- name: Papuan
+  ancestors: [HP]
+  epochs:
+  - start_size: 2000
+    end_time: 0
+
+pulses:
+- sources: [MHI]
+  proportions: [0.1]
+  dest: N
+  time: 200000
+- sources: [NI]
+  proportions: [0.03]
+  dest: OOA
+  time: 50000
+
+migrations:
+- demes: [KhomaniSan, Yoruba]
+  rate: 1e-5
+- demes: [Yoruba, French]
+  rate: 1e-5
+- demes: [Han, Papuan]
+  rate: 1e-5

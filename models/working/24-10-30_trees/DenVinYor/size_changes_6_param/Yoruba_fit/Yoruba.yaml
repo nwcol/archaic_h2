@@ -1,0 +1,18 @@
+time_units: years
+generation_time: 29
+description: Here I'm just trying to fit the Yoruba curve...
+demes:
+- name: Anc
+  epochs:
+  - start_size: 16440
+    end_time: 930000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 32550
+    end_time: 100000
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 26500
+    end_time: 0

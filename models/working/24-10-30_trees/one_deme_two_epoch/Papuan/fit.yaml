@@ -1,0 +1,13 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -83.62751830153755,
+    max_iter: 500, num_iter: 153, func_calls: 292, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 21200.188306876076, start_size: 17890.145580976783}
+- name: Papuan
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 0, start_size: 1039.5014841922375}

@@ -1,0 +1,48 @@
+time_units: years
+generation_time: 29
+metadata:
+  u: 1.112e-8
+demes:
+- name: Anc
+  epochs:
+  - start_size: 19000
+    end_time: 820000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - start_size: 9842
+    end_time: 727000
+- name: Altai
+  ancestors: [ND]
+  epochs:
+  - start_size: 2222
+    end_time: 110000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 2400
+    end_time: 80000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 19000
+    end_time: 115000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 19000
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 30000
+    end_time: 0
+
+migrations:
+- demes: [Altai, Denisova]
+  rate: 5e-6
+  
+pulses:
+- sources: [MH]
+  dest: Altai
+  time: 200000
+  proportions: [0.02]

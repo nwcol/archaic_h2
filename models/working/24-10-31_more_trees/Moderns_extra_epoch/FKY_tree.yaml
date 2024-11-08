@@ -1,0 +1,33 @@
+time_units: years
+generation_time: 29
+description: Frees the K/YF diverence time and adds another epoch, `MH` (which is only a name and extends >300ka into the past)
+demes:
+- name: Anc
+  epochs:
+  - start_size: 18000
+    end_time: 600000
+- name: MH 
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 115000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 20000
+    end_time: 0
+- name: FY
+  ancestors: [MH]
+  epochs:
+  - start_size: 20000
+    end_time: 60000
+- name: French
+  ancestors: [FY]
+  epochs:
+  - start_size: 6000
+    end_time: 0
+- name: Yoruba
+  ancestors: [FY]
+  epochs:
+  - start_size: 20000
+    end_time: 0

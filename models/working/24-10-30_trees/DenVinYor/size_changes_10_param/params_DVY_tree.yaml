@@ -1,0 +1,79 @@
+parameters:
+- name: NA 
+  lower_bound: 100
+  values:
+    - demes:
+        Anc: 
+          epochs:
+            0: start_size
+- name: TA 
+  lower_bound: 400000
+  upper_bound: 1050000
+  values:
+    - demes:
+        Anc: 
+         epochs:
+           0: end_time
+- name: NND
+  lower_bound: 100
+  values:
+    - demes:
+        ND: 
+         epochs:
+           0: start_size
+- name: TND
+  lower_bound: 400000
+  upper_bound: 950000
+  values:
+    - demes:
+        ND: 
+         epochs:
+           0: end_time
+- name: ND0
+  lower_bound: 100
+  values:
+    - demes:
+        Denisova: 
+          epochs:
+            0: start_size
+- name: ND1
+  lower_bound: 100
+  values:
+    - demes:
+        Denisova: 
+          epochs:
+            1: start_size
+- name: NV0
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            0: start_size
+- name: NV1
+  lower_bound: 100
+  values:
+    - demes:
+        Vindija: 
+          epochs:
+            1: start_size
+- name: NMH
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        MH: 
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 100
+  upper_bound: 60000
+  values:
+    - demes:
+        Yoruba: 
+          epochs:
+            0: start_size
+
+constraints:
+- params: [TA, TND]
+  constraint: greater_than

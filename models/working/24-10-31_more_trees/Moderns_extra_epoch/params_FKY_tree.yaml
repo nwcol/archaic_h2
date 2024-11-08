@@ -1,0 +1,59 @@
+parameters:
+- name: NMH
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        MH:
+          epochs:
+            0: start_size
+- name: TMH
+  upper_bound: 600000
+  values:
+    - demes:
+        MH:
+          epochs:
+            0: end_time
+- name: NK
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: NFY
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        FY:
+          epochs:
+            0: start_size
+- name: TFY
+  lower_bound: 40000
+  values:
+    - demes:
+        FY:
+          epochs:
+            0: end_time
+- name: NF
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        French:
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size
+
+constraints:
+- params: [TMH, TFY]
+  constraint: greater_than

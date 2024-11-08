@@ -1,0 +1,30 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -29.637907262310815,
+    max_iter: 500, num_iter: 500, func_calls: 747, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 750000, start_size: 15748.682471788303}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 717704.812470195, start_size: 7814.835588540291}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3674.5122198122203}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 170000, start_size: 5060.369922155969}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 1220.610227958528}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 7.6206428543407285e-06

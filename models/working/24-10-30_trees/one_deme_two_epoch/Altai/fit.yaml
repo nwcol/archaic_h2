@@ -1,0 +1,13 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -3.3968789572796583,
+    max_iter: 500, num_iter: 235, func_calls: 420, flag: 0, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 151883.88917534, start_size: 10915.245319651678}
+- name: Altai
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 110000, start_size: 695.8828820891094}

@@ -1,0 +1,53 @@
+parameters:
+- name: NA0
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: start_size
+- name: TA0
+  lower_bound: 100000
+  upper_bound: 2000000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            0: end_time
+- name: NA1
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            1: start_size
+- name: TA1
+  lower_bound: 50000
+  upper_bound: 225000
+  values:
+    - demes:
+        Anc:
+          epochs:
+            1: end_time
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        KhomaniSan:
+          epochs:
+            0: start_size
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes:
+        Yoruba:
+          epochs:
+            0: start_size
+
+constraints:
+- params: [TA0, TA1]
+  constraint: greater_than

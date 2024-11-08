@@ -1,0 +1,10 @@
+time_units: generations
+metadata: 
+  u: 1e-8
+demes:
+- name: X
+  epochs:
+  - start_size: 25000
+    end_time: 50000
+  - start_size: 50000
+    end_time: 0

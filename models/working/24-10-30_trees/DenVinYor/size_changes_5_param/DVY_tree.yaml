@@ -1,0 +1,35 @@
+time_units: years
+generation_time: 29
+description: I fix modern human Ne and ancestral split time/Ne
+demes:
+- name: Anc
+  epochs:
+  - start_size: 16440
+    end_time: 930000
+- name: ND
+  ancestors: [Anc]
+  epochs:
+  - start_size: 5000
+    end_time: 750000
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3000
+    end_time: 80000
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - start_size: 7000
+    end_time: 100000
+  - start_size: 900
+    end_time: 55000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 32550
+    end_time: 100000
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 26500
+    end_time: 0

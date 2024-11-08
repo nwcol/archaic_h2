@@ -1,0 +1,9 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Yoruba
+  epochs:
+  - start_size: 12000
+    end_time: 300000
+  - start_size: 20000
+    end_time: 0

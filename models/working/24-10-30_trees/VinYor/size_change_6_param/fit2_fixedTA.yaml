@@ -1,0 +1,20 @@
+description: allows a size change (times are fixed) for each sampled deme
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -266.0255729257428,
+    max_iter: 500, num_iter: 500, func_calls: 808, flag: 2, u_fitted: 0, u: 1.111e-08}
+demes:
+- name: Anc
+  epochs:
+  - {end_time: 800000, start_size: 18600.722924761198}
+- name: Vindija
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 7224.973951116412}
+  - {end_time: 55000, start_size: 732.8794610545579}
+- name: Yoruba
+  ancestors: [Anc]
+  epochs:
+  - {end_time: 100000, start_size: 26091.894388569228}
+  - {end_time: 0, start_size: 49999.9150029349}

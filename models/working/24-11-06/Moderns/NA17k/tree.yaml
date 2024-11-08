@@ -1,0 +1,56 @@
+time_units: years
+generation_time: 29
+demes:
+- name: Anc
+  epochs:
+  - start_size: 17000
+    end_time: 300000
+- name: MH
+  ancestors: [Anc]
+  epochs:
+  - start_size: 20000
+    end_time: 120000
+- name: KhomaniSan
+  ancestors: [MH]
+  epochs:
+  - start_size: 20000
+    end_time: 0
+- name: YOOA
+  ancestors: [MH]
+  epochs:
+  - start_size: 25000
+    end_time: 60000
+- name: Yoruba
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 25000
+    end_time: 0
+- name: OOA
+  ancestors: [YOOA]
+  epochs:
+  - start_size: 1000
+    end_time: 40000
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - start_size: 6000
+    end_time: 0
+- name: HP
+  ancestors: [OOA]
+  epochs:
+  - start_size: 1000
+    end_time: 35000
+- name: Han
+  ancestors: [HP]
+  epochs:
+  - start_size: 5000
+    end_time: 0
+- name: Papuan
+  ancestors: [HP]
+  epochs:
+  - start_size: 1000
+    end_time: 0
+
+migrations:
+- demes: [Yoruba, KhomaniSan]
+  rate: 1e-5

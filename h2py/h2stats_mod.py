@@ -57,37 +57,7 @@ class H2stats:
         self.covs = covs
 
     @classmethod
-    def initialize(cls, pop_ids, bins=None):
-        """
-        """
-        num_pops = len(pop_ids)
-        num_stats = int(num_pops * (num_pops - 1) / 2)
-        data = np.zeros((len(bins), num_stats), dtype=float)
-        covs = np.zeros((len(bins), num_stats, num_stats), dtype=float)
-        return cls(data, bins=bins, pop_ids=pop_ids, covs=covs)
-    
-    @classmethod
-    def from_counts(
-        cls,
-        num_H,
-        num_sites,
-        num_H2,
-        num_pairs,
-        pop_ids=None,
-        bins=None
-    ):
-        #
-        stats = [stats(num_H[i], num_sites[i], num_H2[i], num_pairs[i])
-                 for i in range(len(num_H2))]
-        covs = None
-        H2 = num_H2.sum(2) / num_pairs.sum(2)
-        H = num_H.sum(2) / num_sites.sum(2)
-        data = np.vstack((H2, H))
-        # nans
-        return cls(data, bins=bins, pop_ids=pop_ids, covs=covs)
-
-    @classmethod
-    def from_dict(cls, dic, to_pop_ids=None, to_bins=None, graph=None):
+    def from_dict(cls, dic, to_pop_ids=None, graph=None):
         """
         
         """
@@ -98,46 +68,27 @@ class H2stats:
         ret = cls(stats, bins=bins, pop_ids=pop_ids, covs=covs)
 
         if to_pop_ids is not None:
-            ret = ret.subset(to_pop_ids=to_pop_ids, to_bins=to_bins)
+            ret = ret.subset(to_pop_ids=to_pop_ids)
 
         elif graph is not None:
             if isinstance(graph, str): 
                 graph = demes.load(graph)
             deme_names = [d.name for d in graph.demes]
             overlaps = [pop for pop in pop_ids if pop in deme_names]
-            ret = ret.subset(to_pop_ids=overlaps, to_bins=to_bins)
+            ret = ret.subset(to_pop_ids=overlaps)
 
         return ret
 
     @classmethod
-    def from_file(cls, fname, pop_ids=None, graph=None):
+    def from_file(cls, fname, to_pop_ids=None, graph=None):
         """
-        Load a bootstrap instance from a .npz file.
-        """
-
-        """
-        file = np.load(fname)
-        stats = file['H2stats']
-        covs = file['H2covs']
-        _pop_ids = file['sample_ids']
-        assert len(_pop_ids) == len(set(_pop_ids))
-        bins = file['bins']
-        ret = cls(stats, bins=bins, pop_ids=_pop_ids, covs=covs)
-        if pop_ids is not None:
-            ret = ret.subset(pop_ids=pop_ids)
-        elif graph is not None:
-            if isinstance(graph, str): 
-                g = demes.load(graph)
-            deme_names = [d.name for d in g.demes]
-            matches = [pop for pop in _pop_ids if pop in deme_names]
-            ret = ret.subset(pop_ids=matches)
+        Loads H2 statistics from the first dictionary in a pickled file.
         """
         with open(fname, 'rb') as fin:
             dics = pickle.load(fin)
-            dic = dics[list(dics.keys())[0]]
+            dic = dics[next(iter(dics))]
 
-        ret = cls.from_dict(dic)
-        return ret
+        return cls.from_dict(dic, to_pop_ids=to_pop_ids, graph=graph)
 
     @classmethod
     def from_demes(
@@ -169,8 +120,10 @@ class H2stats:
                 ]
             else:
                 for d in sampled_demes:
-                    if d not in graph.demes: 
-                        raise ValueError(f'deme {d} is not present in graph!')
+                    graph_demes = [d.name for d in graph.demes]
+                    for d in sampled_demes:
+                        if d not in graph_demes: 
+                            raise ValueError(f'deme {d} is not present in graph!')
         if sample_times is None:
             _times = {d.name: d.end_time for d in graph.demes}
             sample_times = [_times[pop] for pop in sampled_demes]
@@ -221,11 +174,11 @@ class H2stats:
         ret = f'H2stats with {num_pops} samples in {num_bins} bins'
         return ret
 
-    def subset(self, to_pop_ids=None, to_bins=None):
+    def subset(self, to_pop_ids=None, min_r=None, max_r=None):
         """
         Subset the instance by population ids or bin indices.
         """
-        _bins, stats, covs = self.bins, self.stats, self.covs
+        bins, stats, covs = self.bins, self.stats, self.covs
 
         if to_pop_ids is not None:
             _pop_ids = self.pop_ids
@@ -239,16 +192,16 @@ class H2stats:
             sorter = np.sort(np.searchsorted(_pop_ids, to_pop_ids))
             pop_ids = [_pop_ids[i] for i in sorter]
 
-        if to_bins is not None:
+        if min_r is not None or max_r is not None:
+            _bins = bins
+            if min_r is None:
+                min_r = 0
+            if max_r is None:
+                max_r = 0.5
             _bs = list(zip(_bins[:-1], _bins[1:]))
-            bs = list(zip(to_bins[:-1], to_bins[1:]))
-            min_bin = _bs.index(bs[0])
-            max_bin = _bs.index(bs[-1])
+            min_bin = _bs.index(min_r)
+            max_bin = _bs.index(max_r)
             bins = _bins[min_bin:max_bin + 1]
-
-            assert len(bins) == len(to_bins)
-            assert np.all([_b == b for _b, b in zip(bins, to_bins)])
-
             if covs is not None:
                 covs = np.vstack((covs[:-1][min_bin:max_bin], covs[-1][None]))
             stats = np.vstack((stats[:-1][min_bin:max_bin], stats[-1][None]))
