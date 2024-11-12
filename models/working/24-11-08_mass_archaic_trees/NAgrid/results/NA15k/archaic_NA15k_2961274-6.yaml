@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -8427.598532869873,
+    max_iter: 10000, num_iter: 7537, func_calls: 10396, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 971180.768133194, start_size: 15000}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 967706.7331306845, start_size: 143.54839055012968}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 5086.969767292143}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 181792.90907380992, start_size: 2859.8954663825853}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 2001.4018104347497}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 112187.216692647, start_size: 2859.8954663825853}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 3107.484060553985}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 3085.3872096289215}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 24443.39902196914}
+  - {end_time: 0, start_size: 42955.93566496998}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 1014.5161050092706}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 1014.5161050092706}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 1.6101598945622598e-08
+- demes: [Altai, CV]
+  rate: 0.00012852465258147172
+- demes: [Vindija, Chagyrskaya]
+  rate: 1.1447688008944973e-08
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

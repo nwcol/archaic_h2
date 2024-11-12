@@ -1,0 +1,86 @@
+parameters:
+- name: NA 
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        A: 
+          epochs:
+            0: start_size 
+- name: NND
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        ND: 
+          epochs:
+            0: start_size
+- name: TND
+  upper_bound: 690000
+  values:
+    - demes: 
+        ND: 
+          epochs:
+            0: end_time
+- name: ND
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Denisova: 
+          epochs:
+            0: start_size
+- name: NV
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Vindija: 
+          epochs:
+            0: start_size
+- name: NMH
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        MH: 
+          epochs:
+            0: start_size 
+- name: TMH
+  lower_bound: 100000
+  upper_bound: 249000
+  values:
+    - demes: 
+        MH: 
+          epochs:
+            0: end_time 
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Yoruba: 
+          epochs:
+            0: start_size 
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        KhomaniSan: 
+          epochs:
+            0: start_size 
+- name: pMHV
+  lower_bound: 0.01
+  upper_bound: 0.15
+  values:
+    - pulses:
+        0: 
+          proportions: 0
+- name: mKY
+  lower_bound: 1e-8
+  upper_bound: 1e-3
+  values:
+    - pulses:
+        0: 
+          proportions: 0

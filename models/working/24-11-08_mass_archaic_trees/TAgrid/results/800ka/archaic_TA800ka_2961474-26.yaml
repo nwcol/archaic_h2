@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -3856.0559951355444,
+    max_iter: 10000, num_iter: 10000, func_calls: 13206, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 800000, start_size: 19037.115833538828}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 682041.0240303834, start_size: 5855.782818650816}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3461.0719328905648}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 125655.8110629767, start_size: 3299.3827240525943}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 137.18965423519253}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 119998.99995759685, start_size: 3299.3827240525943}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 530.8317563723729}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1387.3678803409084}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 25218.049905919965}
+  - {end_time: 0, start_size: 34337.83501088403}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 1002.4821059358267}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 1002.4821059358267}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 3.3496530051052345e-05
+- demes: [Altai, CV]
+  rate: 0.00014495819876019712
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0006483286355060442
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

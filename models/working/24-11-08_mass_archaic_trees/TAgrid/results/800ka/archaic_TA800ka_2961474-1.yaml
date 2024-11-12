@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -3382.608422962859,
+    max_iter: 10000, num_iter: 10000, func_calls: 12996, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 800000, start_size: 18592.44161549906}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 771359.046552754, start_size: 1328.229500806342}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 4110.684258481642}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 159574.69110932812, start_size: 2899.267824322569}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 1105.7509193605902}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 115703.48864710488, start_size: 2899.267824322569}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 1064.1423293070093}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1670.411361099037}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 21793.68695894051}
+  - {end_time: 0, start_size: 99999.32346222573}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 24783.538598137806}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 24783.538598137806}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 1.8163623039772637e-06
+- demes: [Altai, CV]
+  rate: 3.50520230752889e-05
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.00029231624758423755
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

@@ -1,0 +1,13 @@
+time_units: years
+generation_time: 29
+metadata:
+  u: 1.1e-8
+demes:
+- name: X
+  epochs:
+  - start_size: 40000
+    end_time: 200000
+  - start_size: 10000
+    end_time: 100000
+  - start_size: 40000
+    end_time: 0

@@ -1,0 +1,32 @@
+parameters:
+- name: NMH
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        A: 
+          epochs:
+            1: start_size 
+- name: TA 
+  upper_bound: 300000
+  values:
+    - demes: 
+        A: 
+          epochs:
+            1: end_time 
+- name: NK
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        KhomaniSan: 
+          epochs:
+            0: start_size 
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Yoruba: 
+          epochs:
+            0: start_size 

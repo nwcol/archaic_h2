@@ -1,5 +1,6 @@
 
 from bisect import bisect
+import copy
 import demes
 import numpy as np
 import numpy.ma as ma
@@ -15,6 +16,7 @@ def compute_H2(
     vcf_file,
     bed_file=None,
     rec_map_file=None,
+    r=None,
     mut_map_file=None,
     pop_file=None,
     region=None,
@@ -31,6 +33,7 @@ def compute_H2(
     """
     Compute H2 and H statistics from a region in a .vcf file.
 
+    :parma r: constant recombination rate
     :param pop_file: form `sample_id` `pop_id`
     """
     if compute_denom is True and bed_file is None:
@@ -61,6 +64,9 @@ def compute_H2(
             raise ValueError('must provide r or cM bins')
         
         pos_map = util.read_recombination_map(rec_map_file, positions)
+
+    elif r is not None:
+        pos_map = constant_rec_map(r, positions)
 
     else:
         if bp_bins is not None:
@@ -101,6 +107,8 @@ def compute_H2(
 
         if rec_map_file is not None:
             bed_map = util.read_recombination_map(rec_map_file, bed_positions)
+        elif r is not None:
+            bed_map = constant_rec_map(r, bed_positions)
         else:
             bed_map = bed_positions
 
@@ -117,7 +125,7 @@ def compute_H2(
             stats['means'] = np.divide(
                 stats['nums'], 
                 stats['denoms'][:, np.newaxis], 
-                where=stats['denoms'] > 0
+                where=(stats['denoms'] > 0)[:, np.newaxis]
             )
         
         # compute mutation-map-weighted denominator
@@ -138,11 +146,12 @@ def compute_H2(
             stats['means'] = np.divide(
                 stats['nums'], 
                 temp_denom[:, np.newaxis], 
-                where=(temp_denom > 0)[:, None]
+                where=(temp_denom > 0)[:, np.newaxis]
             )
     
     # compute denominator from vcf sites only
     elif compute_snp_denom:
+        denom_H = _denominator_H(positions)
         denom_H2 = _denominator_H2(
             pos_map,
             bins=bins,
@@ -152,7 +161,9 @@ def compute_H2(
         )
         stats['denoms'] = np.append(denom_H2, denom_H)
         stats['means'] = np.divide(
-            stats['nums'], stats['denoms'], where=stats['denoms'] > 0
+            stats['nums'], 
+            stats['denoms'][:, np.newaxis], 
+            where=(stats['denoms'] > 0)[:, np.newaxis]
         )
         
     stats['bins'] = ret_bins
@@ -186,6 +197,16 @@ def subset_genotypes_by_pop(pop_file, sample_ids, genotypes):
     genotypes = genotypes[idxs]
 
     return pop_ids, genotypes
+
+
+def constant_rec_map(r, positions):
+    """
+    Obtain a recombination map for `positions` assuming a constant recombination
+    rate `r`. Returns a map in units of cM.
+    """
+    cM_per_bp = util.map_function(r)
+    rec_map = positions * cM_per_bp
+    return
 
 
 def get_H_statistics(genotypes, compute_two_sample=True, verbose=False):
@@ -653,7 +674,7 @@ def bootstrap_H2(
     print(util.get_time(), f'bootstrapping with {num_reps} reps of '
           f'{num_samples} samples')
 
-    if mut_weighted is False:
+    if not mut_weighted:
         stats = _bootstrap(regions, num_reps, num_samples)
 
     else:
@@ -677,9 +698,10 @@ def _bootstrap(
     region0 = regions[next(iter(regions))]
     num_bins, num_stats = region0['nums'].shape
     reps = np.zeros((num_reps, num_bins, num_stats), dtype=np.float64)
+    labels = list(regions.keys())
 
     for rep in range(num_reps):
-        samples = np.random.choice(regions, num_samples, replace=True)
+        samples = np.random.choice(labels, num_samples, replace=True)
         rep_sums = np.zeros((num_bins, num_stats), dtype=np.float64)
         rep_denoms = np.zeros(num_bins, dtype=np.float64)
         for key in samples:
@@ -687,10 +709,7 @@ def _bootstrap(
             rep_denoms += regions[key]['denoms']
         reps[rep] = rep_sums / rep_denoms[:, np.newaxis]
 
-    means = (
-        np.array(regions[reg]['nums'] for reg in regions).sum(0) / 
-        np.array(regions[reg]['denoms'] for reg in regions).sum(0)
-    )
+    means = compute_regions_mean(regions)
     varcovs = np.array(
         [np.cov(reps[:, b], rowvar=False) for b in range(num_bins)]
     )
@@ -781,6 +800,20 @@ def _mut_weighted_bootstrap(
     stats['covs'] = varcovs
 
     return stats
+
+
+def replace_denominator(data, denom_data):
+    """
+    
+    """
+    ret = copy.deepcopy(data)
+
+    ret['denoms'] = denom_data['denoms']
+
+    if 'mut_stats' in denom_data:
+        ret['mut_stats'] = denom_data['mut_stats']
+
+    return ret
 
 
 def subset_H2(

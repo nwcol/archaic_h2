@@ -1,0 +1,30 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -458.13843343192354,
+    max_iter: 200, num_iter: 23, func_calls: 1855, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  epochs:
+  - {end_time: 700000, start_size: 20525.8541067565}
+- name: ND
+  ancestors: [A]
+  epochs:
+  - {end_time: 689990.3669363154, start_size: 429.3936650989145}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 4097.091379593393}
+- name: Vindija
+  ancestors: [ND]
+  epochs:
+  - {end_time: 55000, start_size: 2173.6983914880484}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 0, start_size: 23646.088990311462}
+pulses:
+- sources: [Yoruba]
+  dest: Vindija
+  time: 200000
+  proportions: [0.09665353921092472]

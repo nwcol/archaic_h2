@@ -1,0 +1,27 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: Powell, objective_func: objective_H2, fopt: -65.07815485662685,
+    max_iter: 500, num_iter: 22, func_calls: 1617, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 929103.1874795742, start_size: 16500}
+- name: N
+  ancestors: [A]
+  epochs:
+  - {end_time: 79455.27282619312, start_size: 7917.364882154524}
+- name: Vindija
+  ancestors: [N]
+  epochs:
+  - {end_time: 55000, start_size: 436.7153354165439}
+- name: MH
+  description: Ancestral to modern human populations
+  ancestors: [A]
+  epochs:
+  - {end_time: 26475.97425987617, start_size: 33937.11652989234}
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - {end_time: 0, start_size: 9801.362898014286}

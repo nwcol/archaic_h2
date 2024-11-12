@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -4036.832850667265,
+    max_iter: 10000, num_iter: 7787, func_calls: 10464, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 986932.2178217293, start_size: 16000}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 725362.0142304841, start_size: 12215.97798637361}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 4165.577234420167}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 141119.22853361274, start_size: 3368.5443191369027}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 693.2694089833867}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 82129.19834786549, start_size: 3368.5443191369027}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 100.44853974250903}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1343.8724564640202}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 30214.6683132618}
+  - {end_time: 0, start_size: 24711.725978391387}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 9038.592193625384}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 9038.592193625384}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 4.695083292091775e-06
+- demes: [Altai, CV]
+  rate: 1.000000009891772e-08
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.0006485671385147902
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

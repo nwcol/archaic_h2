@@ -18,8 +18,9 @@ dependencies = [
 packages = ["h2py", "h2py.scripts"]
 
 [project.scripts]
-parse_H2 = "h2py.scripts.parse_H2:main"
-bootstrap_H2 = "h2py.scripts.bootstrap_H2:main"
-fit_H2 = "h2py.scripts.fit_H2:main"
-plot_H2 = "h2py.scripts.plot_H2:main"
-stderrs = "h2py.scripts.compute_stderrs:main"
+parse_h2 = "h2py.scripts.parse_h2:main"
+bootstrap_h2 = "h2py.scripts.bootstrap_h2:main"
+fit_h2 = "h2py.scripts.fit_h2:main"
+compute_uncerts = "h2py.scripts.compute_stderrs:main"
+plot_h2 = "h2py.scripts.plot_h2:main"
+plot_params = "h2py.scripts.plot_params:main"

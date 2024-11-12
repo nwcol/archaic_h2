@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -19804.426134312445,
+    max_iter: 10000, num_iter: 6039, func_calls: 8648, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 1065397.946229264, start_size: 14000}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 846683.0890811589, start_size: 9610.734816044735}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 100.00000000004786}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 199999.99999998367, start_size: 2323.70523739736}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 875.8902405718682}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 89588.8425388062, start_size: 2323.70523739736}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 1092.3272822821318}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 4102.550347946224}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 27163.76904954639}
+  - {end_time: 0, start_size: 31402.083677039547}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 8660.52097640713}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 8660.52097640713}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 3.1513199667617943e-06
+- demes: [Altai, CV]
+  rate: 0.00014788616060260968
+- demes: [Vindija, Chagyrskaya]
+  rate: 1.0000000018369766e-08
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

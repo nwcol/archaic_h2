@@ -1,0 +1,74 @@
+parameters:
+- name: NA 
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        A: 
+          epochs: 
+            0: start_size
+- name: TA
+  values:
+    - demes:
+        A: 
+          epochs: 
+            0: end_time
+- name: NAFR
+  lower_bound: 100
+  upper_bound: 50000
+  values:
+    - demes:
+        AFR: 
+          epochs: 
+            0: start_size
+        Yoruba:
+          epochs:
+            0: start_size
+- name: TAFR
+  values:
+    - demes:
+        AFR: 
+          epochs: 
+            0: end_time
+- name: NY1
+  lower_bound: 100
+  values:
+    - demes:
+        Yoruba: 
+          epochs: 
+            0: end_size
+- name: NOOA
+  lower_bound: 100
+  values:
+    - demes:
+        OOA: 
+          epochs: 
+            0: start_size
+        French: 
+          epochs: 
+            0: start_size
+        Han: 
+          epochs: 
+            0: start_size
+- name: NY1
+  lower_bound: 100
+  values:
+    - demes:
+        Yoruba: 
+          epochs: 
+            0: end_size
+- name: NF1
+  lower_bound: 100
+  values:
+    - demes:
+        French: 
+          epochs: 
+            0: end_size
+- name: NH1
+  lower_bound: 100
+  values:
+    - demes:
+        Han: 
+          epochs: 
+            0: end_size
+

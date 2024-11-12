@@ -1,0 +1,35 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  epochs:
+  - start_size: 16000
+    end_time: 220000
+- name: AFR
+  ancestors: [A]
+  epochs:
+  - start_size: 25000
+    end_time: 140000
+- name: Yoruba
+  ancestors: [AFR]
+  epochs:
+  - start_size: 25000
+    end_size: 60000
+    end_time: 0
+- name: OOA
+  ancestors: [AFR]
+  epochs:
+  - start_size: 4000
+    end_time: 20000
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - start_size: 4000
+    end_size: 8000
+    end_time: 0
+- name: Han
+  ancestors: [OOA]
+  epochs:
+  - start_size: 4000
+    end_size: 8000
+    end_time: 0

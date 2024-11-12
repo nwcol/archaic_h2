@@ -1,0 +1,21 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: LBFGSB, objective_func: objective_H2, fopt: -19802.867618535012,
+    max_iter: 500, num_iter: 0, func_calls: 126, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  epochs:
+  - {end_time: 150786.8490834643, start_size: 9279.162636005014}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 0, start_size: 15716.877413163209}
+- name: French
+  ancestors: [A]
+  epochs:
+  - {end_time: 37304.988652137195, start_size: 1000}
+  - {end_time: 0, start_size: 3686.638070654594}
+migrations:
+- demes: [French, Yoruba]
+  rate: 6.486760466892664e-06

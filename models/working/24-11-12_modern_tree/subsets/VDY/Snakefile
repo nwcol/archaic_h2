@@ -1,0 +1,24 @@
+
+
+TAs = ['600ka', '700ka', '800ka', '900ka']
+TPs = ['150ka', '200ka', '250ka']
+reps = list(range(5))
+
+
+rule all:
+    input:
+        expand('{TA}-{TP}/fit_{rep}.yaml', TA=TAs, TP=TPs, rep=reps)
+
+
+rule fit:
+    input:
+        d = "../../bootstrap.pkl",
+        g = "{TA}-{TP}/tree.yaml",
+        p = "{TA}-{TP}/params.yaml"
+    output:
+        "{TA}-{TP}/fit_{rep}.yaml"
+    shell:
+        """
+        fit_H2 -u 1.112e-8 -d {input.d} -p {input.p} -g {input.g} \
+            -o {output} --max_iter 200 --method Powell --perturb 0.5 --verbose 50
+        """

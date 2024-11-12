@@ -1,0 +1,83 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - start_size: 16000
+    end_time: 600000 ###
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - start_size: 8000
+    end_time: 500000 ###
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - start_size: 3500
+    end_time: 80000
+- name: N
+  ancestors: [ND]
+  epochs:
+  - start_size: 6000
+    end_time: 170000
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - start_size: 2000
+    end_time: 120000
+- name: CV
+  ancestors: [N]
+  epochs:
+  - start_size: 6000
+    end_time: 105000
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - start_size: 2000
+    end_time: 80000
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - start_size: 3000
+    end_time: 55000
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - start_size: 15000
+    end_time: 125000
+  - start_size: 24000
+    end_time: 0
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  ancestors: [Yoruba]
+  start_time: 250000
+  epochs:
+  - start_size: 8000
+    end_time: 200000
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  ancestors: [Yoruba]
+  start_time: 150000
+  epochs:
+  - start_size: 8000
+    end_time: 120000
+
+pulses:
+- sources: [MHI1]
+  proportions: [0.05]
+  dest: N
+  time: 200000
+- sources: [MHI2]
+  proportions: [0.005]
+  dest: CV
+  time: 120000
+
+migrations:
+- demes: [Altai, Denisova]
+  rate: 1e-5
+- demes: [Altai, CV]
+  rate: 1e-4
+- demes: [Vindija, Chagyrskaya]
+  rate: 5e-4

@@ -221,6 +221,42 @@ def check_params(p, lower_bounds, upper_bounds, constraints):
     return ret
 
 
+def perturb_params(
+    p0,
+    cv=0.2,
+    lower_bounds=None,
+    upper_bounds=None,
+    constraints=None,
+    std_thresh=3,
+    max_reps=100
+):
+    """
+    
+    """
+    stds = p0 * cv
+
+    satisfied = False
+    num_reps = 0
+
+    lower = np.max(
+        [lower_bounds, p0 - std_thresh * stds, np.full(len(lower_bounds), 0)], 
+        axis=0
+    )
+    upper = np.min(
+        [upper_bounds, p0 + std_thresh * stds], axis=0
+    )
+
+    while not satisfied:
+        if num_reps > max_reps:
+            raise ValueError("")
+        
+        p = np.random.normal(p0, stds)
+
+
+        num_reps += 1
+
+    return 
+ 
 
 def fit_H2(*args, include_H=False, **kwargs):
     """

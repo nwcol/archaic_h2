@@ -1,0 +1,66 @@
+parameters:
+- name: NA 
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        A: 
+          epochs:
+            0: start_size 
+- name: NMH
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        MH: 
+          epochs:
+            0: start_size 
+# TOOA := 60000
+- name: NOOA
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        OOA: 
+          epochs:
+            0: start_size 
+- name: TF
+  lower_bound: 1000
+  values:
+    - demes: 
+        French: start_time
+- name: NF
+  lower_bound: 100
+  upper_bound: 54999
+  values:
+    - demes: 
+        French: 
+          epochs:
+            0: start_size 
+- name: THP
+  lower_bound: 35001
+  values:
+    - demes: 
+        OOA:
+          epochs:
+            0: end_time
+- name: NH
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Han: 
+          epochs:
+            0: start_size 
+- name: NP
+  lower_bound: 100
+  upper_bound: 10000
+  values:
+    - demes: 
+        Papuan: 
+          epochs:
+            0: start_size 
+
+constraints:
+- params: [TF, THP]
+  constraint: greater_than

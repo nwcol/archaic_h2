@@ -1,0 +1,72 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -8185.039191227589,
+    max_iter: 10000, num_iter: 7407, func_calls: 9926, flag: 0, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - {end_time: 600000, start_size: 20663.234815210293}
+- name: ND
+  description: Ancestral to Neandertals and Denisovans
+  ancestors: [A]
+  epochs:
+  - {end_time: 598112.8718220992, start_size: 101.92196266972991}
+- name: Denisova
+  ancestors: [ND]
+  epochs:
+  - {end_time: 80000, start_size: 3522.819217555972}
+- name: N
+  ancestors: [ND]
+  epochs:
+  - {end_time: 156948.00569731463, start_size: 2447.9979542529472}
+- name: Altai
+  ancestors: [N]
+  epochs:
+  - {end_time: 120000, start_size: 945.5455076629655}
+- name: CV
+  ancestors: [N]
+  epochs:
+  - {end_time: 109177.63339521323, start_size: 2447.9979542529472}
+- name: Chagyrskaya
+  ancestors: [CV]
+  epochs:
+  - {end_time: 80000, start_size: 4140.20897459311}
+- name: Vindija
+  ancestors: [CV]
+  epochs:
+  - {end_time: 55000, start_size: 1588.6179740256325}
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - {end_time: 125000, start_size: 17738.326657104295}
+  - {end_time: 0, start_size: 25939.230166883866}
+- name: MHI1
+  description: Modern human deme introgressing into Neandertals 200ka
+  start_time: 250000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 200000, start_size: 10452.352869417675}
+- name: MHI2
+  description: Modern human deme introgressing into CV 120ka
+  start_time: 150000
+  ancestors: [Yoruba]
+  epochs:
+  - {end_time: 120000, start_size: 10452.352869417675}
+migrations:
+- demes: [Altai, Denisova]
+  rate: 1.1855391823338466e-06
+- demes: [Altai, CV]
+  rate: 4.1709499690449774e-05
+- demes: [Vindija, Chagyrskaya]
+  rate: 0.00034804467840228475
+pulses:
+- sources: [MHI1]
+  dest: N
+  time: 200000
+  proportions: [0.05]
+- sources: [MHI2]
+  dest: CV
+  time: 120000
+  proportions: [0.005]

@@ -10,9 +10,9 @@ out = archaic_tree_$(NA)_$(Cluster)-$(Process).yaml
 data = bootstrap.pkl
 u = 1.112e-8
 
-maxiter = 500
+maxiter = 5000
 perturb = 0.5
-method = LBFGSB
+method = NelderMead
 
 #     
 
@@ -44,7 +44,7 @@ transfer_input_files = \
  ../models/$(params)
 
 request_cpus = 1
-request_memory = 1GB
-request_disk = 1GB
+request_memory = 500MB
+request_disk = 800MB
 
-queue 10
+queue 30

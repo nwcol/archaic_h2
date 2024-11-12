@@ -1,12 +1,21 @@
 
 from bokeh.palettes import Category10, Turbo256, TolRainbow
 import matplotlib as mpl
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 from scipy import stats
 
 from h2py import util, h2_parsing, inference
+
+
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = \
+    "\\usepackage{amsmath}\\usepackage{amssymb}"
+mpl.rcParams['font.family'] = "serif"
+mpl.rcParams['font.serif'] = "Computer Modern"
+mpl.rcParams['savefig.bbox'] = "tight"
 
 
 def plot_H2s(
@@ -88,7 +97,7 @@ def plot_H2s(
         framealpha=0,
         loc='lower center',
         bbox_to_anchor=(0.5, y_anchor),
-        ncols=4
+        ncols=3
     )
 
     for i, ax in enumerate(axs):
@@ -197,8 +206,6 @@ def plot_H2(
     return l
 
 
-
-
 def format_ticks(ax, y_ax=True, x_ax=True):
     # latex scientific notation for x, y ticks
     def scientific(x):
@@ -224,6 +231,62 @@ def format_ticks(ax, y_ax=True, x_ax=True):
     return
 
 
+def plot_params(
+    names,
+    p_arr,
+    lls,
+    n_cols=5,
+    title=None,
+):
+    """
+    Make pairwise scatter plots of parameters.
+    """
+    n = len(names)
+    n_axes = n * (n - 1) // 2
+    n_rows = int(np.ceil(n_axes / n_cols))
+
+    fig, axes = plt.subplots(
+        n_rows, 
+        n_cols, 
+        figsize=(n_cols * 2.4, n_rows * 2.3),
+        layout="constrained"
+    )
+    axes = axes.flat
+    for ax in axes[n_axes:]:
+        ax.remove()
+
+    idxs = [(i, j) for i in range(n - 1) for j in range(i + 1, n)]
+    norm = plt.Normalize(np.min(lls), np.max(lls))
+
+    for ax, (i, j) in zip(axes, idxs):
+        ax.set_xlabel(names[i])
+        ax.set_ylabel(names[j])
+        cb = ax.scatter(
+            p_arr[:, i],
+            p_arr[:, j],
+            c=lls,
+            cmap='plasma',
+            marker='o',
+            s=12,
+            norm=norm
+        )
+        rho = stats.pearsonr(p_arr[:, i], p_arr[:, j]).statistic
+        ax.set_title(
+            rf'$\rho={np.round(rho, 2)}$', y=1.0, pad=-14
+        )
+
+    smap = plt.cm.ScalarMappable(cmap='plasma', norm=norm)
+    cbar = fig.colorbar(
+        cb, 
+        ax=axes[:n_axes], 
+        location='bottom',
+        shrink=0.35,
+        fraction=0.1
+    )
+    cbar.ax.tick_params()
+    cbar.ax.set_ylabel('ll', rotation=0)
+
+    return
 
 
 
@@ -231,12 +294,15 @@ def format_ticks(ax, y_ax=True, x_ax=True):
 
 
 
-mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = \
-    "\\usepackage{amsmath}\\usepackage{amssymb}"
-mpl.rcParams['font.family'] = "serif"
-mpl.rcParams['font.serif'] = "Computer Modern"
-mpl.rcParams['savefig.bbox'] = "tight"
+
+
+
+
+
+
+
+
+
 
 
 
@@ -624,72 +690,6 @@ def plot_two_panel_H2(model, data, labels, colors, axs=None, ci=1.96):
 """
 Plotting parameters
 """
-
-
-def plot_parameters(
-    names,
-    truths,
-    bounds,
-    labels,
-    *args,
-    n_cols=5,
-    marker_size=2,
-    title=None,
-    wide_bounds=False
-):
-    # plot parameter clouds
-    # truths is a vector of underlying true parameters
-    n = len(names)
-    n_axs = util.n_choose_2(n)
-    n_rows = int(np.ceil(n_axs / n_cols))
-    fig, axs = plt.subplots(
-        n_rows, n_cols, figsize=(n_cols * 3.5, n_rows * 3),
-        layout="constrained"
-    )
-    axs = axs.flat
-    for ax in axs[n_axs:]:
-        ax.remove()
-    colors = ['b', 'orange', 'g', 'r']
-    idxs = util.get_pair_idxs(n)
-    for k, (i, j) in enumerate(idxs):
-        ax = axs[k]
-        ax.set_xlabel(names[i])
-        ax.set_ylabel(names[j])
-        if wide_bounds:
-            ax.set_xlim(bounds[i])
-            ax.set_ylim(bounds[j])
-        for z, arr in enumerate(args):
-            ax.scatter(
-                arr[:, i],
-                arr[:, j],
-                color=colors[z],
-                marker='.',
-                s=marker_size
-            )
-        if truths is not None:
-            ax.scatter(truths[i], truths[j], color='black', marker='x')
-    legend_elements = [
-        Line2D(
-            [0],
-            [0],
-            marker='.',
-            color='w',
-            label=labels[i],
-            markerfacecolor=colors[i],
-            markersize=10
-        ) for i in range(len(labels))
-    ]
-    fig.legend(
-        handles=legend_elements,
-        loc='lower center',
-        shadow=True,
-        fontsize=10,
-        ncols=3,
-        bbox_to_anchor=(0.5, -0.1)
-    )
-    if title is not None:
-        fig.suptitle(title)
-    return 0
 
 
 def box_plot_parameters(

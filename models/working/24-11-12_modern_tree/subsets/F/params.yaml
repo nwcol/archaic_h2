@@ -1,0 +1,21 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  epochs:
+  - start_size: 16000
+    end_time: 100000
+- name: Yoruba
+  ancestors: [A]
+  epochs:
+  - start_size: 24000
+    end_time: 0
+- name: French
+  ancestors: [A]
+  epochs:
+  - start_size: 5000
+    end_time: 0
+
+migrations:
+- demes: [French, Yoruba]
+  rate: 1e-5

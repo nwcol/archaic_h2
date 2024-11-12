@@ -1,0 +1,17 @@
+parameters:
+- name: NA
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Yoruba: 
+          epochs:
+            0: start_size 
+- name: NY
+  lower_bound: 100
+  upper_bound: 100000
+  values:
+    - demes: 
+        Yoruba: 
+          epochs:
+            1: start_size 

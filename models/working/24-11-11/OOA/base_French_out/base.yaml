@@ -1,0 +1,61 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - start_size: 16000
+    end_time: 750000
+- name: ND
+  ancestors: [A]
+  epochs:
+  - start_size: 4000
+    end_time: 650000
+- name: N
+  ancestors: [ND]
+  epochs:
+  - start_size: 2000
+    end_time: 50000
+- name: D
+  ancestors: [ND]
+  epochs:
+  - start_size: 2000
+    end_time: 30000
+- name: MH
+  description: Ancestral to modern human populations
+  ancestors: [A]
+  epochs:
+  - start_size: 15000
+    end_time: 60000
+- name: OOA
+  start_time: 60000
+  ancestors: [MH]
+  epochs:
+  - start_size: 1400
+    end_time: 38000
+- name: French
+  start_time: 45000
+  ancestors: [OOA]
+  epochs:
+  - start_size: 6000
+    end_time: 0
+- name: Han
+  ancestors: [OOA]
+  epochs:
+  - start_size: 5000
+    end_time: 0
+- name: Papuan
+  ancestors: [OOA]
+  epochs:
+  - start_size: 2000
+    end_time: 0
+
+pulses:
+- sources: [N]
+  proportions: [0.02]
+  dest: OOA
+  time: 55000
+- sources: [D]
+  proportions: [0.05]
+  dest: Papuan
+  time: 35000

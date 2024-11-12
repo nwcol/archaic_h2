@@ -1,0 +1,42 @@
+time_units: years
+generation_time: 29
+demes:
+- name: A
+  description: Ancestral to modern and archaic humans
+  epochs:
+  - start_size: 16500
+    end_time: 750000
+- name: N
+  ancestors: [A]
+  epochs:
+  - start_size: 5000
+    end_time: 80000  
+- name: Vindija
+  ancestors: [N]
+  epochs:
+  - start_size: 3000
+    end_time: 55000 
+- name: MH
+  description: Ancestral to modern human populations
+  ancestors: [A]
+  epochs:
+  - start_size: 15000
+    end_time: 115000
+- name: MHI
+  description: Modern human deme introgressing into Neandertals
+  ancestors: [MH]
+  start_time: 300000
+  epochs:
+  - start_size: 15000
+    end_time: 250000
+- name: Yoruba
+  ancestors: [MH]
+  epochs:
+  - start_size: 24000
+    end_time: 0
+
+pulses:
+- sources: [MHI]
+  proportions: [0.10]
+  dest: N
+  time: 250000

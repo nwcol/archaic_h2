@@ -1,0 +1,29 @@
+time_units: years
+generation_time: 29
+metadata:
+  opt_info: {method: NelderMead, objective_func: objective_H2, fopt: -337.71190895338236,
+    max_iter: 500, num_iter: 500, func_calls: 728, flag: 2, u_fitted: 0, u: 1.112e-08}
+demes:
+- name: A
+  epochs:
+  - {end_time: 436909.2146550113, start_size: 19463.945351893635}
+- name: AFR
+  ancestors: [A]
+  epochs:
+  - {end_time: 51345.681474739235, start_size: 28709.064272282838}
+- name: Yoruba
+  ancestors: [AFR]
+  epochs:
+  - {end_time: 0, start_size: 28709.064272282838, end_size: 90442.62453025198}
+- name: OOA
+  ancestors: [AFR]
+  epochs:
+  - {end_time: 20000, start_size: 2247.0077476065}
+- name: French
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 2247.0077476065, end_size: 8122.272080766715}
+- name: Han
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 0, start_size: 2247.0077476065, end_size: 2203.302012582356}
